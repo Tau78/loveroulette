@@ -26,6 +26,8 @@ function demoMetadata(): Record<string, unknown> {
       chat_anonymous: true,
       jury_enabled: false,
       question_mode: "dynamic",
+      generatore_auto_import: true,
+      generatore_default_bundle: "DEMO01-manche-full-v1",
     },
   };
 }

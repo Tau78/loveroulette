@@ -5,9 +5,11 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { LastReveal } from "@/lib/musicpro/extraction";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { cn } from "@/lib/utils";
+import { PROJECTOR_EXTRACTION_WHEEL_PX } from "@/lib/display/projector-canvas";
 
 const SPIN_DURATION_MS = 2500;
 const WHEEL_SEGMENT_COUNT = 12;
+const WHEEL_LABEL_RADIUS_PERCENT = 38;
 
 interface DisplayExtractionStageProps {
   lastReveal: LastReveal | null;
@@ -17,25 +19,59 @@ interface DisplayExtractionStageProps {
 
 type ExtractionStage = "idle" | "spinning" | "revealed";
 
-function RouletteWheel({ spinning }: { spinning: boolean }) {
-  const reduceMotion = useReducedMotion();
+function WheelSegmentLabels() {
+  const segmentAngle = 360 / WHEEL_SEGMENT_COUNT;
 
   return (
-    <div className="relative flex items-center justify-center">
+    <>
+      {Array.from({ length: WHEEL_SEGMENT_COUNT }).map((_, index) => {
+        const centerAngle = index * segmentAngle + segmentAngle / 2;
+        const rad = ((centerAngle - 90) * Math.PI) / 180;
+        const x = 50 + WHEEL_LABEL_RADIUS_PERCENT * Math.cos(rad);
+        const y = 50 + WHEEL_LABEL_RADIUS_PERCENT * Math.sin(rad);
+
+        return (
+          <span
+            key={index}
+            className="absolute z-10 font-display text-[22px] font-bold tabular-nums text-white/95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]"
+            style={{
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: `translate(-50%, -50%) rotate(${centerAngle}deg)`,
+            }}
+            aria-hidden
+          >
+            {index + 1}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+function RouletteWheel({ spinning }: { spinning: boolean }) {
+  const reduceMotion = useReducedMotion();
+  const wheelSize = PROJECTOR_EXTRACTION_WHEEL_PX;
+
+  return (
+    <div
+      className="relative flex shrink-0 items-center justify-center"
+      style={{ width: wheelSize, height: wheelSize }}
+    >
       <div
-        className="pointer-events-none absolute -inset-8 rounded-full bg-primary/25 blur-3xl"
+        className="pointer-events-none absolute inset-0 rounded-full bg-primary/25 blur-3xl"
         aria-hidden
       />
 
       <div
-        className="absolute -top-3 left-1/2 z-20 -translate-x-1/2"
+        className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1"
         aria-hidden
       >
-        <div className="size-0 border-x-[14px] border-x-transparent border-t-[22px] border-t-primary drop-shadow-[0_0_12px_rgba(236,72,153,0.9)] md:border-x-[18px] md:border-t-[28px]" />
+        <div className="size-0 border-x-[16px] border-x-transparent border-t-[26px] border-t-primary drop-shadow-[0_0_12px_rgba(236,72,153,0.9)]" />
       </div>
 
       <motion.div
-        className="relative size-[min(72vw,420px)] md:size-[min(58vw,480px)]"
+        className="relative size-full"
         animate={
           reduceMotion
             ? { rotate: 0 }
@@ -59,7 +95,7 @@ function RouletteWheel({ spinning }: { spinning: boolean }) {
         <div
           className="absolute inset-0 rounded-full border-4 border-white/20 shadow-[0_0_60px_rgba(236,72,153,0.35),inset_0_0_40px_rgba(0,0,0,0.65)]"
           style={{
-            background: `conic-gradient(from 0deg, ${Array.from({ length: WHEEL_SEGMENT_COUNT }, (_, i) => {
+            background: `conic-gradient(from -90deg, ${Array.from({ length: WHEEL_SEGMENT_COUNT }, (_, i) => {
               const color =
                 i % 2 === 0
                   ? "rgba(236,72,153,0.85)"
@@ -72,26 +108,12 @@ function RouletteWheel({ spinning }: { spinning: boolean }) {
           aria-hidden
         />
 
-        {Array.from({ length: WHEEL_SEGMENT_COUNT }).map((_, index) => {
-          const angle = (360 / WHEEL_SEGMENT_COUNT) * index + 360 / WHEEL_SEGMENT_COUNT / 2;
-          return (
-            <div
-              key={index}
-              className="absolute left-1/2 top-1/2 h-1/2 w-8 -translate-x-1/2 origin-bottom text-center"
-              style={{ transform: `translateX(-50%) rotate(${angle}deg)` }}
-              aria-hidden
-            >
-              <span className="inline-block -rotate-90 text-xs md:text-sm font-bold text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                {index + 1}
-              </span>
-            </div>
-          );
-        })}
+        <WheelSegmentLabels />
 
         <div className="absolute inset-[18%] rounded-full border-2 border-white/15 bg-gradient-to-br from-black/90 via-black/75 to-primary/20 shadow-[inset_0_0_32px_rgba(0,0,0,0.8)]" />
 
         <div className="absolute inset-[32%] flex items-center justify-center rounded-full border border-primary/40 bg-black/80">
-          <span className="font-display text-lg md:text-2xl font-bold uppercase tracking-[0.35em] text-primary/90">
+          <span className="font-display text-[28px] font-bold uppercase tracking-[0.35em] text-primary/90">
             Love
           </span>
         </div>
@@ -266,12 +288,12 @@ export function DisplayExtractionStage({
   const activeReveal = lastReveal;
 
   return (
-    <div className="relative flex h-full min-h-0 flex-1 flex-col w-full max-w-5xl mx-auto px-2 md:px-4 pb-3 md:pb-5">
+    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
       <AnimatePresence mode="wait">
         {stage === "idle" ? (
           <motion.div
             key="idle"
-            className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-10 md:gap-14"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-12"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -289,7 +311,7 @@ export function DisplayExtractionStage({
         {stage === "spinning" && activeReveal ? (
           <motion.div
             key={`spin-${activeReveal.updatedAt}`}
-            className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-8 md:gap-12"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -298,7 +320,7 @@ export function DisplayExtractionStage({
             <RouletteWheel spinning />
             <motion.p
               className={cn(
-                "font-display text-2xl md:text-4xl font-bold uppercase tracking-[0.28em] text-primary",
+                "font-display text-[36px] font-bold uppercase tracking-[0.28em] text-primary",
                 "drop-shadow-[0_0_24px_rgba(236,72,153,0.75)]",
               )}
               animate={{ opacity: [0.65, 1, 0.65] }}
@@ -312,7 +334,7 @@ export function DisplayExtractionStage({
         {stage === "revealed" && activeReveal ? (
           <motion.div
             key={`reveal-${activeReveal.updatedAt}`}
-            className="flex h-full min-h-0 flex-1 items-center justify-center py-4 md:py-8"
+            className="absolute inset-0 flex items-center justify-center px-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

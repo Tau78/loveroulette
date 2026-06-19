@@ -5,13 +5,13 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef } from "react";
 import type { QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
 import { QUIZ_PHASE_BACKGROUNDS } from "@/lib/display/quiz-phase-backgrounds";
+import { DISPLAY_BRAND_CORNER_POSITION } from "@/lib/display/display-brand-metrics";
 import {
-  DISPLAY_BRAND_CORNER_POSITION,
-  DISPLAY_COMPACT_LOGO_CLASS,
-  DISPLAY_COMPACT_LOGO_EMBED_CLASS,
-} from "@/lib/display/display-brand-metrics";
+  PROJECTOR_LOBBY_LOGO_CLASS,
+  PROJECTOR_LOBBY_LOGO_FULL_CLASS,
+  PROJECTOR_ROULETTE_CLASS,
+} from "@/lib/display/projector-canvas";
 import { DisplayQuizPhaseOverlay } from "@/components/display/DisplayQuizPhaseOverlay";
-import { DisplayQuizHeart } from "@/components/display/DisplayQuizHeart";
 import { cn } from "@/lib/utils";
 
 const VIDEO_SRC = "/grafiche/video/sfondo-animato.mp4";
@@ -21,16 +21,16 @@ export type DisplayLogoScale = "full" | "compact";
 
 type DisplayStageBackgroundProps = {
   logoScale?: DisplayLogoScale;
-  /** Iframe preview: avoid vw-based sizing that shifts with scrollbars. */
-  stableLayout?: boolean;
-  /** Fase quiz attiva — sottofondo, cuore basso-sinistra. */
+  /** Fase quiz attiva — cuore/logo nel footer unificato. */
   quizPhase?: QuizDisplayPhase | null;
+  /** Nasconde la roulette PNG di sfondo (estrazione / matching). */
+  hideBackgroundRoulette?: boolean;
 };
 
 export function DisplayStageBackground({
   logoScale = "full",
-  stableLayout = false,
   quizPhase = null,
+  hideBackgroundRoulette = false,
 }: DisplayStageBackgroundProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const reduceMotion = useReducedMotion();
@@ -88,16 +88,15 @@ export function DisplayStageBackground({
         </>
       )}
 
-      {/* Ruota — grande, centrata, rotazione lenta */}
       <div className="absolute inset-0 flex items-center justify-center">
         <motion.div
           className="flex items-center justify-center"
           animate={
             reduceMotion
-              ? { opacity: phaseConfig?.rouletteOpacity ?? 0.78 }
+              ? { opacity: hideBackgroundRoulette ? 0 : (phaseConfig?.rouletteOpacity ?? 0.78) }
               : {
-                  rotate: 360,
-                  opacity: phaseConfig?.rouletteOpacity ?? 0.78,
+                  rotate: hideBackgroundRoulette ? 0 : 360,
+                  opacity: hideBackgroundRoulette ? 0 : (phaseConfig?.rouletteOpacity ?? 0.78),
                 }
           }
           transition={
@@ -106,10 +105,10 @@ export function DisplayStageBackground({
               : {
                   rotate: {
                     duration: phaseConfig?.rouletteDuration ?? 28,
-                    repeat: Infinity,
+                    repeat: hideBackgroundRoulette ? 0 : Infinity,
                     ease: "linear",
                   },
-                  opacity: { duration: 0.6, ease: "easeInOut" },
+                  opacity: { duration: 0.45, ease: "easeInOut" },
                 }
           }
         >
@@ -120,41 +119,30 @@ export function DisplayStageBackground({
             height={900}
             priority
             className={cn(
-              "h-auto max-h-[78vh] object-contain mix-blend-screen drop-shadow-[0_20px_60px_rgba(233,30,140,0.35)] transition-opacity duration-500",
-              stableLayout ? "w-[min(90%,880px)]" : "w-[min(78vw,880px)]",
+              PROJECTOR_ROULETTE_CLASS,
+              "mix-blend-screen drop-shadow-[0_20px_60px_rgba(233,30,140,0.35)] transition-opacity duration-500",
             )}
           />
         </motion.div>
       </div>
 
-      {quizPhase ? (
-        <DisplayQuizHeart
-          variant="floating"
-          className={DISPLAY_BRAND_CORNER_POSITION.heart}
-        />
-      ) : null}
-
-      <div className={DISPLAY_BRAND_CORNER_POSITION.logo}>
-        <Image
-          src={LOGO_SRC}
-          alt="Love Roulette"
-          width={320}
-          height={140}
-          priority
-          className={cn(
-            "h-auto object-contain transition-[width] duration-500 ease-in-out",
-            logoScale === "compact"
-              ? stableLayout
-                ? DISPLAY_COMPACT_LOGO_EMBED_CLASS
-                : DISPLAY_COMPACT_LOGO_CLASS
-              : stableLayout
-                ? "w-64"
-                : "w-[min(28vw,320px)]",
-            logoScale === "full" &&
-              "drop-shadow-[0_8px_32px_rgba(233,30,140,0.55)]",
-          )}
-        />
-      </div>
+      {quizPhase ? null : (
+        <div className={DISPLAY_BRAND_CORNER_POSITION.logo}>
+          <Image
+            src={LOGO_SRC}
+            alt="Love Roulette"
+            width={320}
+            height={140}
+            priority
+            className={cn(
+              "h-auto object-contain transition-[width] duration-500 ease-in-out",
+              logoScale === "compact"
+                ? PROJECTOR_LOBBY_LOGO_CLASS
+                : PROJECTOR_LOBBY_LOGO_FULL_CLASS,
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 }

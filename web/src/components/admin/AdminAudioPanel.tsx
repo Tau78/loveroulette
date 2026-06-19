@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Monitor, Volume2, VolumeX } from "lucide-react";
+import { Monitor, Volume2, VolumeX, Maximize } from "lucide-react";
 import type { EventState } from "@/lib/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import { STINGER_IDS } from "@/lib/audio/stingers";
 import { useLoveRouletteSoundtrack } from "@/hooks/useLoveRouletteSoundtrack";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { Button } from "@/components/ui/button";
+import { displayUrl, openProjectorWindow } from "@/lib/display/embed";
 
 interface AdminAudioPanelProps {
   eventCode: string;
@@ -48,23 +49,29 @@ export function AdminAudioPanel({
     muted,
     currentTrackId,
     loadError,
+    missingFilesWarning,
     unlock,
     toggleMute,
   } = useLoveRouletteSoundtrack({
     runtimeState,
     enabled: !disabled,
+    autoUnlock: true,
     stingerId: STINGER_IDS.quizQuestionGong,
     stingerToken: gongStingerToken,
     stingerDedupKey: gongDedupKey,
   });
 
-  const displayUrl =
+  const projectorUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/s/${eventCode}/display`
-      : `/s/${eventCode}/display`;
+      ? displayUrl(eventCode, { origin: window.location.origin })
+      : displayUrl(eventCode);
 
   function openDisplayWindow() {
-    window.open(displayUrl, "love-roulette-display", "noopener,noreferrer");
+    openProjectorWindow(eventCode);
+  }
+
+  function openFullscreenProjector() {
+    openProjectorWindow(eventCode, { present: true });
   }
 
   return (
@@ -112,6 +119,16 @@ export function AdminAudioPanel({
           <Monitor className="size-3.5" />
           Apri proiettore
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          onClick={openFullscreenProjector}
+        >
+          <Maximize className="size-3.5" />
+          Schermo pieno
+        </Button>
       </div>
 
       {unlocked ? (
@@ -124,8 +141,14 @@ export function AdminAudioPanel({
       ) : null}
 
       <p className="text-[10px] text-muted-foreground font-mono break-all leading-relaxed">
-        {displayUrl}
+        {projectorUrl}
       </p>
+
+      {missingFilesWarning ? (
+        <p className="text-xs text-amber-600 dark:text-amber-500">
+          {missingFilesWarning}
+        </p>
+      ) : null}
 
       {loadError ? (
         <p className="text-xs text-destructive">{loadError}</p>

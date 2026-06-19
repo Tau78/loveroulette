@@ -137,7 +137,7 @@ export default async function EventJoinPage({
               href={`/s/${urlSlug}/display`}
               className="hover:text-primary transition-colors"
             >
-              Display proiettore →
+              Schermo display →
             </Link>
             <Link
               href={`/admin/${urlSlug}`}

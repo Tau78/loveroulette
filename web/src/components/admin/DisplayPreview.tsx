@@ -12,6 +12,7 @@ import {
   ExternalLink,
   GripHorizontal,
   LayoutPanelTop,
+  Maximize,
   PictureInPicture2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { displayUrl as buildDisplayUrl } from "@/lib/display/embed";
+import { openProjectorWindow } from "@/lib/display/embed";
+import { ScaledProjectorPreview } from "@/components/admin/ScaledProjectorPreview";
 
 interface DisplayPreviewProps {
   eventCode: string;
@@ -111,12 +113,14 @@ function PreviewToolbar({
   onDetach,
   onAttach,
   onOpenWindow,
+  onOpenFullscreen,
   className,
 }: {
   detached: boolean;
   onDetach: () => void;
   onAttach: () => void;
   onOpenWindow: () => void;
+  onOpenFullscreen: () => void;
   className?: string;
 }) {
   return (
@@ -136,6 +140,10 @@ function PreviewToolbar({
         <ExternalLink />
         Apri in finestra
       </Button>
+      <Button type="button" variant="ghost" size="xs" onClick={onOpenFullscreen}>
+        <Maximize />
+        Schermo pieno
+      </Button>
     </div>
   );
 }
@@ -147,20 +155,7 @@ function PreviewIframe({
   eventCode: string;
   className?: string;
 }) {
-  const src =
-    typeof window !== "undefined"
-      ? buildDisplayUrl(eventCode, { embed: true, origin: window.location.origin })
-      : buildDisplayUrl(eventCode, { embed: true });
-
-  return (
-    <iframe
-      title="Anteprima proiettore"
-      src={src}
-      className={cn("size-full border-0 bg-black", className)}
-      loading="lazy"
-      scrolling="no"
-    />
-  );
+  return <ScaledProjectorPreview eventCode={eventCode} className={className} />;
 }
 
 export function DisplayPreview({
@@ -216,11 +211,11 @@ export function DisplayPreview({
   );
 
   const handleOpenWindow = useCallback(() => {
-    const url =
-      typeof window !== "undefined"
-        ? buildDisplayUrl(eventCode, { origin: window.location.origin })
-        : buildDisplayUrl(eventCode);
-    window.open(url, "_blank", "noopener,noreferrer");
+    openProjectorWindow(eventCode);
+  }, [eventCode]);
+
+  const handleOpenFullscreen = useCallback(() => {
+    openProjectorWindow(eventCode, { present: true });
   }, [eventCode]);
 
   const handleDetach = useCallback(() => {
@@ -358,6 +353,7 @@ export function DisplayPreview({
               onDetach={handleDetach}
               onAttach={handleAttach}
               onOpenWindow={handleOpenWindow}
+              onOpenFullscreen={handleOpenFullscreen}
             />
           </div>
 
@@ -446,6 +442,7 @@ export function DisplayPreview({
                 onDetach={handleDetach}
                 onAttach={handleAttach}
                 onOpenWindow={handleOpenWindow}
+                onOpenFullscreen={handleOpenFullscreen}
               />
             ) : null}
           </header>
@@ -473,6 +470,7 @@ export function DisplayPreview({
                 onDetach={handleDetach}
                 onAttach={handleAttach}
                 onOpenWindow={handleOpenWindow}
+                onOpenFullscreen={handleOpenFullscreen}
               />
             ) : null}
           </div>

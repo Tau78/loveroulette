@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import { PLAYER_PRIVACY_SHARING_NOTICE } from "@/lib/player/public-copy";
 
 export default function RegisterPage() {
   const params = useParams();
@@ -87,6 +88,10 @@ export default function RegisterPage() {
               la partecipazione a Love Roulette.
             </span>
           </label>
+
+          <p className="text-xs leading-relaxed text-muted">
+            {PLAYER_PRIVACY_SHARING_NOTICE}
+          </p>
 
           <button
             type="submit"

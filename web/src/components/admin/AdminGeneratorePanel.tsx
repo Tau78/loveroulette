@@ -162,6 +162,13 @@ export function AdminGeneratorePanel({
       </div>
 
       <p className="text-[10px] text-muted-foreground leading-snug">
+        Import automatico del bundle default all&apos;apertura admin (DEMO01 →
+        27 domande). Usa <strong>Importa manche</strong> solo per sovrascrivere
+        manualmente. Disabilita con metadata{" "}
+        <code className="font-mono">generatore_auto_import: false</code>.
+      </p>
+
+      <p className="text-[10px] text-muted-foreground leading-snug">
         Comandi API: import_manche, export_manche, start_quiz, tick, advance,
         skip_phase, get_quiz_state. Header opzionale: X-Generatore-Key.
       </p>

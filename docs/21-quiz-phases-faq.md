@@ -22,8 +22,25 @@ Lo script demo `web/scripts/seed-demo-questions-only.sql` inserisce **solo Q1–
 
 ## Come caricare il set completo (24–27 domande)
 
-1. **Import Generatore (consigliato in produzione)**  
-   Admin → **Generatore** → **Import** → file `web/data/generatore/DEMO01-manche-full-v1.json` (27 domande, evento `DEMO01`). Le domande vengono scritte su `love_roulette_questions` per l’evento.
+### Import automatico (default DEMO01)
+
+All'apertura della dashboard admin, `GET /api/events/{code}/questions` esegue **automaticamente** l'import del bundle default se mancano domande o il contenuto è cambiato.
+
+| Evento | Bundle default | Domande |
+|--------|----------------|---------|
+| **DEMO01** | `DEMO01-manche-full-v1.json` | 27 |
+
+Metadata evento (opzionale):
+
+- `generatore_auto_import: false` — disabilita auto-import (solo import manuale)
+- `generatore_default_bundle: "DEMO01-manche-full-v1"` — bundle per altri eventi
+
+Verifica in admin: **Domande caricate: 27 · bundle OK**.
+
+### Import manuale (override)
+
+1. **Import Generatore**  
+   Admin → **Generatore** → **Importa manche** → file JSON (sovrascrive il bundle).
 
 2. **Seed / pool Supabase**  
    Popola `love_roulette_question_pool` con `web/data/pools/pool_v2026_06.json` (50 domande da [06-question-bank.md](./06-question-bank.md) §4). All’avvio quiz il pool viene materializzato sull’evento.

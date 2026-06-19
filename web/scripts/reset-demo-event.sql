@@ -1,6 +1,7 @@
 -- Love Roulette — reset demo event (lobby + clean game data)
 --
 -- Equivalent to admin «Nuova partita» (without clearing participants).
+-- Preserves love_roulette_questions / options (Generatore import).
 -- Run in Supabase SQL Editor for project fvxdghqpavdcohczrvsc.
 --
 -- Options:
@@ -15,7 +16,6 @@ declare
   v_clear_players boolean := false;
   v_event_id uuid;
   v_participant_ids uuid[];
-  v_question_ids uuid[];
 begin
   select e.id into v_event_id
   from public.events e
@@ -38,18 +38,6 @@ begin
 
   delete from public.love_roulette_pairs
   where event_id = v_event_id;
-
-  select coalesce(array_agg(id), '{}') into v_question_ids
-  from public.love_roulette_questions
-  where event_id = v_event_id;
-
-  if array_length(v_question_ids, 1) > 0 then
-    delete from public.love_roulette_question_options
-    where question_id = any(v_question_ids);
-
-    delete from public.love_roulette_questions
-    where event_id = v_event_id;
-  end if;
 
   if v_clear_players then
     delete from public.love_roulette_participants

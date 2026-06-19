@@ -12,6 +12,11 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+const CARD_CLASS =
+  "bg-card/85 backdrop-blur-md border-primary/25 shadow-[0_0_32px_rgba(236,72,153,0.12)]";
+const CARD_ACTIVE =
+  "border-primary/45 shadow-[0_0_40px_rgba(236,72,153,0.28)] ring-1 ring-primary/20";
+
 interface VotingPlayerProps {
   eventSlug: string;
   participantId: string;
@@ -78,14 +83,14 @@ export function VotingPlayer({
 
   if (session.status === "closed") {
     return (
-      <Card className="bg-card/80 backdrop-blur-md border-border/60 text-left">
+      <Card className={cn(CARD_CLASS, CARD_ACTIVE, "text-left")}>
         <CardHeader className="pb-2">
           <CardDescription>Votazione chiusa</CardDescription>
           <CardTitle className="text-lg">Grazie per il voto!</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Segui il proiettore per i risultati.
+            Segui gli schermi in sala per i risultati.
           </p>
         </CardContent>
       </Card>
@@ -93,7 +98,7 @@ export function VotingPlayer({
   }
 
   return (
-    <Card className="bg-card/80 backdrop-blur-md border-border/60 text-left">
+    <Card className={cn(CARD_CLASS, CARD_ACTIVE, "text-left")}>
       <CardHeader className="pb-2">
         <CardDescription>Vota la coppia preferita</CardDescription>
         <CardTitle className="text-lg">Chi vince questa prova?</CardTitle>

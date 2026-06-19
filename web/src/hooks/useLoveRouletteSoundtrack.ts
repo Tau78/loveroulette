@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { EventState } from "@/lib/types";
 import { registerSoundtrackBedDuck } from "@/lib/audio/bed-duck";
 import { playQuizGongSound } from "@/lib/audio/gong";
+import {
+  formatMissingMp3Warning,
+  probeMissingManifestFiles,
+} from "@/lib/audio/manifest-files";
 import { trackIdForPhase, audioUrl } from "@/lib/audio/phase-tracks";
 import { STINGER_IDS } from "@/lib/audio/stingers";
 import {
@@ -56,6 +60,8 @@ export interface UseLoveRouletteSoundtrackOptions {
   stingerToken?: number;
   /** Proiettore: sblocco da dashboard (timestamp cue). */
   externalUnlockAt?: string | null;
+  /** Avvia colonna sonora al mount (dashboard animatore). */
+  autoUnlock?: boolean;
   /** Proiettore: nessuna UI, solo playback. */
   viewerMode?: boolean;
   /** Chiave stabile per dedup gong (es. currentIndex:phaseStartedAt). */
@@ -68,6 +74,7 @@ export interface UseLoveRouletteSoundtrackResult {
   currentTrackId: string | null;
   lastStingerId: string | null;
   loadError: string | null;
+  missingFilesWarning: string | null;
   unlock: () => void;
   toggleMute: () => void;
 }
@@ -78,17 +85,22 @@ export function useLoveRouletteSoundtrack({
   stingerId = null,
   stingerToken = 0,
   externalUnlockAt = null,
+  autoUnlock = false,
   viewerMode = false,
   stingerDedupKey = null,
 }: UseLoveRouletteSoundtrackOptions): UseLoveRouletteSoundtrackResult {
   const [manifest, setManifest] = useState<SoundtrackManifest | null>(null);
-  const [unlocked, setUnlocked] = useState(false);
+  const [unlocked, setUnlocked] = useState(autoUnlock || viewerMode);
   const [muted, setMuted] = useState(false);
   const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
   const [lastStingerId, setLastStingerId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [missingFilesWarning, setMissingFilesWarning] = useState<string | null>(
+    null,
+  );
 
   const activeRef = useRef<HTMLAudioElement | null>(null);
+  const missingPathsRef = useRef<Set<string>>(new Set());
   const idleRef = useRef<HTMLAudioElement | null>(null);
   const stingerRef = useRef<HTMLAudioElement | null>(null);
   const playingUrlRef = useRef<string | null>(null);
@@ -118,6 +130,26 @@ export function useLoveRouletteSoundtrack({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!manifest) return;
+
+    const loadedManifest = manifest;
+    let cancelled = false;
+
+    async function probeFiles() {
+      const missing = await probeMissingManifestFiles(loadedManifest);
+      if (cancelled) return;
+
+      missingPathsRef.current = new Set(missing);
+      setMissingFilesWarning(formatMissingMp3Warning(missing));
+    }
+
+    void probeFiles();
+    return () => {
+      cancelled = true;
+    };
+  }, [manifest]);
 
   const ensureAudioPair = useCallback(() => {
     if (!activeRef.current) {
@@ -163,6 +195,11 @@ export function useLoveRouletteSoundtrack({
         return;
       }
 
+      const rel = track.files[track.primary];
+      if (rel && missingPathsRef.current.has(rel)) {
+        return;
+      }
+
       const token = ++fadeTokenRef.current;
       idle.src = url;
       idle.loop = track.loop;
@@ -171,12 +208,8 @@ export function useLoveRouletteSoundtrack({
       try {
         await idle.play();
       } catch {
-        setLoadError(
-          trackId
-            ? `${trackId} non disponibile — esporta da SUNO e lancia npm run sync:audio`
-            : "Impossibile avviare l'audio — clicca di nuovo per sbloccare.",
-        );
         idle.pause();
+        idle.removeAttribute("src");
         return;
       }
 
@@ -260,9 +293,6 @@ export function useLoveRouletteSoundtrack({
     }
 
     if (trackId && !track) {
-      setLoadError(
-        `${trackId} non ancora esportato — continua il loop corrente. Dopo SUNO: npm run sync:audio`,
-      );
       return;
     }
 
@@ -323,9 +353,10 @@ export function useLoveRouletteSoundtrack({
   const lastExternalUnlock = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!viewerMode) return;
-    unlock();
-  }, [viewerMode, unlock]);
+    if (autoUnlock || viewerMode) {
+      unlock();
+    }
+  }, [autoUnlock, viewerMode, unlock]);
 
   useEffect(() => {
     if (!externalUnlockAt || externalUnlockAt === lastExternalUnlock.current) {
@@ -345,6 +376,7 @@ export function useLoveRouletteSoundtrack({
     currentTrackId,
     lastStingerId,
     loadError,
+    missingFilesWarning,
     unlock,
     toggleMute,
   };

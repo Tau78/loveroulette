@@ -1,7 +1,6 @@
 // Dev-only entry hub (DEMO01 shortcuts). Production flow: docs/16-production-entry-flow.md
-"use client";
-
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Heart, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
@@ -12,8 +11,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { isProductionApp } from "@/lib/env";
 
 export default function Home() {
+  if (isProductionApp()) {
+    notFound();
+  }
+
   return (
     <PageShell className="items-center justify-center p-6">
       <div className="max-w-lg w-full space-y-8 text-center">

@@ -9,7 +9,7 @@ const HEART_RED = "#ef4444";
 
 interface DisplayQuizHeartProps {
   className?: string;
-  /** floating = angolo basso-sinistra sullo sfondo. */
+  /** floating = angolo (legacy). inline = integrato nel footer quiz. */
   variant?: "floating" | "inline";
   size?: "default" | "compact";
 }
@@ -28,6 +28,7 @@ export function DisplayQuizHeart({
         "pointer-events-none",
         variant === "floating" &&
           "absolute bottom-4 left-4 z-[8] md:bottom-6 md:left-6",
+        variant === "inline" && "relative",
         className,
       )}
       aria-hidden
@@ -52,7 +53,11 @@ export function DisplayQuizHeart({
       <Heart
         className={cn(
           "fill-[#ef4444] text-[#ef4444]",
-          compact ? "size-8" : DISPLAY_FLOATING_HEART_CLASS,
+          variant === "inline"
+            ? "size-full"
+            : compact
+              ? "size-8"
+              : DISPLAY_FLOATING_HEART_CLASS,
         )}
         style={{
           color: HEART_RED,

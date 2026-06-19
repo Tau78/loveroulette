@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight,
   FastForward,
@@ -12,15 +12,22 @@ import {
 import { useCurrentQuizQuestion } from "@/hooks/useQuizQuestions";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
+import type { QuestionResults } from "@/lib/musicpro/quiz-results";
 import { QUIZ_PHASE_LABELS } from "@/lib/musicpro/quiz-display";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
+import { cn } from "@/lib/utils";
+import { AdminQuizQuestionReel } from "@/components/admin/AdminQuizQuestionReel";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+
+const QUIZ_STATS_POLL_MS = 1500;
 
 interface AdminQuizPanelProps {
   eventCode: string;
   quizState: QuizSessionState | null;
   animatorPin: string | null;
+  onlineCount?: number;
+  participantCount?: number;
   disabled?: boolean;
   onInvalidPin?: () => void;
   onQuizChange?: (quiz: QuizSessionState | null) => void;
@@ -31,6 +38,8 @@ export function AdminQuizPanel({
   eventCode,
   quizState,
   animatorPin,
+  onlineCount = 0,
+  participantCount = 0,
   disabled = false,
   onInvalidPin,
   onQuizChange,
@@ -38,15 +47,22 @@ export function AdminQuizPanel({
 }: AdminQuizPanelProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [answerStats, setAnswerStats] = useState<QuestionResults | null>(null);
   const tickingRef = useRef(false);
   const busyRef = useRef(false);
 
-  const { currentQuestion, progressLabel, loading, error: questionsError } =
+  const { questions, progressLabel, loading, error: questionsError } =
     useCurrentQuizQuestion(eventCode, quizState, "quiz");
 
+  const orderedQuestions = useMemo(() => {
+    if (!quizState) return [];
+    return quizState.questionIds
+      .map((id) => questions.find((q) => q.id === id))
+      .filter((q): q is NonNullable<typeof q> => q != null);
+  }, [quizState, questions]);
+
   const questionSeconds = quizState?.timing.questionSeconds ?? 15;
-  const autoplayEnabled = quizState?.autoplayEnabled !== false;
-  const compact = variant === "deck";
+  const autoplayEnabled = quizState?.autoplayEnabled === true;
 
   const runAction = useCallback(
     async (
@@ -118,6 +134,42 @@ export function AdminQuizPanel({
     });
   }, [autoplayEnabled, disabled, quizState, remaining, runAction]);
 
+  const currentQuestionId =
+    quizState?.questionIds[quizState.currentIndex] ?? null;
+  const pollAnswerStats =
+    quizState?.displayPhase === "answers" ||
+    quizState?.displayPhase === "results";
+
+  useEffect(() => {
+    if (!pollAnswerStats || !currentQuestionId) {
+      setAnswerStats(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadStats() {
+      try {
+        const res = await fetch(
+          `/api/events/${encodeURIComponent(eventCode)}/quiz/stats?questionId=${encodeURIComponent(currentQuestionId!)}`,
+        );
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as QuestionResults;
+        if (!cancelled) setAnswerStats(data);
+      } catch {
+        // keep last known count
+      }
+    }
+
+    void loadStats();
+    const interval = window.setInterval(loadStats, QUIZ_STATS_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [currentQuestionId, eventCode, pollAnswerStats, quizState?.currentIndex]);
+
   if (!quizState) {
     return null;
   }
@@ -130,6 +182,11 @@ export function AdminQuizPanel({
   const phaseLabel =
     QUIZ_PHASE_LABELS[quizState.displayPhase] ?? quizState.displayPhase;
 
+  const answerCap = onlineCount > 0 ? onlineCount : participantCount;
+  const totalAnswers = answerStats?.totalAnswers ?? 0;
+  const answerRatio = answerCap > 0 ? totalAnswers / answerCap : 0;
+  const showAnswerCount = pollAnswerStats && currentQuestionId;
+
   return (
     <AdminPanelShell
       variant={variant}
@@ -137,39 +194,32 @@ export function AdminQuizPanel({
       cardTitle="Quiz — regia domande"
       subtitle={`${phaseLabel} · ${remaining}s · ${progressLabel ?? "…"}`}
       cardDescription={`${progressLabel ?? "Caricamento domande…"} · fase: ${phaseLabel}`}
+      actions={
+        showAnswerCount ? (
+          <span
+            className={cn(
+              "text-[11px] font-semibold tabular-nums whitespace-nowrap",
+              answerRatio > 0.5 ? "text-primary" : "text-muted-foreground",
+            )}
+            aria-live="polite"
+          >
+            {totalAnswers} / {answerCap} risposte
+          </span>
+        ) : undefined
+      }
       accent
       className={variant === "card" ? "border-primary/20" : undefined}
     >
       {loading ? (
-        <p className="text-xs text-muted-foreground">Caricamento testo…</p>
-      ) : currentQuestion ? (
-        <div className="rounded-md border border-border/50 bg-background/40 p-2.5 space-y-2">
-          <p className="text-[10px] uppercase tracking-wider text-primary">
-            {progressLabel}
-          </p>
-          <p
-            className={
-              compact
-                ? "text-sm font-semibold leading-snug"
-                : "text-lg font-semibold leading-snug"
-            }
-          >
-            {currentQuestion.body}
-          </p>
-          <ul className="space-y-1">
-            {currentQuestion.options.map((option) => (
-              <li
-                key={option.id}
-                className="rounded-md border border-border/40 px-2 py-1 text-xs text-muted-foreground"
-              >
-                {option.label}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <p className="text-xs text-muted-foreground">Caricamento rullo…</p>
+      ) : orderedQuestions.length > 0 ? (
+        <AdminQuizQuestionReel
+          questions={orderedQuestions}
+          currentIndex={quizState.currentIndex}
+        />
       ) : (
         <p className="text-xs text-destructive">
-          {questionsError ?? "Domanda non trovata."}
+          {questionsError ?? "Domande non trovate."}
         </p>
       )}
 

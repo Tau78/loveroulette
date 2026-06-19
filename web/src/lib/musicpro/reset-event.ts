@@ -46,33 +46,6 @@ export async function resetLoveRouletteEvent(
     throw new Error(pairsError.message);
   }
 
-  const { data: eventQuestions } = await supabase
-    .from("love_roulette_questions")
-    .select("id")
-    .eq("event_id", eventId);
-
-  const questionIds = (eventQuestions ?? []).map((row) => row.id);
-
-  if (questionIds.length > 0) {
-    const { error: optionsError } = await supabase
-      .from("love_roulette_question_options")
-      .delete()
-      .in("question_id", questionIds);
-
-    if (optionsError) {
-      throw new Error(optionsError.message);
-    }
-
-    const { error: questionsError } = await supabase
-      .from("love_roulette_questions")
-      .delete()
-      .eq("event_id", eventId);
-
-    if (questionsError) {
-      throw new Error(questionsError.message);
-    }
-  }
-
   if (clearParticipants) {
     const { error: participantsError } = await supabase
       .from("love_roulette_participants")

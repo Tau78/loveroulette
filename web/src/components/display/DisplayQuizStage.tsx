@@ -22,6 +22,10 @@ import {
 } from "@/lib/display/quiz-display-typography";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { cn } from "@/lib/utils";
+import {
+  PROJECTOR_QUIZ_HEADER_HEIGHT,
+  PROJECTOR_QUIZ_MAIN_PAD,
+} from "@/lib/display/projector-canvas";
 
 interface DisplayQuizStageProps {
   eventSlug: string;
@@ -34,7 +38,7 @@ interface DisplayQuizStageProps {
   ) => void;
 }
 
-/** Tre zone fisse: header · centro · footer (countdown). Cuore/logo sullo sfondo. */
+/** Tre zone fisse: header · centro · footer unificato (cuore · countdown · logo). */
 function DisplayQuizGameLayout({
   header,
   center,
@@ -47,17 +51,12 @@ function DisplayQuizGameLayout({
   centerKey?: string;
 }) {
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-1 flex-col overflow-hidden">
-      <header
-        className={cn(
-          "shrink-0 px-2 pt-1 md:px-4 md:pt-2",
-          "h-[clamp(5.5rem,20vh,9.5rem)] min-h-[5.5rem] max-h-[9.5rem]",
-        )}
-      >
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1280px] flex-1 flex-col overflow-hidden">
+      <header className={cn("shrink-0 px-4 pt-2", PROJECTOR_QUIZ_HEADER_HEIGHT)}>
         <div className="flex h-full min-h-0 flex-col justify-center">{header}</div>
       </header>
 
-      <section className="min-h-0 flex-1 overflow-hidden px-2 md:px-4 py-2 md:py-3">
+      <section className={cn("min-h-0 flex-1 overflow-hidden", PROJECTOR_QUIZ_MAIN_PAD)}>
         <AnimatePresence mode="wait">
           <motion.div
             key={centerKey ?? "center"}
@@ -92,14 +91,14 @@ function QuestionHeaderPanel({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-5 py-3 backdrop-blur-md shadow-[0_12px_48px_rgba(0,0,0,0.5)] md:px-8",
+        "flex h-full min-h-0 flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-8 py-3 backdrop-blur-md shadow-[0_12px_48px_rgba(0,0,0,0.5)]",
         compact && "border-white/10 bg-black/45 py-2",
       )}
     >
       <p
         className={cn(
-          "mb-1.5 uppercase tracking-[0.22em] text-primary/90 md:mb-2",
-          compact ? "text-[10px] md:text-xs" : "text-xs md:text-sm",
+          "mb-2 uppercase tracking-[0.22em] text-primary/90",
+          compact ? "text-xs" : "text-sm",
         )}
       >
         {progressLabel ?? "Quiz"}
@@ -119,15 +118,15 @@ function ThemeHeaderPanel({
   subtitle?: string;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-5 py-3 backdrop-blur-md md:px-8">
-      <p className="mb-1.5 text-xs uppercase tracking-[0.22em] text-primary/90 md:mb-2 md:text-sm">
+    <div className="flex h-full min-h-0 flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-8 py-3 backdrop-blur-md">
+      <p className="mb-2 text-sm uppercase tracking-[0.22em] text-primary/90">
         {progressLabel ?? "Prossima manche"}
       </p>
       {subtitle ? (
         <p
           className={cn(
             QUIZ_READABLE,
-            "line-clamp-2 text-[clamp(0.875rem,min(2.2vh,2.8vw),1.5rem)] text-white/80",
+            "line-clamp-2 text-[24px] text-white/80",
           )}
         >
           {subtitle}
@@ -139,11 +138,11 @@ function ThemeHeaderPanel({
 
 function CountdownHeaderPanel() {
   return (
-    <div className="flex h-full min-h-0 flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-5 py-3 backdrop-blur-md md:px-8">
-      <p className="text-xs uppercase tracking-[0.22em] text-primary/90 md:text-sm">
+    <div className="flex h-full min-h-0 flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-8 py-3 backdrop-blur-md">
+      <p className="text-sm uppercase tracking-[0.22em] text-primary/90">
         Attenti
       </p>
-      <p className="mt-1 font-sans text-xl font-semibold text-white md:text-3xl">
+      <p className="mt-1 font-sans text-3xl font-semibold text-white">
         Il quiz sta per iniziare
       </p>
     </div>
@@ -179,16 +178,16 @@ function AnswerOptions({
   options: LoveRouletteQuestion["options"];
 }) {
   return (
-    <ul className="grid h-full min-h-0 w-full grid-rows-4 gap-[clamp(0.35rem,1vh,0.65rem)]">
+    <ul className="grid h-full min-h-0 w-full grid-rows-4 gap-2">
       {options.map((option, index) => (
         <motion.li
           key={option.id}
-          className="flex min-h-0 items-center rounded-xl border border-white/15 bg-black/50 px-[clamp(0.5rem,1.5vw,1.25rem)] font-sans text-white backdrop-blur-sm"
+          className="flex min-h-0 items-center rounded-xl border border-white/15 bg-black/50 px-5 font-sans text-white backdrop-blur-sm"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.06 + index * 0.05, duration: 0.3 }}
         >
-          <span className={cn(QUIZ_ANSWER_LETTER_CLASS, "mr-[clamp(0.35rem,1vw,0.75rem)]")}>
+          <span className={cn(QUIZ_ANSWER_LETTER_CLASS, "mr-3")}>
             {String.fromCharCode(65 + index)}.
           </span>
           <span className={cn(QUIZ_ANSWER_TEXT_CLASS, "min-w-0 flex-1")}>
@@ -218,7 +217,7 @@ function ThemeCenter({ title }: { title: string }) {
           aria-hidden
         />
       ))}
-      <div className="relative z-10 w-full max-w-4xl rounded-2xl border border-white/15 bg-black/55 px-6 py-10 text-center backdrop-blur-md shadow-[0_12px_48px_rgba(0,0,0,0.5)] md:px-10 md:py-14">
+      <div className="relative z-10 w-full max-w-4xl rounded-2xl border border-white/15 bg-black/55 px-10 py-14 text-center backdrop-blur-md shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
         <motion.p
           className={cn(QUIZ_THEME_TITLE_CLASS, "text-center")}
           style={{ textShadow: "0 2px 24px rgba(0,0,0,0.9)" }}
@@ -242,7 +241,7 @@ function ResultsBars({
 }) {
   return (
     <motion.div
-      className="flex h-full min-h-0 w-full flex-col gap-2 md:gap-3"
+      className="flex h-full min-h-0 w-full flex-col gap-3"
       initial="hidden"
       animate="show"
       variants={{
@@ -260,30 +259,30 @@ function ResultsBars({
         className="flex shrink-0 items-baseline justify-between gap-3 px-1"
         variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }}
       >
-        <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold md:text-sm">
+        <p className="text-sm uppercase tracking-[0.2em] text-primary font-semibold">
           Risultati in sala
         </p>
-        <p className="text-[10px] text-white/50 tabular-nums md:text-xs">
+        <p className="text-xs text-white/50 tabular-nums">
           {results.totalAnswers}{" "}
           {results.totalAnswers === 1 ? "risposta" : "risposte"}
         </p>
       </motion.div>
 
-      <div className="grid min-h-0 flex-1 grid-rows-4 gap-[clamp(0.25rem,0.8vh,0.5rem)]">
+      <div className="grid min-h-0 flex-1 grid-rows-4 gap-2">
         {results.options.map((stat, index) => {
           const letter = String.fromCharCode(65 + index);
           return (
             <motion.div
               key={stat.optionId}
-              className="flex min-h-0 flex-col justify-center rounded-xl border border-white/15 bg-black/55 px-[clamp(0.5rem,1.2vw,1rem)] py-[clamp(0.25rem,0.8vh,0.5rem)] backdrop-blur-sm"
+              className="flex min-h-0 flex-col justify-center rounded-xl border border-white/15 bg-black/55 px-4 py-2 backdrop-blur-sm"
               variants={{
                 hidden: { opacity: 0, x: -20 },
                 show: { opacity: 1, x: 0 },
               }}
             >
               <div className="flex min-h-0 items-center justify-between gap-2">
-                <span className="flex min-w-0 flex-1 items-center gap-[clamp(0.35rem,1vw,0.5rem)]">
-                  <span className="inline-flex size-[clamp(1.5rem,min(3.5vh,4vw),2rem)] shrink-0 items-center justify-center rounded-md border border-primary/55 bg-primary/15 font-mono text-[clamp(0.65rem,min(1.8vh,2.2vw),1rem)] font-bold text-primary">
+                <span className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-primary/55 bg-primary/15 font-mono text-base font-bold text-primary">
                     {letter}
                   </span>
                   <span className={cn(QUIZ_RESULT_LABEL_CLASS, "min-w-0 flex-1")}>
@@ -299,7 +298,7 @@ function ResultsBars({
                   {stat.percent}%
                 </motion.span>
               </div>
-              <div className="mt-1 h-[clamp(0.35rem,0.9vh,0.65rem)] overflow-hidden rounded-full bg-white/10">
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/10">
                 <motion.div
                   className="h-full rounded-full bg-gradient-to-r from-primary/70 via-primary to-primary/90"
                   initial={{ width: "0%" }}
@@ -334,7 +333,7 @@ export function DisplayQuizStage({
     eventSlug,
     quizState,
     enabled: true,
-    driveTicks: quizState.autoplayEnabled !== false,
+    driveTicks: quizState.autoplayEnabled === true,
     onPhaseChange: (nextPhase) => {
       if (nextPhase === "results") {
         setResults(null);

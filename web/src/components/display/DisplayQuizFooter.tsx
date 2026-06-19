@@ -1,15 +1,23 @@
 "use client";
 
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
+import { DisplayQuizHeart } from "@/components/display/DisplayQuizHeart";
 import { cn } from "@/lib/utils";
 import {
-  QUIZ_FOOTER_BAR_CLASS,
+  QUIZ_FOOTER_BRAND_HEART_CLASS,
+  QUIZ_FOOTER_BRAND_LOGO_CLASS,
   QUIZ_FOOTER_COUNTDOWN_DIGIT_CLASS,
   QUIZ_FOOTER_COUNTDOWN_RING_RADIUS,
   QUIZ_FOOTER_COUNTDOWN_SLOT_CLASS,
   QUIZ_FOOTER_COUNTDOWN_VIEWBOX,
+  QUIZ_FOOTER_MASK_BAR_CLASS,
+  QUIZ_FOOTER_MASK_PATH,
+  QUIZ_FOOTER_MASK_VIEWBOX,
 } from "@/lib/display/quiz-footer-metrics";
+
+const LOGO_SRC = "/grafiche/logo-transparent.png";
 
 interface DisplayQuizFooterProps {
   countdown?: {
@@ -27,6 +35,7 @@ function FooterCountdown({
   total: number;
 }) {
   const reduceMotion = useReducedMotion();
+  const gradientId = useId().replace(/:/g, "");
   const prevValueRef = useRef(value);
   const ticked = prevValueRef.current !== value;
 
@@ -75,7 +84,7 @@ function FooterCountdown({
         aria-hidden
       >
         <defs>
-          <linearGradient id="countdown-ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`countdown-ring-gradient-${gradientId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="rgb(244, 114, 182)" />
             <stop offset="50%" stopColor="rgb(236, 72, 153)" />
             <stop offset="100%" stopColor="rgb(219, 39, 119)" />
@@ -94,7 +103,7 @@ function FooterCountdown({
           cy={center}
           r={r}
           fill="none"
-          stroke="url(#countdown-ring-gradient)"
+          stroke={`url(#countdown-ring-gradient-${gradientId})`}
           strokeWidth="3"
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -144,19 +153,102 @@ function FooterCountdown({
   );
 }
 
-/** Solo countdown — cuore e logo sono sullo sfondo (angoli bassi). */
+function FooterMaskShape() {
+  const { width, height } = QUIZ_FOOTER_MASK_VIEWBOX;
+
+  return (
+    <svg
+      className="pointer-events-none absolute inset-x-0 bottom-0 h-full w-full"
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id="quiz-footer-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgba(18,8,16,0.72)" />
+          <stop offset="100%" stopColor="rgba(8,4,10,0.88)" />
+        </linearGradient>
+        <linearGradient id="quiz-footer-rim" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
+          <stop offset="18%" stopColor="rgba(236,72,153,0.22)" />
+          <stop offset="50%" stopColor="rgba(255,255,255,0.18)" />
+          <stop offset="82%" stopColor="rgba(236,72,153,0.22)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.06)" />
+        </linearGradient>
+        <filter id="quiz-footer-glow" x="-20%" y="-40%" width="140%" height="180%">
+          <feDropShadow
+            dx="0"
+            dy="-4"
+            stdDeviation="8"
+            floodColor="rgba(236,72,153,0.25)"
+          />
+        </filter>
+      </defs>
+      <path
+        d={QUIZ_FOOTER_MASK_PATH}
+        fill="url(#quiz-footer-fill)"
+        filter="url(#quiz-footer-glow)"
+      />
+      <path
+        d={QUIZ_FOOTER_MASK_PATH}
+        fill="none"
+        stroke="url(#quiz-footer-rim)"
+        strokeWidth="1.5"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+/** Maschera unificata: cuore · countdown · logo Love Roulette. */
 export function DisplayQuizFooter({
   countdown = null,
   className,
 }: DisplayQuizFooterProps) {
   return (
-    <footer className={cn("relative z-10 shrink-0 px-3 pb-2 md:px-6 md:pb-3", className)}>
-      <div className={QUIZ_FOOTER_BAR_CLASS}>
-        {countdown ? (
-          <FooterCountdown value={countdown.value} total={countdown.total} />
-        ) : (
-          <span className="sr-only">Timer non attivo</span>
-        )}
+    <footer
+      className={cn(
+        "relative z-20 shrink-0 px-4 pb-3 pt-[60px]",
+        className,
+      )}
+    >
+      <div className="relative mx-auto w-full max-w-[1280px]">
+        <div className={cn(QUIZ_FOOTER_MASK_BAR_CLASS, "relative")}>
+          <FooterMaskShape />
+
+          <div className="relative z-10 flex h-full items-end justify-between px-6 lg:px-8">
+            <div className="relative z-20 flex shrink-0 items-end pb-2">
+              <DisplayQuizHeart
+                variant="inline"
+                className={QUIZ_FOOTER_BRAND_HEART_CLASS}
+              />
+            </div>
+
+            <div
+              className={cn(
+                "pointer-events-none absolute left-1/2 bottom-0 z-20 -translate-x-1/2",
+                "translate-y-[calc(-50%+0.5rem)]",
+              )}
+            >
+              {countdown ? (
+                <FooterCountdown value={countdown.value} total={countdown.total} />
+              ) : (
+                <span className="sr-only">Timer non attivo</span>
+              )}
+            </div>
+
+            <div className="relative z-20 flex shrink-0 items-end pb-2">
+              <Image
+                src={LOGO_SRC}
+                alt=""
+                width={208}
+                height={91}
+                className={QUIZ_FOOTER_BRAND_LOGO_CLASS}
+                aria-hidden
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </footer>
   );

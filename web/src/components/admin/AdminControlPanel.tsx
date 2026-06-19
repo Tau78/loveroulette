@@ -255,6 +255,9 @@ export function AdminControlPanel({
             ? "…"
             : (questionCount ?? "—")}
         </span>
+        {questionCount === 27 ? (
+          <span className="ml-1 text-primary/80">· bundle OK</span>
+        ) : null}
       </p>
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}

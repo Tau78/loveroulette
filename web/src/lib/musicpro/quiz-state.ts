@@ -139,7 +139,7 @@ export function getQuizSessionState(
       ? record.phaseStartedAt
       : updatedAt;
 
-  const autoplayEnabled = record.autoplayEnabled !== false;
+  const autoplayEnabled = record.autoplayEnabled === true;
 
   const gongCueKey =
     typeof record.gongCueKey === "string" ? record.gongCueKey : undefined;
@@ -245,7 +245,7 @@ export async function startQuizSession(
     total: quizQuestions.length,
     source: source === "pool" ? "event" : source,
     autoplaySeconds: timing.questionSeconds,
-    autoplayEnabled: true,
+    autoplayEnabled: false,
     updatedAt: at,
     displayPhase: "start_countdown",
     phaseStartedAt: at,

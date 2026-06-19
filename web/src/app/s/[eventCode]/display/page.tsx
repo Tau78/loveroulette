@@ -18,6 +18,12 @@ import { isEventUuid, normalizeEventSlug } from "@/lib/musicpro/slug";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { isDisplayEmbedMode } from "@/lib/display/embed";
+import { PROJECTOR_CANVAS, PROJECTOR_HEADER_CLASS } from "@/lib/display/projector-canvas";
+import { DisplayProjectorRoot } from "@/components/display/DisplayProjectorRoot";
+import { DisplayProjectorHeader } from "@/components/display/DisplayProjectorHeader";
+import { DisplayFixedCanvas } from "@/components/display/DisplayFixedCanvas";
+import { DisplayLocalMediaLayer } from "@/components/display/DisplayLocalMediaLayer";
+import { useRegiaLocalMediaReceiver } from "@/hooks/useRegiaLocalMediaReceiver";
 
 function absoluteUrl(pathOrUrl: string): string {
   if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
@@ -49,6 +55,7 @@ export default function DisplayPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const embedMode = isDisplayEmbedMode(searchParams);
+  const presentMode = searchParams.get("present") === "1";
   const rawSlug = String(params.eventCode ?? "");
   const eventSlug = useMemo(
     () => (isEventUuid(rawSlug) ? rawSlug : normalizeEventSlug(rawSlug)),
@@ -90,13 +97,16 @@ export default function DisplayPage() {
 
   const isQuiz = runtimeState === "quiz" && Boolean(quizState);
 
-  useEffect(() => {
-    if (!embedMode) return;
+  const { state: localMediaState, active: localMediaActive } =
+    useRegiaLocalMediaReceiver(eventSlug);
 
+  useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
     const prevHtmlOverflow = html.style.overflow;
+    const prevHtmlHeight = html.style.height;
     const prevBodyOverflow = body.style.overflow;
+    const prevBodyHeight = body.style.height;
     const prevBodyMargin = body.style.margin;
 
     html.style.overflow = "hidden";
@@ -107,44 +117,57 @@ export default function DisplayPage() {
 
     return () => {
       html.style.overflow = prevHtmlOverflow;
-      html.style.height = "";
+      html.style.height = prevHtmlHeight;
       body.style.overflow = prevBodyOverflow;
-      body.style.height = "";
+      body.style.height = prevBodyHeight;
       body.style.margin = prevBodyMargin;
     };
-  }, [embedMode]);
+  }, []);
 
   return (
-    <div
-      className={cn(
-        "relative flex h-screen max-h-screen w-full max-w-full flex-col overflow-hidden text-foreground",
-        embedMode && "overscroll-none",
-      )}
-      data-display-embed={embedMode ? "1" : undefined}
+    <DisplayProjectorRoot
+      embedMode={embedMode}
+      presentMode={presentMode}
+      className="fixed inset-0 bg-black outline-none"
     >
+      <DisplayFixedCanvas>
+        <div
+          className="relative flex flex-col overflow-hidden text-foreground"
+          style={{
+            width: PROJECTOR_CANVAS.width,
+            height: PROJECTOR_CANVAS.height,
+          }}
+        >
       <DisplayStageBackground
         logoScale={isLobby ? "full" : "compact"}
-        stableLayout={embedMode}
         quizPhase={isQuiz ? quizState!.displayPhase : null}
+        hideBackgroundRoulette={
+          runtimeState === "extraction" || runtimeState === "matching"
+        }
       />
 
-      <header className="relative z-10 flex justify-end px-6 py-4 md:px-10 md:py-5 shrink-0">
+      <DisplayLocalMediaLayer
+        state={localMediaState}
+        active={localMediaActive}
+      />
+
+      <DisplayProjectorHeader embedMode={embedMode} className={PROJECTOR_HEADER_CLASS}>
         <Badge
           variant="outline"
-          className="text-xs md:text-sm uppercase tracking-wider px-3 py-1.5 border-white/15 bg-black/35 backdrop-blur-sm"
+          className="text-sm uppercase tracking-wider px-3 py-1.5 border-white/15 bg-black/35 backdrop-blur-sm"
         >
           {displayCode} · {phaseLabel}
         </Badge>
-      </header>
+      </DisplayProjectorHeader>
 
       <main
         className={cn(
-          "relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-4 md:px-8",
+          "relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-8",
           runtimeState === "quiz" && quizState
             ? "items-stretch w-full"
             : runtimeState === "extraction" || runtimeState === "elimination"
               ? "items-stretch w-full h-full"
-              : "items-center px-6 md:px-12",
+              : "items-center px-12",
         )}
       >
         {runtimeState === "matching" ? (
@@ -178,17 +201,17 @@ export default function DisplayPage() {
             runtimeState={runtimeState === "winner" ? "winner" : "finals"}
           />
         ) : isLobby ? (
-          <div className="relative z-10 flex flex-1 w-full items-end pb-10 md:pb-14 px-8 md:px-16 animate-fade-in">
-            <div className="flex flex-col items-start gap-4 max-w-[min(100%,320px)]">
-              <p className="text-left text-base md:text-lg text-white/90 tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
+          <div className="relative z-10 flex flex-1 w-full items-end pb-14 px-16 animate-fade-in">
+            <div className="flex flex-col items-start gap-4 max-w-[320px]">
+              <p className="text-left text-lg text-white/90 tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
                 Scansiona il QR e preparati al gioco
               </p>
               <JoinQrCode url={effectiveJoinUrl} showUrl={false} size={240} />
             </div>
           </div>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-end text-center pb-16 md:pb-20 animate-fade-in">
-            <p className="text-2xl md:text-4xl font-display text-white/90 drop-shadow-lg">
+          <div className="flex flex-1 flex-col items-center justify-end text-center pb-20 animate-fade-in">
+            <p className="text-4xl font-display text-white/90 drop-shadow-lg">
               {phaseLabel}
             </p>
           </div>
@@ -229,7 +252,7 @@ export default function DisplayPage() {
               return (
                 <div
                   key={finalist.pairId}
-                  className="rounded-xl py-4 text-center text-lg md:text-xl font-semibold bg-black/30 border border-white/10 text-white/80"
+                  className="rounded-xl py-4 text-center text-xl font-semibold bg-black/30 border border-white/10 text-white/80"
                 >
                   {label}
                   <span className="block text-sm font-normal text-white/45 mt-1">
@@ -244,6 +267,8 @@ export default function DisplayPage() {
       ) : null}
 
       <DisplayOverlay overlay={displayOverlay} joinUrl={effectiveJoinUrl} />
-    </div>
+        </div>
+      </DisplayFixedCanvas>
+    </DisplayProjectorRoot>
   );
 }

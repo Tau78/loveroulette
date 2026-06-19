@@ -14,7 +14,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  PLAYER_RESULTS_ANSWERED,
+  PLAYER_RESULTS_MISSED,
+} from "@/lib/player/public-copy";
 import { cn } from "@/lib/utils";
+
+const CARD_CLASS =
+  "bg-card/85 backdrop-blur-md border-primary/25 shadow-[0_0_32px_rgba(236,72,153,0.12)]";
+const CARD_ACTIVE =
+  "border-primary/45 shadow-[0_0_40px_rgba(236,72,153,0.28)] ring-1 ring-primary/20";
 
 interface QuizPlayerProps {
   eventSlug: string;
@@ -104,9 +113,11 @@ export function QuizPlayer({
     return null;
   }
 
+  let phaseContent = null;
+
   if (quizState.displayPhase === "start_countdown") {
-    return (
-      <Card className="bg-card/80 backdrop-blur-md border-border/60">
+    phaseContent = (
+      <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardContent className="py-10 text-center">
           <p className="text-4xl font-bold tabular-nums text-primary">
             {remaining}
@@ -115,9 +126,7 @@ export function QuizPlayer({
         </CardContent>
       </Card>
     );
-  }
-
-  if (quizState.displayPhase === "theme_intro") {
+  } else if (quizState.displayPhase === "theme_intro") {
     const theme = resolveThemeForQuizIndex(
       quizState.questionIds,
       quizState.currentIndex,
@@ -125,8 +134,8 @@ export function QuizPlayer({
       currentQuestion?.category,
     );
 
-    return (
-      <Card className="bg-card/80 backdrop-blur-md border-border/60 border-primary/20">
+    phaseContent = (
+      <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardContent className="py-8 text-center space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">
             Tema
@@ -140,46 +149,44 @@ export function QuizPlayer({
             </p>
           ) : null}
           <p className="text-xs text-muted-foreground/80 pt-1">
-            Guarda il proiettore…
+            Guarda gli schermi…
           </p>
         </CardContent>
       </Card>
     );
-  }
-
-  if (quizState.displayPhase === "next_question") {
-    return (
-      <Card className="bg-card/80 backdrop-blur-md border-border/60">
+  } else if (quizState.displayPhase === "next_question") {
+    phaseContent = (
+      <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardContent className="py-8 text-center text-muted-foreground">
-          Prossima domanda — guarda il proiettore!
+          Prossima domanda — guarda gli schermi!
         </CardContent>
       </Card>
     );
-  }
+  } else if (quizState.displayPhase === "results") {
+    const answeredInTime =
+      currentQuestion != null &&
+      answeredQuestionId === currentQuestion.id;
 
-  if (quizState.displayPhase === "results") {
-    return (
-      <Card className="bg-card/80 backdrop-blur-md border-border/60">
+    phaseContent = (
+      <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardContent className="py-8 text-center text-primary">
-          Tempo scaduto — guarda il proiettore per i risultati!
+          {answeredInTime
+            ? PLAYER_RESULTS_ANSWERED
+            : PLAYER_RESULTS_MISSED}
         </CardContent>
       </Card>
     );
-  }
-
-  if (loading || !currentQuestion) {
-    return (
-      <Card className="bg-card/80 backdrop-blur-md border-border/60">
+  } else if (loading || !currentQuestion) {
+    phaseContent = (
+      <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardContent className="py-8 text-center text-muted-foreground">
           Caricamento domanda…
         </CardContent>
       </Card>
     );
-  }
-
-  if (quizState.displayPhase === "question") {
-    return (
-      <Card className="bg-card/80 backdrop-blur-md border-border/60 border-primary/20">
+  } else if (quizState.displayPhase === "question") {
+    phaseContent = (
+      <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardHeader className="pb-2">
           <CardDescription>{progressLabel}</CardDescription>
           <CardTitle className="text-xl leading-snug">
@@ -193,56 +200,58 @@ export function QuizPlayer({
         </CardContent>
       </Card>
     );
+  } else {
+    const alreadyAnswered = answeredQuestionId === currentQuestion.id;
+
+    phaseContent = (
+      <Card className={cn(CARD_CLASS, canAnswer && CARD_ACTIVE)}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-2">
+            <CardDescription>{progressLabel}</CardDescription>
+            <span
+              className={cn(
+                "text-sm font-bold tabular-nums text-primary",
+                remaining <= 5 && "animate-pulse",
+              )}
+            >
+              {remaining}s
+            </span>
+          </div>
+          <CardTitle className="text-xl leading-snug">
+            {currentQuestion.body}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {currentQuestion.options.map((option) => (
+            <Button
+              key={option.id}
+              type="button"
+              variant="outline"
+              disabled={submitting || alreadyAnswered || !canAnswer}
+              className={cn(
+                "h-auto w-full justify-start whitespace-normal py-3 text-left",
+                selectedOptionId === option.id &&
+                  "border-primary bg-primary/15 text-primary",
+              )}
+              onClick={() => void submitAnswer(option.id, currentQuestion)}
+            >
+              {option.label}
+            </Button>
+          ))}
+
+          {alreadyAnswered ? (
+            <p className="text-sm text-primary text-center">
+              Risposta inviata — guarda gli schermi!
+            </p>
+          ) : null}
+
+          {submitError ? (
+            <p className="text-sm text-destructive text-center">{submitError}</p>
+          ) : null}
+        </CardContent>
+      </Card>
+    );
   }
 
-  const alreadyAnswered = answeredQuestionId === currentQuestion.id;
-
-  return (
-    <Card className="bg-card/80 backdrop-blur-md border-border/60">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-2">
-          <CardDescription>{progressLabel}</CardDescription>
-          <span
-            className={cn(
-              "text-sm font-bold tabular-nums text-primary",
-              remaining <= 5 && "animate-pulse",
-            )}
-          >
-            {remaining}s
-          </span>
-        </div>
-        <CardTitle className="text-xl leading-snug">
-          {currentQuestion.body}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {currentQuestion.options.map((option) => (
-          <Button
-            key={option.id}
-            type="button"
-            variant="outline"
-            disabled={submitting || alreadyAnswered || !canAnswer}
-            className={cn(
-              "h-auto w-full justify-start whitespace-normal py-3 text-left",
-              selectedOptionId === option.id &&
-                "border-primary bg-primary/15 text-primary",
-            )}
-            onClick={() => void submitAnswer(option.id, currentQuestion)}
-          >
-            {option.label}
-          </Button>
-        ))}
-
-        {alreadyAnswered ? (
-          <p className="text-sm text-primary text-center">
-            Risposta inviata — guarda il proiettore!
-          </p>
-        ) : null}
-
-        {submitError ? (
-          <p className="text-sm text-destructive text-center">{submitError}</p>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
+  return phaseContent ?? null;
 }

@@ -27,11 +27,14 @@ function isEditableTarget(target: EventTarget | null): boolean {
 interface UseFullscreenOptions {
   storageKey?: string;
   enableShortcut?: boolean;
+  /** When true, F toggles without requiring focus inside the container (e.g. projector page). */
+  alwaysListenShortcut?: boolean;
 }
 
 export function useFullscreen({
   storageKey = STORAGE_KEY,
   enableShortcut = true,
+  alwaysListenShortcut = false,
 }: UseFullscreenOptions = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -47,7 +50,11 @@ export function useFullscreen({
       typeof document !== "undefined" && document.fullscreenEnabled !== false,
     );
     document.addEventListener("fullscreenchange", syncState);
-    return () => document.removeEventListener("fullscreenchange", syncState);
+    document.addEventListener("webkitfullscreenchange", syncState);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncState);
+      document.removeEventListener("webkitfullscreenchange", syncState);
+    };
   }, [syncState]);
 
   const persistPreference = useCallback(
@@ -117,13 +124,15 @@ export function useFullscreen({
       const container = containerRef.current;
       if (!container) return;
 
-      const active = document.activeElement;
-      const dashboardFocused =
-        active === document.body ||
-        active === container ||
-        (active instanceof Node && container.contains(active));
+      if (!alwaysListenShortcut) {
+        const active = document.activeElement;
+        const dashboardFocused =
+          active === document.body ||
+          active === container ||
+          (active instanceof Node && container.contains(active));
 
-      if (!dashboardFocused) return;
+        if (!dashboardFocused) return;
+      }
 
       event.preventDefault();
       void toggle();
@@ -131,7 +140,7 @@ export function useFullscreen({
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [enableShortcut, toggle]);
+  }, [alwaysListenShortcut, enableShortcut, toggle]);
 
   return {
     containerRef,

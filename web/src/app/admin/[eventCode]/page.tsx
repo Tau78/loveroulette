@@ -2,20 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import {
-  KeyRound,
-  Megaphone,
-  QrCode,
-  SlidersHorizontal,
-} from "lucide-react";
+import { KeyRound, Megaphone, SlidersHorizontal } from "lucide-react";
 import { AdminAudioPanel } from "@/components/admin/AdminAudioPanel";
 import { AdminControlPanel } from "@/components/admin/AdminControlPanel";
+import { AdminPreflightPanel } from "@/components/admin/AdminPreflightPanel";
 import { AdminDashboardShell } from "@/components/admin/AdminDashboardShell";
 import { AdminDeckPanel } from "@/components/admin/AdminDeckPanel";
 import { AdminGeneratorePanel } from "@/components/admin/AdminGeneratorePanel";
 import { AdminPinModal } from "@/components/admin/AdminPinModal";
 import { AdminNewGamePanel } from "@/components/admin/AdminNewGamePanel";
-import { AdminQrPanel } from "@/components/admin/AdminQrPanel";
 import { AdminQuizPanel } from "@/components/admin/AdminQuizPanel";
 import { AdminRegiaPanel } from "@/components/admin/AdminRegiaPanel";
 import { DisplayPreview } from "@/components/admin/DisplayPreview";
@@ -29,11 +24,10 @@ import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import { normalizeEventSlug } from "@/lib/musicpro/slug";
 import { postQuizAction } from "@/lib/admin/animator-api";
 
-type AdminTab = "controlli" | "invito" | "regia";
+type AdminTab = "controlli" | "regia";
 
 const TABS: { id: AdminTab; label: string; icon: typeof SlidersHorizontal }[] = [
   { id: "controlli", label: "Controlli", icon: SlidersHorizontal },
-  { id: "invito", label: "Invito & QR", icon: QrCode },
   { id: "regia", label: "Regia", icon: Megaphone },
 ];
 
@@ -257,6 +251,13 @@ export default function AdminDashboardPage() {
             <div className="space-y-2 overflow-y-auto min-h-0 h-full pr-0.5">
               {activeTab === "controlli" ? (
                 <>
+                  <AdminPreflightPanel
+                    variant="deck"
+                    eventCode={eventCode}
+                    onlineCount={stats.onlineCount}
+                    participantCount={stats.participantCount}
+                    questionsRefreshKey={questionsRefreshKey}
+                  />
                   <AdminControlPanel
                     variant="deck"
                     eventCode={eventCode}
@@ -274,6 +275,8 @@ export default function AdminDashboardPage() {
                       eventCode={eventCode}
                       quizState={effectiveQuizState}
                       animatorPin={pin}
+                      onlineCount={stats.onlineCount}
+                      participantCount={stats.participantCount}
                       disabled={controlsDisabled}
                       onInvalidPin={handleInvalidPin}
                       onQuizChange={handleQuizChange}
@@ -331,21 +334,11 @@ export default function AdminDashboardPage() {
                 </>
               ) : null}
 
-              {activeTab === "invito" ? (
-                <AdminQrPanel
-                  variant="deck"
-                  eventCode={eventCode}
-                  joinUrl={event.joinUrl}
-                  animatorPin={pin}
-                  disabled={controlsDisabled}
-                  onInvalidPin={handleInvalidPin}
-                />
-              ) : null}
-
               {activeTab === "regia" ? (
                 <AdminRegiaPanel
                   variant="deck"
                   eventCode={eventCode}
+                  joinUrl={event.joinUrl}
                   animatorPin={pin}
                   disabled={controlsDisabled}
                   onInvalidPin={handleInvalidPin}

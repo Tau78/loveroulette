@@ -1,10 +1,15 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Heart } from "lucide-react";
+import { motion } from "framer-motion";
 import { AmbientBackground } from "@/components/player/AmbientBackground";
+import { PlayerLobbyGlow } from "@/components/player/PlayerLobbyGlow";
+import { PlayerMobileHeader } from "@/components/player/PlayerMobileHeader";
+import { PlayerMobileShell } from "@/components/player/PlayerMobileShell";
+import { PlayerPresenceHero } from "@/components/player/PlayerPresenceHero";
+import { PlayerRuntimeGlow } from "@/components/player/PlayerRuntimeGlow";
+import { PlayerStageTransition } from "@/components/player/PlayerStageTransition";
 import { QuizPlayer } from "@/components/player/QuizPlayer";
 import { VotingPlayer } from "@/components/player/VotingPlayer";
 import { CoupleTakeover } from "@/components/player/CoupleTakeover";
@@ -22,32 +27,18 @@ import {
   type StoredParticipantProfile,
 } from "@/lib/player/participant-storage";
 import { useLoveRouletteSession } from "@/hooks/useLoveRouletteSession";
+import { usePlayerEventInfo } from "@/hooks/usePlayerEventInfo";
 import { isEventUuid, normalizeEventSlug } from "@/lib/musicpro/slug";
-import type { EventState } from "@/lib/types";
-import { PageShell } from "@/components/layout/PageShell";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-
-const STATE_LABELS: Record<EventState, string> = {
-  lobby: "Lobby",
-  quiz: "Quiz",
-  matching: "Roulette",
-  extraction: "Estrazione",
-  elimination: "Eliminazione",
-  finals: "Finali",
-  winner: "Vincitore",
-  closed: "Chiuso",
-};
+import { PLAYER_PRIVACY_SHARING_NOTICE } from "@/lib/player/public-copy";
+import { playerPresenceSubtitle } from "@/lib/player/presence-copy";
 
 type JoinField = "nickname" | "badge";
 
@@ -63,6 +54,9 @@ interface JoinResponse {
     badge_code?: string | null;
   };
 }
+
+const JOIN_CARD_CLASS =
+  "border-primary/25 bg-card/85 shadow-[0_0_32px_rgba(236,72,153,0.12)] backdrop-blur-md";
 
 async function postJoin(
   eventSlug: string,
@@ -139,6 +133,9 @@ export default function PlayerPlayPage() {
     [rawSlug],
   );
 
+  const { info: eventInfo, loading: eventInfoLoading } =
+    usePlayerEventInfo(eventSlug);
+
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [badgeCode, setBadgeCode] = useState("");
@@ -153,11 +150,26 @@ export default function PlayerPlayPage() {
   const joinedRef = useRef(false);
   const lastRevealAtRef = useRef<string | null>(null);
 
-  const { runtimeState, transport, isResolving, quizState, lastReveal, voting } =
+  const { runtimeState, quizState, lastReveal, voting } =
     useLoveRouletteSession({
       eventSlug,
       enabled: joined,
     });
+
+  const presenceSubtitle = playerPresenceSubtitle(runtimeState, {
+    quizPhase: quizState?.displayPhase ?? null,
+    votingOpen: voting.current?.status === "open",
+  });
+
+  const playerStageKey = useMemo(() => {
+    if (runtimeState === "quiz" && quizState) {
+      return `quiz-${quizState.displayPhase}-${quizState.currentIndex}-${quizState.phaseStartedAt}`;
+    }
+    if (runtimeState === "finals" && voting.current) {
+      return `finals-${voting.current.status}-${voting.current.updatedAt}`;
+    }
+    return runtimeState;
+  }, [quizState, runtimeState, voting.current]);
 
   const applyParticipant = useCallback(
     (
@@ -314,7 +326,11 @@ export default function PlayerPlayPage() {
     if (!joined || partnerNick) return;
     if (runtimeState === "matching") setWaveMode("spin");
     else if (runtimeState === "extraction") setWaveMode("reveal");
-    else if (runtimeState === "lobby") setWaveMode("idle");
+    else if (runtimeState === "quiz") setWaveMode("pulse");
+    else if (runtimeState === "elimination") setWaveMode("pulse");
+    else if (runtimeState === "finals" || runtimeState === "winner") {
+      setWaveMode("celebration");
+    } else setWaveMode("idle");
   }, [joined, runtimeState, partnerNick]);
 
   useEffect(() => {
@@ -354,16 +370,6 @@ export default function PlayerPlayPage() {
     setWaveMode("idle");
   }, []);
 
-  const simulateSpin = () => {
-    setPartnerNick(null);
-    setWaveMode("spin");
-  };
-
-  const simulateExtraction = () => {
-    const demoPartner = gender === "male" ? "Sofia" : "Marco";
-    dispatchCoupleRevealed({ partnerNick: demoPartner, yourNick: nickname });
-  };
-
   const handleJoin = async () => {
     const nick = nickname.trim();
     if (!nick) {
@@ -390,219 +396,193 @@ export default function PlayerPlayPage() {
 
   if (restoreState === "pending" || (joining && !joined)) {
     return (
-      <PageShell className="p-6">
-        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-center">
-          <p className="text-muted-foreground">Riconnessione in corso…</p>
+      <PlayerMobileShell eventSlug={eventSlug}>
+        <PlayerMobileHeader event={eventInfo} loading={eventInfoLoading} />
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <motion.div
+            className="size-10 rounded-full border-2 border-primary/40 border-t-primary"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          <p className="text-sm text-muted-foreground">Riconnessione in corso…</p>
         </div>
-      </PageShell>
+      </PlayerMobileShell>
     );
   }
 
   if (joined) {
     return (
-      <AmbientBackground waveMode={waveMode}>
-        <div className="min-h-full flex flex-col items-center justify-center p-6 pb-28">
-          <div className="w-full max-w-md space-y-6 text-center">
-            <Badge variant="outline" className="border-primary/40 text-primary">
-              {eventSlug}
-            </Badge>
-            <div className="inline-flex size-14 items-center justify-center rounded-full bg-primary/15 ring-1 ring-primary/30">
-              <Heart className="size-7 text-primary fill-primary/30" />
+      <PlayerMobileShell eventSlug={eventSlug}>
+        <PlayerMobileHeader event={eventInfo} loading={eventInfoLoading} />
+        <AmbientBackground waveMode={waveMode} className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col items-center justify-center px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            <div className="w-full max-w-md space-y-6">
+              <PlayerStageTransition stageKey={playerStageKey}>
+                <PlayerPresenceHero
+                  nickname={nickname}
+                  gender={gender}
+                  runtimeState={runtimeState}
+                  quizPhase={quizState?.displayPhase ?? null}
+                  votingOpen={voting.current?.status === "open"}
+                  subtitle={presenceSubtitle}
+                />
+
+                {runtimeState === "lobby" ? <PlayerLobbyGlow /> : null}
+
+                {runtimeState !== "lobby" && runtimeState !== "quiz" ? (
+                  <PlayerRuntimeGlow runtimeState={runtimeState} />
+                ) : null}
+
+                {participantId && voting.current?.status === "open" &&
+                runtimeState === "finals" ? (
+                  <VotingPlayer
+                    eventSlug={eventSlug}
+                    participantId={participantId}
+                    session={voting.current}
+                  />
+                ) : participantId ? (
+                  <QuizPlayer
+                    eventSlug={eventSlug}
+                    participantId={participantId}
+                    quizState={quizState}
+                    runtimeState={runtimeState}
+                  />
+                ) : null}
+              </PlayerStageTransition>
             </div>
-            <h1 className="text-2xl font-bold">Ciao, {nickname}!</h1>
-            <p className="text-muted-foreground">
-              Sei in sala. In attesa dell&apos;animatore...
-            </p>
-            <Card className="bg-card/80 backdrop-blur-md border-border/60">
-              <CardHeader className="pb-2">
-                <CardDescription>Stato evento</CardDescription>
-                <CardTitle className="text-xl">
-                  {isResolving
-                    ? "Caricamento..."
-                    : STATE_LABELS[runtimeState]}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  {runtimeState === "lobby"
-                    ? "Il quiz partirà quando l'animatore premerà Start."
-                    : runtimeState === "quiz"
-                      ? "Rispondi alla domanda qui sotto."
-                      : runtimeState === "matching"
-                        ? "La roulette sta girando..."
-                        : runtimeState === "extraction"
-                          ? "Estrazione coppia in corso."
-                      : runtimeState === "finals"
-                        ? voting.current?.status === "open"
-                          ? "Scegli la coppia preferita qui sotto."
-                          : "In attesa della prossima votazione."
-                        : "Segui le istruzioni dell'animatore."}
-                </p>
-                {transport && (
-                  <p className="text-xs text-muted-foreground/70">
-                    Sync: {transport === "realtime" ? "live" : "polling 5s"}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {participantId && voting.current?.status === "open" &&
-            runtimeState === "finals" ? (
-              <VotingPlayer
-                eventSlug={eventSlug}
-                participantId={participantId}
-                session={voting.current}
-              />
-            ) : participantId ? (
-              <QuizPlayer
-                eventSlug={eventSlug}
-                participantId={participantId}
-                quizState={quizState}
-                runtimeState={runtimeState}
-              />
-            ) : null}
           </div>
-        </div>
+        </AmbientBackground>
 
-        <div className="fixed bottom-0 inset-x-0 p-4 border-t border-border/60 bg-card/90 backdrop-blur-md">
-          <p className="text-xs text-muted-foreground text-center mb-2">
-            Demo spettacolo
-          </p>
-          <div className="flex gap-2 max-w-md mx-auto">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 border-primary/40"
-              onClick={simulateSpin}
-            >
-              Roulette
-            </Button>
-            <Button type="button" className="flex-1" onClick={simulateExtraction}>
-              Estrazione
-            </Button>
-          </div>
-        </div>
-
-        {partnerNick && (
+        {partnerNick ? (
           <CoupleTakeover partnerNick={partnerNick} onDismiss={dismissTakeover} />
-        )}
-      </AmbientBackground>
+        ) : null}
+      </PlayerMobileShell>
     );
   }
 
   return (
-    <PageShell className="p-6">
-      <div className="w-full max-w-md mx-auto space-y-6">
-        <Link
-          href={`/s/${eventSlug}`}
-          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+    <PlayerMobileShell eventSlug={eventSlug}>
+      <PlayerMobileHeader event={eventInfo} loading={eventInfoLoading} />
+      <div className="flex flex-1 flex-col px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <motion.div
+          className="mx-auto w-full max-w-md space-y-6"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
         >
-          ← {eventSlug}
-        </Link>
+          <div className="space-y-1 text-center">
+            <h1 className="font-display text-2xl font-bold tracking-tight">
+              Entra in sala
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Scegli nickname e genere per giocare stasera.
+            </p>
+          </div>
 
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Entra in sala</h1>
-        </div>
-
-        <Card className="border-border/60">
-          <CardContent className="pt-6">
-            <form
-              className="space-y-5"
-              noValidate
-              onSubmit={(e) => {
-                e.preventDefault();
-                void handleJoin();
-              }}
-            >
-              <div className="space-y-2">
-                <Label htmlFor="nickname">Nickname</Label>
-                <Input
-                  id="nickname"
-                  value={nickname}
-                  onChange={(e) => {
-                    setNickname(e.target.value);
-                    if (fieldError === "nickname") {
-                      setFieldError(null);
-                      setJoinError(null);
-                    }
-                  }}
-                  placeholder="Il tuo nick"
-                  maxLength={24}
-                  autoComplete="nickname"
-                  enterKeyHint="next"
-                  aria-invalid={fieldError === "nickname"}
-                  className={cn(
-                    "h-11 bg-background/50",
-                    fieldError === "nickname" &&
-                      "border-destructive ring-destructive/30",
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Genere</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(["male", "female"] as const).map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => setGender(g)}
-                      className={cn(
-                        "rounded-lg py-3 font-medium border transition-colors",
-                        gender === g
-                          ? "border-primary bg-primary/15 text-primary"
-                          : "border-border bg-background/50 hover:bg-muted/50",
-                      )}
-                    >
-                      {g === "male" ? "Uomo" : "Donna"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="badge">Codice badge (opzionale)</Label>
-                <Input
-                  id="badge"
-                  value={badgeCode}
-                  onChange={(e) => {
-                    setBadgeCode(e.target.value);
-                    if (fieldError === "badge") {
-                      setFieldError(null);
-                      setJoinError(null);
-                    }
-                  }}
-                  placeholder="Es. 12"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  aria-invalid={fieldError === "badge"}
-                  className={cn(
-                    "h-11 bg-background/50",
-                    fieldError === "badge" &&
-                      "border-destructive ring-destructive/30",
-                  )}
-                />
-              </div>
-
-              {joinError && (
-                <p className="text-sm text-destructive" role="alert">
-                  {joinError}
-                </p>
-              )}
-
-              <Button
-                type="button"
-                size="lg"
-                className="w-full h-12 text-base font-semibold"
-                disabled={joining}
-                onClick={() => void handleJoin()}
+          <Card className={JOIN_CARD_CLASS}>
+            <CardContent className="pt-6">
+              <form
+                className="space-y-5"
+                noValidate
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void handleJoin();
+                }}
               >
-                {joining ? "Accesso..." : "Entra"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="nickname">Nickname</Label>
+                  <Input
+                    id="nickname"
+                    value={nickname}
+                    onChange={(e) => {
+                      setNickname(e.target.value);
+                      if (fieldError === "nickname") {
+                        setFieldError(null);
+                        setJoinError(null);
+                      }
+                    }}
+                    placeholder="Il tuo nick"
+                    maxLength={24}
+                    autoComplete="nickname"
+                    enterKeyHint="next"
+                    aria-invalid={fieldError === "nickname"}
+                    className={cn(
+                      "h-11 bg-background/50",
+                      fieldError === "nickname" &&
+                        "border-destructive ring-destructive/30",
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Genere</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(["male", "female"] as const).map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setGender(g)}
+                        className={cn(
+                          "rounded-lg py-3 font-medium border transition-all",
+                          gender === g
+                            ? "border-primary bg-primary/15 text-primary shadow-[0_0_20px_rgba(236,72,153,0.25)]"
+                            : "border-border bg-background/50 hover:bg-muted/50",
+                        )}
+                      >
+                        {g === "male" ? "Uomo" : "Donna"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="badge">Codice badge (opzionale)</Label>
+                  <Input
+                    id="badge"
+                    value={badgeCode}
+                    onChange={(e) => {
+                      setBadgeCode(e.target.value);
+                      if (fieldError === "badge") {
+                        setFieldError(null);
+                        setJoinError(null);
+                      }
+                    }}
+                    placeholder="Es. 12"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    aria-invalid={fieldError === "badge"}
+                    className={cn(
+                      "h-11 bg-background/50",
+                      fieldError === "badge" &&
+                        "border-destructive ring-destructive/30",
+                    )}
+                  />
+                </div>
+
+                {joinError ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {joinError}
+                  </p>
+                ) : null}
+
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {PLAYER_PRIVACY_SHARING_NOTICE}
+                </p>
+
+                <Button
+                  type="button"
+                  size="lg"
+                  className="h-12 w-full text-base font-semibold shadow-[0_0_24px_rgba(236,72,153,0.35)]"
+                  disabled={joining}
+                  onClick={() => void handleJoin()}
+                >
+                  {joining ? "Accesso..." : "Entra"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
-    </PageShell>
+    </PlayerMobileShell>
   );
 }
