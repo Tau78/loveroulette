@@ -22,6 +22,7 @@ import type {
   LoveRouletteSessionRow,
   MusicProEventRow,
 } from "./types";
+import { ensureDemoEvent, isDemoJoinCode } from "./demo-event";
 import { isEventUuid, isJoinCode, normalizeEventSlug } from "./slug";
 
 async function fetchEventRow(
@@ -43,7 +44,10 @@ async function fetchEventRow(
     return null;
   }
 
-  const { data, error } = await query.maybeSingle();
+  const { data, error } = await query
+    .order("event_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (error || !data) return null;
   return data as MusicProEventRow;
 }
@@ -108,6 +112,11 @@ export async function getLoveRouletteEvent(
   supabase: SupabaseClient,
   slug: string,
 ): Promise<LoveRouletteEvent | null> {
+  const normalized = normalizeEventSlug(slug);
+  if (isDemoJoinCode(normalized)) {
+    await ensureDemoEvent(supabase);
+  }
+
   const row = await fetchEventRow(supabase, slug);
   if (!row) return null;
 

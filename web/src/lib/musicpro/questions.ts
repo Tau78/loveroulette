@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isDemoEventId } from "./demo-event";
 import type {
   LoveRouletteQuestion,
   LoveRouletteQuestionOption,
@@ -198,7 +199,11 @@ export async function getQuestionsForEvent(
     return { source: "pool", questions: poolQuestions };
   }
 
-  if (process.env.NODE_ENV === "development") {
+  const demoFallback =
+    process.env.NODE_ENV === "development" ||
+    (await isDemoEventId(supabase, eventId));
+
+  if (demoFallback) {
     return { source: "pool", questions: getDevFallbackQuestions() };
   }
 

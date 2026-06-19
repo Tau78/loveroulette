@@ -17,9 +17,11 @@ declare
   v_participant_ids uuid[];
   v_question_ids uuid[];
 begin
-  select id into v_event_id
-  from public.events
-  where metadata->>'love_roulette_code' = v_join_code;
+  select e.id into v_event_id
+  from public.events e
+  where e.metadata->>'love_roulette_code' = v_join_code
+  order by e.event_date desc
+  limit 1;
 
   if v_event_id is null then
     raise exception 'Evento % non trovato', v_join_code;
