@@ -20,6 +20,8 @@ interface AdminPreflightPanelProps {
   questionsRefreshKey?: number;
   /** Se noto (es. da hook colonna sonora), aggiorna il semaforo audio. */
   soundtrackUnlocked?: boolean | null;
+  /** Colonna sonora con autoUnlock (dashboard animatore). */
+  soundtrackAutoUnlock?: boolean;
   expectedQuestionCount?: number;
   disabled?: boolean;
   variant?: "card" | "deck";
@@ -95,6 +97,7 @@ export function AdminPreflightPanel({
   participantCount,
   questionsRefreshKey = 0,
   soundtrackUnlocked = null,
+  soundtrackAutoUnlock = false,
   expectedQuestionCount = DEFAULT_QUIZ_TOTAL,
   disabled = false,
   variant = "deck",
@@ -177,16 +180,24 @@ export function AdminPreflightPanel({
             soundtrackUnlocked === true
               ? "Colonna sonora sbloccata su questo dispositivo."
               : soundtrackUnlocked === false
-                ? "Premi «Avvia colonna sonora» nel pannello sotto."
-                : "Sblocca in «Audio & proiettore» sotto."
+                ? soundtrackAutoUnlock
+                  ? "Autoplay bloccato dal browser — usa «Avvia colonna sonora» sotto."
+                  : "Premi «Avvia colonna sonora» nel pannello sotto."
+                : soundtrackAutoUnlock
+                  ? "Si avvia automaticamente in «Audio & proiettore»."
+                  : "Sblocca in «Audio & proiettore» sotto."
           }
         >
           <p className="text-[11px] text-muted-foreground">
             {soundtrackUnlocked === true
               ? "Attiva"
               : soundtrackUnlocked === false
-                ? "Non sbloccata"
-                : "Da verificare localmente"}
+                ? soundtrackAutoUnlock
+                  ? "Autoplay bloccato"
+                  : "Non sbloccata"
+                : soundtrackAutoUnlock
+                  ? "Avvio automatico"
+                  : "Da verificare localmente"}
           </p>
         </PreflightRow>
 

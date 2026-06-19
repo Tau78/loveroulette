@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalizeParticipantDataVisibility } from "@/lib/player/data-visibility";
 import type {
   LoveRouletteGender,
   LoveRouletteParticipant,
@@ -7,7 +8,7 @@ import type {
 import { JoinParticipantError } from "./participants";
 
 const PARTICIPANT_ADMIN_SELECT =
-  "id, event_id, nickname, gender, badge_code, role, is_online, last_seen_at";
+  "id, event_id, nickname, gender, badge_code, role, is_online, data_visibility, last_seen_at";
 
 export interface AdminParticipantRow extends LoveRouletteParticipant {
   last_seen_at: string | null;
@@ -38,6 +39,7 @@ function mapRow(row: Record<string, unknown>): AdminParticipantRow {
     badge_code: (row.badge_code as string | null) ?? null,
     role: (row.role as LoveRouletteParticipantRole) ?? "player",
     is_online: Boolean(row.is_online),
+    data_visibility: normalizeParticipantDataVisibility(row.data_visibility),
     last_seen_at: (row.last_seen_at as string | null) ?? null,
     created_at: (row.created_at as string | null) ?? null,
   };

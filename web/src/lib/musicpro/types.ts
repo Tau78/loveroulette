@@ -9,6 +9,8 @@ export type EventGameFormat = "cervellone" | "love_roulette";
 
 export type LoveRouletteGender = "male" | "female";
 
+export type ParticipantDataVisibility = "everyone" | "matched" | "none";
+
 export type LoveRouletteParticipantRole =
   | "player"
   | "finalist"
@@ -72,6 +74,7 @@ export interface LoveRouletteParticipant {
   badge_code: string | null;
   role: LoveRouletteParticipantRole;
   is_online: boolean;
+  data_visibility: ParticipantDataVisibility;
 }
 
 /** Row shape from love_roulette_pairs. */

@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { KeyRound, Megaphone, SlidersHorizontal } from "lucide-react";
-import { AdminAudioPanel } from "@/components/admin/AdminAudioPanel";
+import {
+  AdminAudioPanel,
+  ADMIN_SOUNDTRACK_AUTO_UNLOCK,
+} from "@/components/admin/AdminAudioPanel";
 import { AdminControlPanel } from "@/components/admin/AdminControlPanel";
 import { AdminPreflightPanel } from "@/components/admin/AdminPreflightPanel";
 import { AdminDashboardShell } from "@/components/admin/AdminDashboardShell";
@@ -53,6 +56,9 @@ export default function AdminDashboardPage() {
     null,
   );
   const [questionsRefreshKey, setQuestionsRefreshKey] = useState(0);
+  const [soundtrackUnlocked, setSoundtrackUnlocked] = useState<
+    boolean | null
+  >(null);
 
   const {
     pin,
@@ -257,6 +263,8 @@ export default function AdminDashboardPage() {
                     onlineCount={stats.onlineCount}
                     participantCount={stats.participantCount}
                     questionsRefreshKey={questionsRefreshKey}
+                    soundtrackUnlocked={soundtrackUnlocked}
+                    soundtrackAutoUnlock={ADMIN_SOUNDTRACK_AUTO_UNLOCK}
                   />
                   <AdminControlPanel
                     variant="deck"
@@ -315,6 +323,7 @@ export default function AdminDashboardPage() {
                     runtimeState={runtimeState}
                     quizState={effectiveQuizState}
                     disabled={controlsDisabled}
+                    onUnlockedChange={setSoundtrackUnlocked}
                   />
                   <AdminNewGamePanel
                     variant="deck"

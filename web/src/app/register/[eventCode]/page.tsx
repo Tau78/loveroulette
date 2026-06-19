@@ -3,6 +3,9 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import { DataVisibilitySelector } from "@/components/player/DataVisibilitySelector";
+import { DEFAULT_PARTICIPANT_DATA_VISIBILITY } from "@/lib/player/data-visibility";
+import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
 import { PLAYER_PRIVACY_SHARING_NOTICE } from "@/lib/player/public-copy";
 
 export default function RegisterPage() {
@@ -11,8 +14,12 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
+  const [dataVisibility, setDataVisibility] = useState<ParticipantDataVisibility>(
+    DEFAULT_PARTICIPANT_DATA_VISIBILITY,
+  );
   const [consent, setConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   if (submitted) {
     return (
@@ -49,7 +56,14 @@ export default function RegisterPage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (consent && email && nickname) setSubmitted(true);
+            if (!dataVisibility) {
+              setFormError("Scegli chi può vedere i tuoi dati personali.");
+              return;
+            }
+            if (consent && email && nickname) {
+              setFormError(null);
+              setSubmitted(true);
+            }
           }}
         >
           <Field label="Email" type="email" value={email} onChange={setEmail} required />
@@ -75,6 +89,15 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          <DataVisibilitySelector
+            value={dataVisibility}
+            onChange={(value) => {
+              setDataVisibility(value);
+              if (formError) setFormError(null);
+            }}
+            invalid={Boolean(formError)}
+          />
+
           <label className="flex items-start gap-3 text-sm text-muted">
             <input
               type="checkbox"
@@ -92,6 +115,12 @@ export default function RegisterPage() {
           <p className="text-xs leading-relaxed text-muted">
             {PLAYER_PRIVACY_SHARING_NOTICE}
           </p>
+
+          {formError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {formError}
+            </p>
+          ) : null}
 
           <button
             type="submit"

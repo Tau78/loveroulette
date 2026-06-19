@@ -10,12 +10,16 @@ import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { Button } from "@/components/ui/button";
 import { displayUrl, openProjectorWindow } from "@/lib/display/embed";
 
+/** Admin dashboard avvia la colonna sonora al mount (autoplay policy browser). */
+export const ADMIN_SOUNDTRACK_AUTO_UNLOCK = true;
+
 interface AdminAudioPanelProps {
   eventCode: string;
   runtimeState: EventState;
   quizState?: QuizSessionState | null;
   disabled?: boolean;
   variant?: "card" | "deck";
+  onUnlockedChange?: (unlocked: boolean) => void;
 }
 
 export function AdminAudioPanel({
@@ -24,6 +28,7 @@ export function AdminAudioPanel({
   quizState = null,
   disabled = false,
   variant = "card",
+  onUnlockedChange,
 }: AdminAudioPanelProps) {
   const [gongStingerToken, setGongStingerToken] = useState(0);
   const gongPlayedForRef = useRef<string | null>(null);
@@ -55,11 +60,15 @@ export function AdminAudioPanel({
   } = useLoveRouletteSoundtrack({
     runtimeState,
     enabled: !disabled,
-    autoUnlock: true,
+    autoUnlock: ADMIN_SOUNDTRACK_AUTO_UNLOCK,
     stingerId: STINGER_IDS.quizQuestionGong,
     stingerToken: gongStingerToken,
     stingerDedupKey: gongDedupKey,
   });
+
+  useEffect(() => {
+    onUnlockedChange?.(unlocked);
+  }, [unlocked, onUnlockedChange]);
 
   const projectorUrl =
     typeof window !== "undefined"

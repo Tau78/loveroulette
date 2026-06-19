@@ -1,5 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { LoveRouletteGender, LoveRouletteParticipant } from "./types";
+import {
+  DEFAULT_PARTICIPANT_DATA_VISIBILITY,
+  normalizeParticipantDataVisibility,
+} from "@/lib/player/data-visibility";
+import type {
+  LoveRouletteGender,
+  LoveRouletteParticipant,
+  ParticipantDataVisibility,
+} from "./types";
 
 export type JoinParticipantErrorCode =
   | "NICKNAME_TAKEN"
@@ -20,12 +28,36 @@ export interface JoinParticipantInput {
   nickname: string;
   gender: LoveRouletteGender;
   badgeCode?: string | null;
+  dataVisibility?: ParticipantDataVisibility;
   /** Reconnect stesso dispositivo (localStorage). */
   participantId?: string | null;
 }
 
-const PARTICIPANT_SELECT =
+const PARTICIPANT_SELECT_BASE =
   "id, event_id, nickname, gender, badge_code, role, is_online";
+
+const PARTICIPANT_SELECT_WITH_VISIBILITY = `${PARTICIPANT_SELECT_BASE}, data_visibility`;
+
+function isMissingDataVisibilityColumn(error: { message?: string }): boolean {
+  const msg = error.message?.toLowerCase() ?? "";
+  return msg.includes("data_visibility") && msg.includes("does not exist");
+}
+
+function mapParticipantRow(row: Record<string, unknown>): LoveRouletteParticipant {
+  return {
+    id: String(row.id),
+    event_id: String(row.event_id),
+    nickname: String(row.nickname),
+    gender: row.gender === "female" ? "female" : "male",
+    badge_code:
+      row.badge_code === null || row.badge_code === undefined
+        ? null
+        : String(row.badge_code),
+    role: (row.role as LoveRouletteParticipant["role"]) ?? "player",
+    is_online: Boolean(row.is_online),
+    data_visibility: normalizeParticipantDataVisibility(row.data_visibility),
+  };
+}
 
 function normalizeNickname(value: string): string {
   return value.trim();
@@ -36,20 +68,47 @@ function normalizeBadge(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+function resolveDataVisibility(
+  input: JoinParticipantInput,
+): ParticipantDataVisibility {
+  return normalizeParticipantDataVisibility(
+    input.dataVisibility ?? DEFAULT_PARTICIPANT_DATA_VISIBILITY,
+  );
+}
+
 async function findParticipantById(
   supabase: SupabaseClient,
   eventId: string,
   participantId: string,
 ): Promise<LoveRouletteParticipant | null> {
-  const { data, error } = await supabase
+  const withVisibility = await supabase
     .from("love_roulette_participants")
-    .select(PARTICIPANT_SELECT)
+    .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
     .eq("event_id", eventId)
     .eq("id", participantId)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
-  return (data as LoveRouletteParticipant | null) ?? null;
+  if (!withVisibility.error) {
+    return withVisibility.data
+      ? mapParticipantRow(withVisibility.data as Record<string, unknown>)
+      : null;
+  }
+
+  if (!isMissingDataVisibilityColumn(withVisibility.error)) {
+    throw new Error(withVisibility.error.message);
+  }
+
+  const fallback = await supabase
+    .from("love_roulette_participants")
+    .select(PARTICIPANT_SELECT_BASE)
+    .eq("event_id", eventId)
+    .eq("id", participantId)
+    .maybeSingle();
+
+  if (fallback.error) throw new Error(fallback.error.message);
+  return fallback.data
+    ? mapParticipantRow(fallback.data as Record<string, unknown>)
+    : null;
 }
 
 async function findParticipantByNickname(
@@ -57,15 +116,34 @@ async function findParticipantByNickname(
   eventId: string,
   nickname: string,
 ): Promise<LoveRouletteParticipant | null> {
-  const { data, error } = await supabase
+  const withVisibility = await supabase
     .from("love_roulette_participants")
-    .select(PARTICIPANT_SELECT)
+    .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
     .eq("event_id", eventId)
     .ilike("nickname", nickname)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
-  return (data as LoveRouletteParticipant | null) ?? null;
+  if (!withVisibility.error) {
+    return withVisibility.data
+      ? mapParticipantRow(withVisibility.data as Record<string, unknown>)
+      : null;
+  }
+
+  if (!isMissingDataVisibilityColumn(withVisibility.error)) {
+    throw new Error(withVisibility.error.message);
+  }
+
+  const fallback = await supabase
+    .from("love_roulette_participants")
+    .select(PARTICIPANT_SELECT_BASE)
+    .eq("event_id", eventId)
+    .ilike("nickname", nickname)
+    .maybeSingle();
+
+  if (fallback.error) throw new Error(fallback.error.message);
+  return fallback.data
+    ? mapParticipantRow(fallback.data as Record<string, unknown>)
+    : null;
 }
 
 async function findParticipantByBadge(
@@ -73,15 +151,34 @@ async function findParticipantByBadge(
   eventId: string,
   badgeCode: string,
 ): Promise<LoveRouletteParticipant | null> {
-  const { data, error } = await supabase
+  const withVisibility = await supabase
     .from("love_roulette_participants")
-    .select(PARTICIPANT_SELECT)
+    .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
     .eq("event_id", eventId)
     .eq("badge_code", badgeCode)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
-  return (data as LoveRouletteParticipant | null) ?? null;
+  if (!withVisibility.error) {
+    return withVisibility.data
+      ? mapParticipantRow(withVisibility.data as Record<string, unknown>)
+      : null;
+  }
+
+  if (!isMissingDataVisibilityColumn(withVisibility.error)) {
+    throw new Error(withVisibility.error.message);
+  }
+
+  const fallback = await supabase
+    .from("love_roulette_participants")
+    .select(PARTICIPANT_SELECT_BASE)
+    .eq("event_id", eventId)
+    .eq("badge_code", badgeCode)
+    .maybeSingle();
+
+  if (fallback.error) throw new Error(fallback.error.message);
+  return fallback.data
+    ? mapParticipantRow(fallback.data as Record<string, unknown>)
+    : null;
 }
 
 async function markParticipantOnline(
@@ -91,6 +188,7 @@ async function markParticipantOnline(
     gender: LoveRouletteGender;
     nickname?: string;
     badgeCode?: string | null;
+    dataVisibility?: ParticipantDataVisibility;
   },
 ): Promise<LoveRouletteParticipant> {
   const update: Record<string, unknown> = {
@@ -107,15 +205,29 @@ async function markParticipantOnline(
     update.badge_code = input.badgeCode;
   }
 
-  const { data, error } = await supabase
+  if (input.dataVisibility !== undefined) {
+    update.data_visibility = input.dataVisibility;
+  }
+
+  let result = await supabase
     .from("love_roulette_participants")
     .update(update)
     .eq("id", participantId)
-    .select(PARTICIPANT_SELECT)
+    .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
     .single();
 
-  if (error) throw new Error(error.message);
-  return data as LoveRouletteParticipant;
+  if (result.error && isMissingDataVisibilityColumn(result.error)) {
+    const { data_visibility: _removed, ...updateWithoutVisibility } = update;
+    result = await supabase
+      .from("love_roulette_participants")
+      .update(updateWithoutVisibility)
+      .eq("id", participantId)
+      .select(PARTICIPANT_SELECT_BASE)
+      .single();
+  }
+
+  if (result.error) throw new Error(result.error.message);
+  return mapParticipantRow(result.data as Record<string, unknown>);
 }
 
 export async function setParticipantPresence(
@@ -150,6 +262,7 @@ export async function joinParticipant(
 ): Promise<LoveRouletteParticipant> {
   const nickname = normalizeNickname(input.nickname);
   const badge_code = normalizeBadge(input.badgeCode);
+  const data_visibility = resolveDataVisibility(input);
 
   if (input.participantId) {
     const existingById = await findParticipantById(
@@ -177,6 +290,7 @@ export async function joinParticipant(
         gender: input.gender,
         nickname,
         badgeCode: badge_code,
+        dataVisibility: data_visibility,
       });
     }
   }
@@ -220,6 +334,7 @@ export async function joinParticipant(
       gender: input.gender,
       nickname,
       badgeCode: badge_code,
+      dataVisibility: data_visibility,
     });
   }
 
@@ -237,22 +352,32 @@ export async function joinParticipant(
     }
   }
 
-  const { data, error } = await supabase
+  const insertBase = {
+    event_id: input.eventId,
+    nickname,
+    gender: input.gender,
+    badge_code,
+    is_online: true,
+    last_seen_at: new Date().toISOString(),
+  };
+
+  let result = await supabase
     .from("love_roulette_participants")
-    .insert({
-      event_id: input.eventId,
-      nickname,
-      gender: input.gender,
-      badge_code,
-      is_online: true,
-      last_seen_at: new Date().toISOString(),
-    })
-    .select(PARTICIPANT_SELECT)
+    .insert({ ...insertBase, data_visibility })
+    .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
     .single();
 
-  if (error) {
-    if (error.code === "23505") {
-      const msg = error.message.toLowerCase();
+  if (result.error && isMissingDataVisibilityColumn(result.error)) {
+    result = await supabase
+      .from("love_roulette_participants")
+      .insert(insertBase)
+      .select(PARTICIPANT_SELECT_BASE)
+      .single();
+  }
+
+  if (result.error) {
+    if (result.error.code === "23505") {
+      const msg = result.error.message.toLowerCase();
       if (msg.includes("badge")) {
         throw new JoinParticipantError(
           "BADGE_TAKEN",
@@ -264,8 +389,8 @@ export async function joinParticipant(
         "Questo nickname è già in sala — scegline un altro.",
       );
     }
-    throw new Error(error.message);
+    throw new Error(result.error.message);
   }
 
-  return data as LoveRouletteParticipant;
+  return mapParticipantRow(result.data as Record<string, unknown>);
 }

@@ -1,26 +1,24 @@
 /**
  * Footer quiz unificato — maschera SVG + countdown + cuore/logo (1920×1080).
+ * La maschera copre tutta la larghezza canvas fino a cuore e logo ai lati.
  */
-export const QUIZ_FOOTER_MASK_VIEWBOX = { width: 1200, height: 108 } as const;
+export const QUIZ_FOOTER_MASK_VIEWBOX = { width: 1920, height: 108 } as const;
 
 export const QUIZ_FOOTER_MASK_BUMP_RADIUS = 48;
 
 export const QUIZ_FOOTER_MASK_PATH = [
-  "M 14 108",
-  "L 14 58",
-  "Q 14 46 30 44",
-  "Q 88 28 168 38",
-  "Q 248 46 352 42",
-  "L 528 42",
-  `A ${QUIZ_FOOTER_MASK_BUMP_RADIUS} ${QUIZ_FOOTER_MASK_BUMP_RADIUS} 0 0 1 672 42`,
-  "L 848 42",
-  "Q 952 46 1032 38",
-  "Q 1112 28 1170 44",
-  "Q 1186 46 1186 58",
-  "L 1186 108",
-  "Q 1186 108 1172 108",
-  "L 28 108",
-  "Q 14 108 14 108",
+  "M 40 108",
+  "L 40 56",
+  "Q 40 44 56 42",
+  "Q 140 24 280 34",
+  "Q 420 42 580 40",
+  "L 912 40",
+  `A ${QUIZ_FOOTER_MASK_BUMP_RADIUS} ${QUIZ_FOOTER_MASK_BUMP_RADIUS} 0 0 1 1008 40`,
+  "L 1340 40",
+  "Q 1500 42 1640 34",
+  "Q 1780 24 1864 42",
+  "Q 1880 44 1880 56",
+  "L 1880 108",
   "Z",
 ].join(" ");
 
@@ -37,4 +35,4 @@ export const QUIZ_FOOTER_MASK_BAR_CLASS = "relative h-[80px] w-full";
 export const QUIZ_FOOTER_BRAND_HEART_CLASS = "size-[104px]";
 
 export const QUIZ_FOOTER_BRAND_LOGO_CLASS =
-  "h-auto w-[104px] object-contain drop-shadow-[0_6px_24px_rgba(233,30,140,0.55)]";
+  "h-auto w-[156px] object-contain drop-shadow-[0_6px_24px_rgba(233,30,140,0.55)]";

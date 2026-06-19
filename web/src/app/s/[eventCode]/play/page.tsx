@@ -39,8 +39,11 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { PLAYER_PRIVACY_SHARING_NOTICE } from "@/lib/player/public-copy";
 import { playerPresenceSubtitle } from "@/lib/player/presence-copy";
+import { DataVisibilitySelector } from "@/components/player/DataVisibilitySelector";
+import { DEFAULT_PARTICIPANT_DATA_VISIBILITY } from "@/lib/player/data-visibility";
+import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
 
-type JoinField = "nickname" | "badge";
+type JoinField = "nickname" | "badge" | "dataVisibility";
 
 type RestoreState = "pending" | "ready";
 
@@ -52,6 +55,7 @@ interface JoinResponse {
     nickname?: string;
     gender?: "male" | "female";
     badge_code?: string | null;
+    data_visibility?: ParticipantDataVisibility;
   };
 }
 
@@ -64,6 +68,7 @@ async function postJoin(
     nickname: string;
     gender: "male" | "female";
     badgeCode: string | null;
+    dataVisibility: ParticipantDataVisibility;
     participantId?: string | null;
   },
 ): Promise<{ ok: true; participant: NonNullable<JoinResponse["participant"]> } | { ok: false; status: number; data: JoinResponse }> {
@@ -74,6 +79,7 @@ async function postJoin(
       nickname: payload.nickname,
       gender: payload.gender,
       badgeCode: payload.badgeCode,
+      dataVisibility: payload.dataVisibility,
       ...(payload.participantId ? { participantId: payload.participantId } : {}),
     }),
   });
@@ -122,6 +128,7 @@ function readAnimatorTestProfile(): StoredParticipantProfile | null {
     nickname: decodeURIComponent(nickname),
     gender: params.get("gender") === "female" ? "female" : "male",
     badgeCode: params.get("badge") ?? "",
+    dataVisibility: DEFAULT_PARTICIPANT_DATA_VISIBILITY,
   };
 }
 
@@ -139,6 +146,9 @@ export default function PlayerPlayPage() {
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [badgeCode, setBadgeCode] = useState("");
+  const [dataVisibility, setDataVisibility] = useState<ParticipantDataVisibility>(
+    DEFAULT_PARTICIPANT_DATA_VISIBILITY,
+  );
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const [restoreState, setRestoreState] = useState<RestoreState>("pending");
@@ -177,17 +187,20 @@ export default function PlayerPlayPage() {
       nick: string,
       g: "male" | "female",
       badge: string,
+      visibility: ParticipantDataVisibility,
     ) => {
       persistParticipantProfile(eventSlug, {
         id: participant.id,
         nickname: nick,
         gender: g,
         badgeCode: badge,
+        dataVisibility: visibility,
       });
       setParticipantId(participant.id);
       setNickname(nick);
       setGender(g);
       setBadgeCode(badge);
+      setDataVisibility(visibility);
       setJoined(true);
       joinedRef.current = true;
     },
@@ -217,6 +230,7 @@ export default function PlayerPlayPage() {
       nickname: string;
       gender: "male" | "female";
       badgeCode: string;
+      dataVisibility: ParticipantDataVisibility;
       participantId?: string | null;
     }) => {
       const nick = input.nickname.trim();
@@ -228,6 +242,7 @@ export default function PlayerPlayPage() {
         nickname: nick,
         gender: input.gender,
         badgeCode: badge || null,
+        dataVisibility: input.dataVisibility,
         participantId: storedId,
       });
 
@@ -235,7 +250,13 @@ export default function PlayerPlayPage() {
         return result;
       }
 
-      applyParticipant(result.participant, nick, input.gender, badge);
+      applyParticipant(
+        result.participant,
+        nick,
+        input.gender,
+        badge,
+        input.dataVisibility,
+      );
       return result;
     },
     [applyParticipant, eventSlug],
@@ -259,12 +280,14 @@ export default function PlayerPlayPage() {
       setNickname(profile.nickname);
       setGender(profile.gender);
       setBadgeCode(profile.badgeCode);
+      setDataVisibility(profile.dataVisibility);
       setJoining(true);
 
       const result = await performJoin({
         nickname: profile.nickname,
         gender: profile.gender,
         badgeCode: profile.badgeCode,
+        dataVisibility: profile.dataVisibility,
         participantId: profile.id,
       });
 
@@ -378,12 +401,23 @@ export default function PlayerPlayPage() {
       return;
     }
 
+    if (!dataVisibility) {
+      setFieldError("dataVisibility");
+      setJoinError("Scegli chi può vedere i tuoi dati personali.");
+      return;
+    }
+
     setJoinError(null);
     setFieldError(null);
     setJoining(true);
 
     try {
-      const result = await performJoin({ nickname: nick, gender, badgeCode });
+      const result = await performJoin({
+        nickname: nick,
+        gender,
+        badgeCode,
+        dataVisibility,
+      });
       if (!result.ok) {
         handleJoinFailure(result.status, result.data);
       }
@@ -413,7 +447,11 @@ export default function PlayerPlayPage() {
   if (joined) {
     return (
       <PlayerMobileShell eventSlug={eventSlug}>
-        <PlayerMobileHeader event={eventInfo} loading={eventInfoLoading} />
+        <PlayerMobileHeader
+          event={eventInfo}
+          loading={eventInfoLoading}
+          nickname={runtimeState !== "lobby" ? nickname : null}
+        />
         <AmbientBackground waveMode={waveMode} className="flex flex-1 flex-col">
           <div className="flex flex-1 flex-col items-center justify-center px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             <div className="w-full max-w-md space-y-6">
@@ -534,6 +572,19 @@ export default function PlayerPlayPage() {
                     ))}
                   </div>
                 </div>
+
+                <DataVisibilitySelector
+                  value={dataVisibility}
+                  onChange={(value) => {
+                    setDataVisibility(value);
+                    if (fieldError === "dataVisibility") {
+                      setFieldError(null);
+                      setJoinError(null);
+                    }
+                  }}
+                  invalid={fieldError === "dataVisibility"}
+                  disabled={joining}
+                />
 
                 <div className="space-y-2">
                   <Label htmlFor="badge">Codice badge (opzionale)</Label>

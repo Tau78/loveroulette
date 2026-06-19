@@ -35,6 +35,17 @@ Il game design ([01-game-design.md](01-game-design.md)) posiziona l’**animator
 
 **Conclusione:** `/` è scaffolding da rimuovere o nascondere in produzione.
 
+### Implementazione (giugno 2026)
+
+| File | Comportamento |
+|------|---------------|
+| `web/src/lib/env.ts` | `isProductionApp()` → `NODE_ENV === "production"` |
+| `web/src/app/page.tsx` | Se produzione: `notFound()` (404 Next.js). Altrimenti hub dev con link DEMO01 |
+
+In produzione `/` risponde **404** — nessuna card “Demo serata”, nessun link hardcoded. In locale (`next dev`) l’hub resta disponibile per smoke-test.
+
+Test: `web/src/lib/env.test.ts`, `web/src/app/page.test.tsx`.
+
 ---
 
 ## 3. URL di produzione (target)
@@ -74,8 +85,8 @@ flowchart LR
 
 | Opzione | Quando usarla |
 |---------|----------------|
-| **Redirect 404** in `NODE_ENV=production` | Deploy pulito; nessuna superficie extra |
-| **Solo dev** (`process.env.NODE_ENV === 'development'`) | Mantiene shortcut locale per il team |
+| **404 in produzione** (`isProductionApp()` → `notFound()`) | ✅ Implementato — deploy pulito; nessuna superficie extra |
+| **Solo dev** (hub visibile quando `NODE_ENV !== 'production'`) | ✅ Implementato — shortcut locale per il team |
 | **Redirect a marketing** (sito vetrina separato) | Se serve landing pubblica brand, non dispatcher tecnico |
 
 Non esporre in produzione la card “Demo serata” con link hardcoded a `DEMO01`.
@@ -137,7 +148,7 @@ Il pezzo mancante principale è il **collegamento dashboard → backend → real
 
 Ordine suggerito per chiudere il gap entry flow:
 
-1. [ ] Nascondere o redirect `/` in production.
+1. [x] Nascondere o redirect `/` in production (`page.tsx` + `env.ts`).
 2. [ ] PIN / auth su `/admin/{code}`.
 3. [ ] Dashboard legge/scrive `events.state` e `events.config` via API.
 4. [ ] Blocco LOBBY: generazione QR + azione “Mostra su display”.

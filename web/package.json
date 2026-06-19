@@ -13,6 +13,8 @@
     "test:e2e:lan": "PLAYWRIGHT_BASE_URL=http://localhost:3001 playwright test",
     "test:e2e:ui": "playwright test --ui",
     "check:audio": "node scripts/check-audio-assets.mjs",
+    "check:day": "npm run check:audio && npx tsc --noEmit && npm run test",
+    "reset:demo": "node --import tsx scripts/reset-demo.mjs",
     "sync:audio": "node ../scripts/sync-audio.mjs"
   },
   "dependencies": {
@@ -43,6 +45,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.9"
   }

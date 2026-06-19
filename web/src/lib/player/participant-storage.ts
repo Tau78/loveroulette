@@ -1,8 +1,12 @@
+import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
+import { normalizeParticipantDataVisibility } from "@/lib/player/data-visibility";
+
 export interface StoredParticipantProfile {
   id: string;
   nickname: string;
   gender: "male" | "female";
   badgeCode: string;
+  dataVisibility: ParticipantDataVisibility;
 }
 
 const UUID_RE =
@@ -24,7 +28,7 @@ function readFromStorage(
     const raw = storage.getItem(profileKey(eventSlug));
     if (!raw) return null;
 
-    const profile = JSON.parse(raw) as StoredParticipantProfile;
+    const profile = JSON.parse(raw) as Partial<StoredParticipantProfile>;
     if (!profile.id || !UUID_RE.test(profile.id) || !profile.nickname) {
       storage.removeItem(profileKey(eventSlug));
       storage.removeItem(idKey(eventSlug));
@@ -36,6 +40,7 @@ function readFromStorage(
       nickname: profile.nickname,
       gender: profile.gender === "female" ? "female" : "male",
       badgeCode: profile.badgeCode ?? "",
+      dataVisibility: normalizeParticipantDataVisibility(profile.dataVisibility),
     };
   } catch {
     storage.removeItem(profileKey(eventSlug));
@@ -68,7 +73,10 @@ export function persistParticipantProfile(
   eventSlug: string,
   profile: StoredParticipantProfile,
 ): void {
-  const payload = JSON.stringify(profile);
+  const payload = JSON.stringify({
+    ...profile,
+    dataVisibility: normalizeParticipantDataVisibility(profile.dataVisibility),
+  });
   localStorage.setItem(idKey(eventSlug), profile.id);
   localStorage.setItem(profileKey(eventSlug), payload);
   sessionStorage.removeItem(idKey(eventSlug));

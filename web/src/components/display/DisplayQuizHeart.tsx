@@ -4,23 +4,26 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DISPLAY_FLOATING_HEART_CLASS } from "@/lib/display/display-brand-metrics";
-
-const HEART_RED = "#ef4444";
+import { heartColorAtProgress } from "@/lib/display/evening-heart-progress";
 
 interface DisplayQuizHeartProps {
   className?: string;
   /** floating = angolo (legacy). inline = integrato nel footer quiz. */
   variant?: "floating" | "inline";
   size?: "default" | "compact";
+  /** 0 = bianco (inizio serata), 1 = rosso acceso. */
+  progress?: number;
 }
 
 export function DisplayQuizHeart({
   className,
   variant = "floating",
   size = "default",
+  progress = 1,
 }: DisplayQuizHeartProps) {
   const reduceMotion = useReducedMotion();
   const compact = size === "compact";
+  const { fill, glow } = heartColorAtProgress(progress);
 
   return (
     <motion.div
@@ -36,8 +39,8 @@ export function DisplayQuizHeart({
         reduceMotion
           ? undefined
           : {
-              scale: [1, 1.1, 1],
-              opacity: [0.78, 1, 0.78],
+              scale: [1, 1.08 + progress * 0.04, 1],
+              opacity: [0.82 + progress * 0.1, 1, 0.82 + progress * 0.1],
             }
       }
       transition={
@@ -52,7 +55,7 @@ export function DisplayQuizHeart({
     >
       <Heart
         className={cn(
-          "fill-[#ef4444] text-[#ef4444]",
+          "size-full",
           variant === "inline"
             ? "size-full"
             : compact
@@ -60,9 +63,9 @@ export function DisplayQuizHeart({
               : DISPLAY_FLOATING_HEART_CLASS,
         )}
         style={{
-          color: HEART_RED,
-          filter:
-            "drop-shadow(0 0 18px rgba(239,68,68,0.7)) drop-shadow(0 0 36px rgba(233,30,140,0.45))",
+          color: fill,
+          fill,
+          filter: glow,
         }}
       />
     </motion.div>

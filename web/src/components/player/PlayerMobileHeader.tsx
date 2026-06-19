@@ -3,10 +3,7 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import type { PlayerEventInfo } from "@/hooks/usePlayerEventInfo";
-import {
-  formatPlayerEventDateTime,
-  PLAYER_GAME_NAME,
-} from "@/lib/player/format-event-datetime";
+import { formatPlayerEventDateTime } from "@/lib/player/format-event-datetime";
 import { cn } from "@/lib/utils";
 
 const LOGO_SRC = "/grafiche/logo-transparent.png";
@@ -14,14 +11,18 @@ const LOGO_SRC = "/grafiche/logo-transparent.png";
 interface PlayerMobileHeaderProps {
   event: PlayerEventInfo | null;
   loading?: boolean;
+  /** Dopo il saluto iniziale — nickname fisso in header. */
+  nickname?: string | null;
   className?: string;
 }
 
 export function PlayerMobileHeader({
   event,
   loading = false,
+  nickname = null,
   className,
 }: PlayerMobileHeaderProps) {
+  const nickLabel = nickname?.trim() || null;
   const venueLabel = event?.venueName ?? event?.title ?? null;
   const dateTime =
     event?.eventDate != null
@@ -57,17 +58,19 @@ export function PlayerMobileHeader({
           <Image
             src={LOGO_SRC}
             alt=""
-            width={120}
-            height={52}
+            width={180}
+            height={78}
             priority
-            className="h-11 w-auto object-contain"
+            className="h-[4.125rem] w-auto object-contain"
           />
         </motion.div>
 
         <div className="min-w-0 flex-1 pt-0.5 text-left">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-primary">
-            {PLAYER_GAME_NAME}
-          </p>
+          {nickLabel ? (
+            <p className="truncate font-display text-xl font-bold uppercase leading-tight text-foreground">
+              {nickLabel}
+            </p>
+          ) : null}
           {loading ? (
             <div className="mt-1.5 h-4 w-32 animate-pulse rounded bg-muted/40" />
           ) : venueLabel ? (

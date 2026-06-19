@@ -24,6 +24,8 @@ interface DisplayQuizFooterProps {
     value: number;
     total: number;
   } | null;
+  /** 0 = bianco, 1 = rosso acceso — progressione serata. */
+  heartProgress?: number;
   className?: string;
 }
 
@@ -203,50 +205,50 @@ function FooterMaskShape() {
 /** Maschera unificata: cuore · countdown · logo Love Roulette. */
 export function DisplayQuizFooter({
   countdown = null,
+  heartProgress = 1,
   className,
 }: DisplayQuizFooterProps) {
   return (
     <footer
       className={cn(
-        "relative z-20 shrink-0 px-4 pb-3 pt-[60px]",
+        "relative z-20 w-full shrink-0 px-10 pb-3 pt-[60px]",
         className,
       )}
     >
-      <div className="relative mx-auto w-full max-w-[1280px]">
-        <div className={cn(QUIZ_FOOTER_MASK_BAR_CLASS, "relative")}>
-          <FooterMaskShape />
+      <div className={cn(QUIZ_FOOTER_MASK_BAR_CLASS, "relative w-full")}>
+        <FooterMaskShape />
 
-          <div className="relative z-10 flex h-full items-end justify-between px-6 lg:px-8">
-            <div className="relative z-20 flex shrink-0 items-end pb-2">
-              <DisplayQuizHeart
-                variant="inline"
-                className={QUIZ_FOOTER_BRAND_HEART_CLASS}
-              />
-            </div>
+        <div className="relative z-10 flex h-full items-end justify-between">
+          <div className="relative z-20 flex shrink-0 items-end pb-2">
+            <DisplayQuizHeart
+              variant="inline"
+              progress={heartProgress}
+              className={QUIZ_FOOTER_BRAND_HEART_CLASS}
+            />
+          </div>
 
-            <div
-              className={cn(
-                "pointer-events-none absolute left-1/2 bottom-0 z-20 -translate-x-1/2",
-                "translate-y-[calc(-50%+0.5rem)]",
-              )}
-            >
-              {countdown ? (
-                <FooterCountdown value={countdown.value} total={countdown.total} />
-              ) : (
-                <span className="sr-only">Timer non attivo</span>
-              )}
-            </div>
+          <div
+            className={cn(
+              "pointer-events-none absolute bottom-0 left-1/2 z-20 -translate-x-1/2",
+              "translate-y-[calc(-50%+0.5rem)]",
+            )}
+          >
+            {countdown ? (
+              <FooterCountdown value={countdown.value} total={countdown.total} />
+            ) : (
+              <span className="sr-only">Timer non attivo</span>
+            )}
+          </div>
 
-            <div className="relative z-20 flex shrink-0 items-end pb-2">
-              <Image
-                src={LOGO_SRC}
-                alt=""
-                width={208}
-                height={91}
-                className={QUIZ_FOOTER_BRAND_LOGO_CLASS}
-                aria-hidden
-              />
-            </div>
+          <div className="relative z-20 flex shrink-0 items-end pb-2">
+            <Image
+              src={LOGO_SRC}
+              alt=""
+              width={312}
+              height={137}
+              className={QUIZ_FOOTER_BRAND_LOGO_CLASS}
+              aria-hidden
+            />
           </div>
         </div>
       </div>

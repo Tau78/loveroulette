@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import {
   joinParticipant,
   JoinParticipantError,
@@ -9,16 +8,7 @@ import {
   getLoveRouletteEvent,
 } from "@/lib/musicpro/resolve-event";
 import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
-
-const bodySchema = z.object({
-  nickname: z.string().trim().min(1).max(24),
-  gender: z.enum(["male", "female"]),
-  badgeCode: z.string().trim().max(32).optional().nullable(),
-  participantId: z
-    .union([z.string().uuid(), z.literal(""), z.null()])
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : undefined)),
-});
+import { joinParticipantBodySchema } from "@/lib/player/join-body-schema";
 
 export async function POST(
   request: Request,
@@ -31,10 +21,10 @@ export async function POST(
     return NextResponse.json({ error: "Invalid event slug" }, { status: 400 });
   }
 
-  let body: z.infer<typeof bodySchema>;
+  let body: import("@/lib/player/join-body-schema").JoinParticipantBody;
   try {
     const json = await request.json();
-    const parsed = bodySchema.safeParse(json);
+    const parsed = joinParticipantBodySchema.safeParse(json);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid payload", details: parsed.error.flatten() },
@@ -66,6 +56,7 @@ export async function POST(
       nickname: body.nickname,
       gender: body.gender,
       badgeCode: body.badgeCode,
+      dataVisibility: body.dataVisibility,
       participantId: body.participantId,
     });
 

@@ -12,6 +12,7 @@ import {
 } from "@/lib/musicpro/quiz-display";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
+import { DisplayStartCountdown } from "@/components/display/DisplayStartCountdown";
 import {
   QUIZ_ANSWER_LETTER_CLASS,
   QUIZ_ANSWER_TEXT_CLASS,
@@ -26,6 +27,7 @@ import {
   PROJECTOR_QUIZ_HEADER_HEIGHT,
   PROJECTOR_QUIZ_MAIN_PAD,
 } from "@/lib/display/projector-canvas";
+import { resolveEveningHeartProgress } from "@/lib/display/evening-heart-progress";
 
 interface DisplayQuizStageProps {
   eventSlug: string;
@@ -43,35 +45,42 @@ function DisplayQuizGameLayout({
   header,
   center,
   footerCountdown,
+  heartProgress,
   centerKey,
 }: {
   header: ReactNode;
   center: ReactNode;
   footerCountdown?: { value: number; total: number } | null;
+  heartProgress?: number;
   centerKey?: string;
 }) {
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1280px] flex-1 flex-col overflow-hidden">
-      <header className={cn("shrink-0 px-4 pt-2", PROJECTOR_QUIZ_HEADER_HEIGHT)}>
-        <div className="flex h-full min-h-0 flex-col justify-center">{header}</div>
-      </header>
+    <div className="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <div className="mx-auto flex min-h-0 w-full max-w-[1280px] flex-1 flex-col overflow-hidden">
+        <header className={cn("shrink-0 px-4 pt-2", PROJECTOR_QUIZ_HEADER_HEIGHT)}>
+          <div className="flex h-full min-h-0 flex-col justify-center">{header}</div>
+        </header>
 
-      <section className={cn("min-h-0 flex-1 overflow-hidden", PROJECTOR_QUIZ_MAIN_PAD)}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={centerKey ?? "center"}
-            className="flex h-full min-h-0 w-full flex-col"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            {center}
-          </motion.div>
-        </AnimatePresence>
-      </section>
+        <section className={cn("min-h-0 flex-1 overflow-hidden", PROJECTOR_QUIZ_MAIN_PAD)}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={centerKey ?? "center"}
+              className="flex h-full min-h-0 w-full flex-col"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              {center}
+            </motion.div>
+          </AnimatePresence>
+        </section>
+      </div>
 
-      <DisplayQuizFooter countdown={footerCountdown ?? null} />
+      <DisplayQuizFooter
+        countdown={footerCountdown ?? null}
+        heartProgress={heartProgress}
+      />
     </div>
   );
 }
@@ -328,12 +337,14 @@ export function DisplayQuizStage({
   const [results, setResults] = useState<QuestionResults | null>(null);
   const phase = quizState.displayPhase as QuizDisplayPhase;
   const timing = quizState.timing;
+  const heartProgress = resolveEveningHeartProgress("quiz", quizState);
 
   const { remaining } = useQuizPhaseSync({
     eventSlug,
     quizState,
     enabled: true,
-    driveTicks: quizState.autoplayEnabled === true,
+    driveTicks:
+      quizState.autoplayEnabled === true || phase === "start_countdown",
     onPhaseChange: (nextPhase) => {
       if (nextPhase === "results") {
         setResults(null);
@@ -377,11 +388,9 @@ export function DisplayQuizStage({
   );
 
   const footerCountdown =
-    phase === "start_countdown"
-      ? { value: remaining, total: timing.startCountdownSeconds }
-      : phase === "answers"
-        ? { value: remaining, total: timing.questionSeconds }
-        : null;
+    phase === "answers"
+      ? { value: remaining, total: timing.questionSeconds }
+      : null;
 
   if (phase === "start_countdown") {
     return (
@@ -389,17 +398,14 @@ export function DisplayQuizStage({
         centerKey="start-countdown"
         header={<CountdownHeaderPanel />}
         center={
-          <div className="flex h-full items-center justify-center">
-            <DisplayPhaseHero
-              kicker="Countdown"
-              headline={`${remaining}`}
-              subline="secondi al via"
-              pulse
-              uppercase
-            />
-          </div>
+          remaining > 0 ? (
+            <DisplayStartCountdown value={remaining} />
+          ) : (
+            <div className="h-full" aria-hidden />
+          )
         }
-        footerCountdown={footerCountdown}
+        footerCountdown={null}
+        heartProgress={heartProgress}
       />
     );
   }
@@ -416,6 +422,7 @@ export function DisplayQuizStage({
         }
         center={<ThemeCenter title={theme.title} />}
         footerCountdown={null}
+        heartProgress={heartProgress}
       />
     );
   }
@@ -432,6 +439,7 @@ export function DisplayQuizStage({
         }
         center={<QuestionPhaseCenter />}
         footerCountdown={null}
+        heartProgress={heartProgress}
       />
     );
   }
@@ -448,6 +456,7 @@ export function DisplayQuizStage({
         }
         center={<AnswerOptions options={currentQuestion.options} />}
         footerCountdown={footerCountdown}
+        heartProgress={heartProgress}
       />
     );
   }
@@ -469,6 +478,7 @@ export function DisplayQuizStage({
         }
         center={<NextQuestionCenter progressLabel={progressLabel} />}
         footerCountdown={null}
+        heartProgress={heartProgress}
       />
     );
   }
@@ -503,6 +513,7 @@ export function DisplayQuizStage({
           />
         }
         footerCountdown={null}
+        heartProgress={heartProgress}
       />
     );
   }

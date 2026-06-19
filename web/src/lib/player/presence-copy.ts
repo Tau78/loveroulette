@@ -56,8 +56,3 @@ export function playerPresenceSubtitle(
       return "Segui le istruzioni dell'animatore";
   }
 }
-
-/** Hint nella card lobby (solo prima dell'avvio). */
-export function playerLobbyHint(): string {
-  return "Il quiz partirà quando l'animatore premerà Start.";
-}
