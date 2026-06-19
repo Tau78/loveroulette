@@ -1,0 +1,16 @@
+{
+  "name": "Love Roulette",
+  "short_name": "Love Roulette",
+  "description": "Gioco interattivo live per single",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d12",
+  "theme_color": "#e91e8c",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

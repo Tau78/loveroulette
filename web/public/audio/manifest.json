@@ -1,0 +1,49 @@
+{
+  "theme": "dark_fuchsia",
+  "tracks": {
+    "LR_01_Lobby_Ambient": {
+      "phase": "lobby",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_01_Lobby_Ambient_A.mp3",
+        "B": "dark_fuchsia/loops/LR_01_Lobby_Ambient_B.mp3"
+      },
+      "notes": "A/B = due take SUNO del Prompt 1 (deep house lounge). Scegli primary ad orecchio."
+    },
+    "LR_02_Quiz_Tension": {
+      "phase": "quiz",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_02_Quiz_Tension_A.mp3",
+        "B": "dark_fuchsia/loops/LR_02_Quiz_Tension_B.mp3"
+      },
+      "notes": "Prompt 1: A «The Final Question», B «The Final Question (1)». Scegli primary ad orecchio."
+    },
+    "LR_07_Extraction_Reveal": {
+      "phase": "extraction",
+      "loop": false,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/stingers/LR_07_Extraction_Reveal_A.mp3",
+        "B": "dark_fuchsia/stingers/LR_07_Extraction_Reveal_B.mp3"
+      },
+      "notes": "Prompt 1 take A «Fuchsia Sparkle». Stinger reveal coppia — manca _B."
+    },
+    "LR_Quiz_Question_Gong": {
+      "phase": "quiz",
+      "loop": false,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/stingers/LR_Quiz_Question_Gong_A.mp3",
+        "B": "dark_fuchsia/stingers/LR_Quiz_Question_Gong_B.mp3"
+      },
+      "notes": "Gong risultati quiz. Fonte e licenza: SFX_ATTRIBUTION.md. Solo _A richiesto; _B opzionale."
+    }
+  }
+}

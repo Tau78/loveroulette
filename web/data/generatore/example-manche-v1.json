@@ -1,0 +1,66 @@
+{
+  "format": "love_roulette_generatore_v1",
+  "version": 1,
+  "event_code": "DEMO01",
+  "exported_at": "2026-06-19T12:00:00.000Z",
+  "manche": [
+    {
+      "id": "manche_lifestyle",
+      "order": 1,
+      "theme_title": "Stile di vita",
+      "theme_subtitle": "Abitudini e serate",
+      "questions": [
+        {
+          "id": "q01",
+          "body": "La serata ideale per te è...",
+          "category": "lifestyle",
+          "weight": 1,
+          "options": [
+            { "id": "q01_a", "label": "Discoteca fino all'alba", "sort_order": 0 },
+            { "id": "q01_b", "label": "Cena romantica a lume di candela", "sort_order": 1 },
+            { "id": "q01_c", "label": "Serata Netflix sul divano", "sort_order": 2 },
+            { "id": "q01_d", "label": "Avventura all'aperto", "sort_order": 3 }
+          ]
+        },
+        {
+          "id": "q02",
+          "body": "Come ti prepari per uscire?",
+          "category": "lifestyle",
+          "weight": 1,
+          "options": [
+            { "id": "q02_a", "label": "Ore davanti allo specchio", "sort_order": 0 },
+            { "id": "q02_b", "label": "Dieci minuti e via", "sort_order": 1 },
+            { "id": "q02_c", "label": "Chiedo consiglio a un amico", "sort_order": 2 },
+            { "id": "q02_d", "label": "Dipende dall'umore", "sort_order": 3 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manche_romantic",
+      "order": 2,
+      "theme_title": "Romanticismo",
+      "theme_subtitle": "Gestures & feelings",
+      "questions": [
+        {
+          "id": "q03",
+          "body": "Il gesto romantico che ti fa impazzire è...",
+          "category": "romantic",
+          "weight": 1.2,
+          "options": [
+            { "id": "q03_a", "label": "Un messaggio a sorpresa a metà giornata", "sort_order": 0 },
+            { "id": "q03_b", "label": "Una cena preparata in casa", "sort_order": 1 },
+            { "id": "q03_c", "label": "Un viaggio organizzato all'ultimo minuto", "sort_order": 2 },
+            { "id": "q03_d", "label": "Una dedica in pubblico (timido mode off)", "sort_order": 3 }
+          ]
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "start_countdown_seconds": 5,
+    "theme_intro_seconds": 4,
+    "question_timer_seconds": 15,
+    "results_seconds": 6
+  }
+}

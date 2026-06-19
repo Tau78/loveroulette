@@ -1,0 +1,810 @@
+{
+  "format": "love_roulette_generatore_v1",
+  "version": 1,
+  "event_code": "DEMO01",
+  "exported_at": "2026-06-19T12:00:00.000Z",
+  "manche": [
+    {
+      "id": "manche_lifestyle",
+      "order": 1,
+      "theme_title": "Stile di vita",
+      "theme_subtitle": "Abitudini e serate",
+      "questions": [
+        {
+          "id": "q01",
+          "body": "La serata ideale per te è...",
+          "category": "lifestyle",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q01_a",
+              "label": "Discoteca fino all'alba",
+              "sort_order": 0
+            },
+            {
+              "id": "q01_b",
+              "label": "Cena romantica a lume di candela",
+              "sort_order": 1
+            },
+            {
+              "id": "q01_c",
+              "label": "Serata Netflix sul divano",
+              "sort_order": 2
+            },
+            {
+              "id": "q01_d",
+              "label": "Avventura all'aperto",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q02",
+          "body": "Come ti prepari per uscire?",
+          "category": "lifestyle",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q02_a",
+              "label": "Ore davanti allo specchio",
+              "sort_order": 0
+            },
+            {
+              "id": "q02_b",
+              "label": "Dieci minuti e via",
+              "sort_order": 1
+            },
+            {
+              "id": "q02_c",
+              "label": "Chiedo consiglio a un amico",
+              "sort_order": 2
+            },
+            {
+              "id": "q02_d",
+              "label": "Dipende dall'umore",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q03",
+          "body": "Il tuo piatto preferito per un primo appuntamento è...",
+          "category": "lifestyle",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q03_a",
+              "label": "Pizza e birra",
+              "sort_order": 0
+            },
+            {
+              "id": "q03_b",
+              "label": "Sushi elegante",
+              "sort_order": 1
+            },
+            {
+              "id": "q03_c",
+              "label": "Cucina casalinga",
+              "sort_order": 2
+            },
+            {
+              "id": "q03_d",
+              "label": "Tapas da condividere",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q04",
+          "body": "Domenica mattina tipica?",
+          "category": "lifestyle",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q04_a",
+              "label": "Sport o passeggiata",
+              "sort_order": 0
+            },
+            {
+              "id": "q04_b",
+              "label": "Dormire fino a mezzogiorno",
+              "sort_order": 1
+            },
+            {
+              "id": "q04_c",
+              "label": "Brunch con amici",
+              "sort_order": 2
+            },
+            {
+              "id": "q04_d",
+              "label": "Progetti creativi",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q05",
+          "body": "In vacanza preferisci...",
+          "category": "lifestyle",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q05_a",
+              "label": "Mare e relax totale",
+              "sort_order": 0
+            },
+            {
+              "id": "q05_b",
+              "label": "Città d'arte e musei",
+              "sort_order": 1
+            },
+            {
+              "id": "q05_c",
+              "label": "Trekking e natura",
+              "sort_order": 2
+            },
+            {
+              "id": "q05_d",
+              "label": "Feste e nightlife",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q06",
+          "body": "Il tuo drink signature è...",
+          "category": "lifestyle",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q06_a",
+              "label": "Spritz o cocktail",
+              "sort_order": 0
+            },
+            {
+              "id": "q06_b",
+              "label": "Vino rosso",
+              "sort_order": 1
+            },
+            {
+              "id": "q06_c",
+              "label": "Birra artigianale",
+              "sort_order": 2
+            },
+            {
+              "id": "q06_d",
+              "label": "Analcolico creativo",
+              "sort_order": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manche_romantic",
+      "order": 2,
+      "theme_title": "Romanticismo",
+      "theme_subtitle": "Gesti e sentimenti",
+      "questions": [
+        {
+          "id": "q07",
+          "body": "Cosa ti fa innamorare per primo?",
+          "category": "romantic",
+          "weight": 1.2,
+          "options": [
+            {
+              "id": "q07_a",
+              "label": "Il sorriso",
+              "sort_order": 0
+            },
+            {
+              "id": "q07_b",
+              "label": "L'intelligenza",
+              "sort_order": 1
+            },
+            {
+              "id": "q07_c",
+              "label": "Il senso dell'umorismo",
+              "sort_order": 2
+            },
+            {
+              "id": "q07_d",
+              "label": "La sicurezza in sé",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q08",
+          "body": "Il gesto romantico perfetto?",
+          "category": "romantic",
+          "weight": 1.2,
+          "options": [
+            {
+              "id": "q08_a",
+              "label": "Lettera scritta a mano",
+              "sort_order": 0
+            },
+            {
+              "id": "q08_b",
+              "label": "Sorpresa last-minute",
+              "sort_order": 1
+            },
+            {
+              "id": "q08_c",
+              "label": "Guardare le stelle insieme",
+              "sort_order": 2
+            },
+            {
+              "id": "q08_d",
+              "label": "Ballare in salotto",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q09",
+          "body": "In una relazione cosa non può mancare?",
+          "category": "romantic",
+          "weight": 1.2,
+          "options": [
+            {
+              "id": "q09_a",
+              "label": "Fiducia totale",
+              "sort_order": 0
+            },
+            {
+              "id": "q09_b",
+              "label": "Risate ogni giorno",
+              "sort_order": 1
+            },
+            {
+              "id": "q09_c",
+              "label": "Spazio personale",
+              "sort_order": 2
+            },
+            {
+              "id": "q09_d",
+              "label": "Passione",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q10",
+          "body": "Primo appuntamento: chi paga?",
+          "category": "romantic",
+          "weight": 1.1,
+          "options": [
+            {
+              "id": "q10_a",
+              "label": "Offro sempre io",
+              "sort_order": 0
+            },
+            {
+              "id": "q10_b",
+              "label": "Alla romana",
+              "sort_order": 1
+            },
+            {
+              "id": "q10_c",
+              "label": "Chi ha proposto paga",
+              "sort_order": 2
+            },
+            {
+              "id": "q10_d",
+              "label": "A turni",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q11",
+          "body": "Quanto sei geloso/a?",
+          "category": "romantic",
+          "weight": 1.2,
+          "options": [
+            {
+              "id": "q11_a",
+              "label": "Per niente",
+              "sort_order": 0
+            },
+            {
+              "id": "q11_b",
+              "label": "Un po', è segno di cura",
+              "sort_order": 1
+            },
+            {
+              "id": "q11_c",
+              "label": "Solo se c'è motivo",
+              "sort_order": 2
+            },
+            {
+              "id": "q11_d",
+              "label": "Preferisco non rispondere",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q12",
+          "body": "L'anniversario ideale si festeggia...",
+          "category": "romantic",
+          "weight": 1.2,
+          "options": [
+            {
+              "id": "q12_a",
+              "label": "Cena stellata",
+              "sort_order": 0
+            },
+            {
+              "id": "q12_b",
+              "label": "Viaggio sorpresa",
+              "sort_order": 1
+            },
+            {
+              "id": "q12_c",
+              "label": "Serata semplice a casa",
+              "sort_order": 2
+            },
+            {
+              "id": "q12_d",
+              "label": "Con amici, festa grande",
+              "sort_order": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manche_adventure",
+      "order": 3,
+      "theme_title": "Avventura",
+      "theme_subtitle": "Rischio e spontaneità",
+      "questions": [
+        {
+          "id": "q13",
+          "body": "Ti lanceresti con il paracadute?",
+          "category": "adventure",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q13_a",
+              "label": "Già fatto!",
+              "sort_order": 0
+            },
+            {
+              "id": "q13_b",
+              "label": "Assolutamente sì",
+              "sort_order": 1
+            },
+            {
+              "id": "q13_c",
+              "label": "Forse... con qualcuno accanto",
+              "sort_order": 2
+            },
+            {
+              "id": "q13_d",
+              "label": "Mai nella vita",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q14",
+          "body": "Decisioni importanti le prendi...",
+          "category": "adventure",
+          "weight": 1.1,
+          "options": [
+            {
+              "id": "q14_a",
+              "label": "Col cuore",
+              "sort_order": 0
+            },
+            {
+              "id": "q14_b",
+              "label": "Con la testa",
+              "sort_order": 1
+            },
+            {
+              "id": "q14_c",
+              "label": "Chiedendo consiglio",
+              "sort_order": 2
+            },
+            {
+              "id": "q14_d",
+              "label": "All'ultimo momento",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q15",
+          "body": "Preferisci pianificare o improvvisare?",
+          "category": "adventure",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q15_a",
+              "label": "Tutto pianificato",
+              "sort_order": 0
+            },
+            {
+              "id": "q15_b",
+              "label": "Mix equilibrato",
+              "sort_order": 1
+            },
+            {
+              "id": "q15_c",
+              "label": "Totalmente spontaneo",
+              "sort_order": 2
+            },
+            {
+              "id": "q15_d",
+              "label": "Dipende dal contesto",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q16",
+          "body": "Ti piacerebbe vivere all'estero?",
+          "category": "adventure",
+          "weight": 1.1,
+          "options": [
+            {
+              "id": "q16_a",
+              "label": "Già ci ho pensato seriamente",
+              "sort_order": 0
+            },
+            {
+              "id": "q16_b",
+              "label": "Per un periodo sì",
+              "sort_order": 1
+            },
+            {
+              "id": "q16_c",
+              "label": "Solo in vacanza lunga",
+              "sort_order": 2
+            },
+            {
+              "id": "q16_d",
+              "label": "Casa mia è qui",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q17",
+          "body": "Sport o attività che ti attira di più?",
+          "category": "adventure",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q17_a",
+              "label": "Danza",
+              "sort_order": 0
+            },
+            {
+              "id": "q17_b",
+              "label": "Escursionismo",
+              "sort_order": 1
+            },
+            {
+              "id": "q17_c",
+              "label": "Palestra",
+              "sort_order": 2
+            },
+            {
+              "id": "q17_d",
+              "label": "Nessuno, sono un divano",
+              "sort_order": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manche_values",
+      "order": 4,
+      "theme_title": "Valori",
+      "theme_subtitle": "Famiglia e priorità",
+      "questions": [
+        {
+          "id": "q18",
+          "body": "Tra 5 anni ti vedi...",
+          "category": "values",
+          "weight": 1.1,
+          "options": [
+            {
+              "id": "q18_a",
+              "label": "Con famiglia",
+              "sort_order": 0
+            },
+            {
+              "id": "q18_b",
+              "label": "Carriera al top",
+              "sort_order": 1
+            },
+            {
+              "id": "q18_c",
+              "label": "Viaggiando il mondo",
+              "sort_order": 2
+            },
+            {
+              "id": "q18_d",
+              "label": "Non ci ho pensato",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q19",
+          "body": "Cosa conta di più?",
+          "category": "values",
+          "weight": 1.1,
+          "options": [
+            {
+              "id": "q19_a",
+              "label": "Stabilità",
+              "sort_order": 0
+            },
+            {
+              "id": "q19_b",
+              "label": "Libertà",
+              "sort_order": 1
+            },
+            {
+              "id": "q19_c",
+              "label": "Successo",
+              "sort_order": 2
+            },
+            {
+              "id": "q19_d",
+              "label": "Felicità quotidiana",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q20",
+          "body": "Quanto spesso vedi i tuoi genitori?",
+          "category": "values",
+          "weight": 1.1,
+          "options": [
+            {
+              "id": "q20_a",
+              "label": "Ogni settimana",
+              "sort_order": 0
+            },
+            {
+              "id": "q20_b",
+              "label": "Una volta al mese",
+              "sort_order": 1
+            },
+            {
+              "id": "q20_c",
+              "label": "Solo le feste",
+              "sort_order": 2
+            },
+            {
+              "id": "q20_d",
+              "label": "Vivo lontano",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q21",
+          "body": "Animali domestici?",
+          "category": "values",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q21_a",
+              "label": "Ho già un pet",
+              "sort_order": 0
+            },
+            {
+              "id": "q21_b",
+              "label": "Ne voglio assolutamente uno",
+              "sort_order": 1
+            },
+            {
+              "id": "q21_c",
+              "label": "Mi piacciono ma non li avrei",
+              "sort_order": 2
+            },
+            {
+              "id": "q21_d",
+              "label": "Allergico/indifferente",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q22",
+          "body": "Politica e attualità...",
+          "category": "values",
+          "weight": 1.1,
+          "options": [
+            {
+              "id": "q22_a",
+              "label": "Seguo tutto da vicino",
+              "sort_order": 0
+            },
+            {
+              "id": "q22_b",
+              "label": "Solo i grandi temi",
+              "sort_order": 1
+            },
+            {
+              "id": "q22_c",
+              "label": "Preferisco evitare",
+              "sort_order": 2
+            },
+            {
+              "id": "q22_d",
+              "label": "Ne parlo solo con amici",
+              "sort_order": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manche_fun",
+      "order": 5,
+      "theme_title": "Divertimento",
+      "theme_subtitle": "Ironia e situazioni buffe",
+      "questions": [
+        {
+          "id": "q23",
+          "body": "Se fossi un personaggio di film romantico...",
+          "category": "fun",
+          "weight": 0.8,
+          "options": [
+            {
+              "id": "q23_a",
+              "label": "Il bad boy con cuore d'oro",
+              "sort_order": 0
+            },
+            {
+              "id": "q23_b",
+              "label": "La romantica sognatrice",
+              "sort_order": 1
+            },
+            {
+              "id": "q23_c",
+              "label": "Il comico della situazione",
+              "sort_order": 2
+            },
+            {
+              "id": "q23_d",
+              "label": "L'eroe silenzioso",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q24",
+          "body": "Karaoke: ci saliresti?",
+          "category": "fun",
+          "weight": 0.8,
+          "options": [
+            {
+              "id": "q24_a",
+              "label": "Primo in fila!",
+              "sort_order": 0
+            },
+            {
+              "id": "q24_b",
+              "label": "Solo se obbligato",
+              "sort_order": 1
+            },
+            {
+              "id": "q24_c",
+              "label": "Mai, morirei di imbarazzo",
+              "sort_order": 2
+            },
+            {
+              "id": "q24_d",
+              "label": "Solo dopo qualche drink",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q25",
+          "body": "Il tuo superpotere ideale in coppia?",
+          "category": "fun",
+          "weight": 0.8,
+          "options": [
+            {
+              "id": "q25_a",
+              "label": "Leggere nel pensiero",
+              "sort_order": 0
+            },
+            {
+              "id": "q25_b",
+              "label": "Teletrasporto",
+              "sort_order": 1
+            },
+            {
+              "id": "q25_c",
+              "label": "Capire sempre l'umore",
+              "sort_order": 2
+            },
+            {
+              "id": "q25_d",
+              "label": "Non ne ho bisogno",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q26",
+          "body": "Messaggio perfetto a mezzanotte?",
+          "category": "fun",
+          "weight": 0.8,
+          "options": [
+            {
+              "id": "q26_a",
+              "label": "\"Stai dormendo?\"",
+              "sort_order": 0
+            },
+            {
+              "id": "q26_b",
+              "label": "\"Non vedo l'ora di rivederti\"",
+              "sort_order": 1
+            },
+            {
+              "id": "q26_c",
+              "label": "Meme divertente",
+              "sort_order": 2
+            },
+            {
+              "id": "q26_d",
+              "label": "Nessuno, a quell'ora dormo",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q27",
+          "body": "Se vincessi il buono vacanza stasera...",
+          "category": "fun",
+          "weight": 0.8,
+          "options": [
+            {
+              "id": "q27_a",
+              "label": "Partirei domani con chi ho accanto",
+              "sort_order": 0
+            },
+            {
+              "id": "q27_b",
+              "label": "Chiamerei il mio migliore amico",
+              "sort_order": 1
+            },
+            {
+              "id": "q27_c",
+              "label": "Organizzerei un viaggio di gruppo",
+              "sort_order": 2
+            },
+            {
+              "id": "q27_d",
+              "label": "Lo metterei da parte e pianificherei",
+              "sort_order": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "start_countdown_seconds": 5,
+    "theme_intro_seconds": 4,
+    "question_timer_seconds": 15,
+    "results_seconds": 6
+  }
+}

@@ -1,0 +1,175 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root,
+.dark,
+.theme-dark-fuchsia {
+  --background: #0d0d12;
+  --foreground: #ffffff;
+  --surface: #1a1a24;
+  --accent: #e91e8c;
+  --accent-secondary: #ff4757;
+  --muted-foreground: #a0a0b0;
+  --card: #1a1a24;
+  --card-foreground: #ffffff;
+  --popover: #1a1a24;
+  --popover-foreground: #ffffff;
+  --primary: #e91e8c;
+  --primary-foreground: #ffffff;
+  --secondary: #252532;
+  --secondary-foreground: #ffffff;
+  --muted: #252532;
+  --accent-foreground: #ffffff;
+  --destructive: #ff4757;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #e91e8c;
+  --radius: 0.75rem;
+  --wave-accent: rgba(233, 30, 140, 0.45);
+  --wave-glow: rgba(255, 71, 87, 0.25);
+  --wave-secondary: rgba(233, 30, 140, 0.2);
+  --takeover-gold: #ffd700;
+  --takeover-gold-light: #fff4b8;
+  --takeover-gold-glow: #ffe566;
+  --takeover-text: #1a1200;
+  --takeover-text-muted: #3d2e00;
+}
+
+.theme-romantic-elegant {
+  --background: #1a0f1e;
+  --foreground: #f5ede8;
+  --surface: #2d1f35;
+  --accent: #d4a5c8;
+  --accent-secondary: #c9a96e;
+  --muted: #b8a0b0;
+}
+
+.theme-neon-party {
+  --background: #050508;
+  --foreground: #ffffff;
+  --surface: #12121a;
+  --accent: #00f5ff;
+  --accent-secondary: #ff00ff;
+  --muted: #888899;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+.text-accent { color: var(--accent); }
+.bg-surface { background-color: var(--surface); }
+.bg-accent { background-color: var(--accent); }
+.border-accent { border-color: var(--accent); }
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+/* Love Roulette landing — ambient glow (server-safe) */
+.lr-landing-bg {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.lr-landing-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(233, 30, 140, 0.22), transparent 55%),
+    radial-gradient(ellipse 50% 45% at 100% 85%, rgba(255, 71, 87, 0.14), transparent 50%),
+    radial-gradient(ellipse 40% 35% at 0% 70%, rgba(233, 30, 140, 0.1), transparent 45%);
+}
+
+.lr-landing-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-slow,
+  .animate-fade-in {
+    animation: none;
+  }
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

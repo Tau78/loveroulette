@@ -1,0 +1,51 @@
+---
+description: UI maniacale — catchy, elegante, giocosa, sempre on-brand Love Roulette
+alwaysApply: true
+---
+
+# UI excellence — Love Roulette
+
+Ogni modifica visibile (display proiettore, player mobile, admin) deve passare questo filtro **prima** di considerarsi finita.
+
+## North star
+
+**Catchy · elegante · giocosa · coerente.** Non “dashboard generica”, non “AI purple gradient”. È una serata live in sala: energia da game show, polish da prodotto premium.
+
+## Prima di scrivere UI
+
+1. Leggi il contesto esistente: componenti fratelli, `docs/02-design-system.md`, tema attivo (`dark_fuchsia` default).
+2. Riutilizza token e pattern già nel repo (`primary`, `font-display`, `rounded-2xl`, glass `bg-black/55 backdrop-blur-md`, bordi `border-white/15`).
+3. Non introdurre colori, font o spaziature “nuovi” se esiste già un equivalente nel design system.
+
+## Display proiettore (`Display*`, `/display`)
+
+- **Layout fisso e stabile**: header · centro · footer — niente elementi che saltano o cambiano altezza tra fasi.
+- **Domande e risposte quiz**: sempre **MAIUSCOLO** (`uppercase`) su proiettore — domanda in header, opzioni A–D e label risultati. Token in `web/src/lib/display/quiz-display-typography.ts`.
+- **Tipografia responsive**: domande/risposte usano `clamp()` + `min(vh,vw)` per riempire lo spazio disponibile senza overflow; `line-clamp` su testi lunghi, grid `flex-1` / `grid-rows-4` per le quattro opzioni.
+- **Leggibilità a distanza**: sans (Geist) per corpo quiz; numeri e % grandi; contrasto alto su video/roulette.
+- **Motion con purpose**: Framer Motion per tick, reveal, transizioni fase — mai animazione gratuita. Rispetta `prefers-reduced-motion`.
+- **Footer quiz**: solo countdown centrale — cuore e logo restano negli angoli bassi (`display-brand-metrics.ts`), **non** nel footer.
+
+## Admin & player
+
+- Admin: compatto ma chiaro (deck OBS); stati busy/disabled sempre visibili.
+- Player: touch target ≥ 48px; feedback immediato al tap; tono leggero ma non infantile.
+
+## Catchy ≠ caotico
+
+- ✅ Glow controllato, spring al tick, stagger leggero, confetti solo su momenti chiave (gong, reveal, vincitore).
+- ❌ Troppi effetti insieme, testi illeggibili, layout che si ridimensiona ogni secondo.
+
+## Checklist pre-consegna UI
+
+- [ ] Domande e risposte quiz in maiuscolo + tipografia da `quiz-display-typography.ts`?
+- [ ] Funziona su proiettore (grande) e anteprima iframe (piccolo)?
+- [ ] Nessun salto di layout al cambio fase o al tick del timer?
+- [ ] Accessibilità: contrasto, `aria-live` su countdown, reduced motion?
+- [ ] Diff minimo: niente refactor estetico non richiesto?
+
+## Riferimenti
+
+- `docs/02-design-system.md` — temi, tipografia, motion
+- `docs/19-display-animation-strategy.md` — livelli polish display
+- `web/src/components/display/` — pattern di riferimento (quiz footer, stage, hero)
