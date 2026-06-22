@@ -6,12 +6,17 @@ import {
 } from "./display-overlay";
 import { getLastReveal } from "./extraction";
 import {
+  ensureFinalistsForEvent,
   getFinalistsFromMetadata,
   getLastElimination,
 } from "./elimination";
 import { getDisplayAudioCue } from "./display-audio";
-import { getQuizSessionState } from "./quiz-state";
+import { getQuizSessionState, getQuizSetupPrefs } from "./quiz-state";
 import { getVotingMetadata } from "./voting";
+import {
+  getFinalsShowFromMetadata,
+  initFinalsShow,
+} from "./finals-show";
 import {
   getLoveRouletteJoinCode,
   getLoveRouletteTitle,
@@ -98,10 +103,12 @@ export function toLoveRouletteEventView(
     displayOverlay: getDisplayOverlay(meta),
     displayAudioCue: getDisplayAudioCue(meta),
     quizState: getQuizSessionState(meta),
+    quizSetup: getQuizSetupPrefs(meta),
     lastReveal: getLastReveal(meta),
     lastElimination: getLastElimination(meta),
     finalists: getFinalistsFromMetadata(meta),
     voting: getVotingMetadata(meta),
+    finalsShow: getFinalsShowFromMetadata(meta),
     joinUrl: buildJoinUrl(normalizeEventSlug(urlSlug)),
     animatorPinRequired:
       typeof meta.animator_pin === "string" && meta.animator_pin.trim().length > 0,
@@ -121,7 +128,25 @@ export async function getLoveRouletteEvent(
   if (!row) return null;
 
   const session = await fetchLatestSession(supabase, row.id);
-  return toLoveRouletteEventView(row, session, slug);
+  let event = toLoveRouletteEventView(row, session, slug);
+
+  if (event.runtimeState === "finals" || event.runtimeState === "winner") {
+    const finalists = await ensureFinalistsForEvent(supabase, row.id);
+    await initFinalsShow(supabase, row.id);
+    const refreshed = await fetchEventRow(supabase, slug);
+    const refreshedMeta = (refreshed?.metadata ?? row.metadata ?? {}) as Record<
+      string,
+      unknown
+    >;
+    event = {
+      ...event,
+      finalists,
+      voting: getVotingMetadata(refreshedMeta),
+      finalsShow: getFinalsShowFromMetadata(refreshedMeta),
+    };
+  }
+
+  return event;
 }
 
 export async function ensureLoveRouletteSession(

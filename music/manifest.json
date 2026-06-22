@@ -21,7 +21,40 @@
         "A": "dark_fuchsia/loops/LR_02_Quiz_Tension_A.mp3",
         "B": "dark_fuchsia/loops/LR_02_Quiz_Tension_B.mp3"
       },
-      "notes": "Prompt 1: A «The Final Question», B «The Final Question (1)». Scegli primary ad orecchio."
+      "notes": "Prompt 1 (2026-06-19): A «The Final Question (2)», B «The Final Question (3)». Primary A — cambia in manifest se preferisci B."
+    },
+    "LR_05_Extraction_Underscore": {
+      "phase": "extraction",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_05_Extraction_Underscore_A.mp3",
+        "B": "dark_fuchsia/loops/LR_05_Extraction_Underscore_B.mp3"
+      },
+      "notes": "Prompt 2 v2 (2026-06-19): A «Midnight Game Show», B «Midnight Game Show (1)». Bed estrazione coppie."
+    },
+    "LR_25_Quiz_Results_Reveal": {
+      "phase": "quiz",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_25_Quiz_Results_Reveal_A.mp3",
+        "B": "dark_fuchsia/loops/LR_25_Quiz_Results_Reveal_B.mp3"
+      },
+      "notes": "Prompt 2 v2 (2026-06-19): A «The Final Question (8)», B «The Final Question (9)». Fase quiz results (%). Styles+Lyrics SUNO."
+    },
+    "LR_06_Extraction_Drumroll": {
+      "phase": "extraction",
+      "loop": false,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/stingers/LR_06_Extraction_Drumroll_A.mp3",
+        "B": "dark_fuchsia/stingers/LR_06_Extraction_Drumroll_B.mp3"
+      },
+      "notes": "Prompt 1 v5 (2026-06-20): A «Empty Room Impact» (~9.8s), B «Empty Room Impact (1)» (~9.2s). Styles+Lyrics — pronti al live, no trim. Primary A. Archive: P1_v4 Silent Tension Cue, P1_v3/P1_legacy, P2/P3 in candidates/."
     },
     "LR_07_Extraction_Reveal": {
       "phase": "extraction",
@@ -32,7 +65,7 @@
         "A": "dark_fuchsia/stingers/LR_07_Extraction_Reveal_A.mp3",
         "B": "dark_fuchsia/stingers/LR_07_Extraction_Reveal_B.mp3"
       },
-      "notes": "Prompt 1 take A «Fuchsia Sparkle». Stinger reveal coppia — manca _B."
+      "notes": "Prompt 1 v2 (2026-06-19): A «Fuchsia Fanfare», B «Fuchsia Fanfare (1)». Stinger reveal coppia. Primary A."
     },
     "LR_Quiz_Question_Gong": {
       "phase": "quiz",
@@ -43,7 +76,51 @@
         "A": "dark_fuchsia/stingers/LR_Quiz_Question_Gong_A.mp3",
         "B": "dark_fuchsia/stingers/LR_Quiz_Question_Gong_B.mp3"
       },
-      "notes": "Gong risultati quiz. Fonte e licenza: SFX_ATTRIBUTION.md. Solo _A richiesto; _B opzionale."
+      "notes": "Gong quiz (2026-06-20): Pixabay «Old Zildjian Gong Quite Natural» — trim ~4 s + fade. SFX_ATTRIBUTION.md. Primary A."
+    },
+    "LR_15_Winner_Anthem": {
+      "phase": "winner",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_15_Winner_Anthem_A.mp3",
+        "B": "dark_fuchsia/loops/LR_15_Winner_Anthem_B.mp3"
+      },
+      "notes": "Prompt 1+2 (2026-06-19): A «Victory Confetti» (~50s), B «Love Roulette Champions» Prompt 2 (~114s). Primary A — valuta B come primary se preferisci loop più lungo stadium EDM."
+    },
+    "LR_16_Winner_Stinger": {
+      "phase": "winner",
+      "loop": false,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/stingers/LR_16_Winner_Stinger_A.mp3",
+        "B": "dark_fuchsia/stingers/LR_16_Winner_Stinger_B.mp3"
+      },
+      "notes": "Prompt 1 (2026-06-20): A «Confetti Strike» (~3.8s), B «Confetti Strike_1» (~4.6s). Hit vincitori prima di LR_15. Primary A."
+    },
+    "LR_13_Voting_Countdown": {
+      "phase": "finals",
+      "loop": false,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/stingers/LR_13_Voting_Countdown_A.mp3",
+        "B": "dark_fuchsia/stingers/LR_13_Voting_Countdown_B.mp3"
+      },
+      "notes": "Prompt 1 (brief §2): one-shot 8–12 s, 3-2-1 prima apertura voti. **File da generare SUNO** — placeholder path."
+    },
+    "LR_14_Voting_Suspense": {
+      "phase": "finals",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_14_Voting_Suspense_A.mp3",
+        "B": "dark_fuchsia/loops/LR_14_Voting_Suspense_B.mp3"
+      },
+      "notes": "Prompt 1 (brief §2): loop 45–60 s, finestra voto (~20 s live). **File da generare SUNO** — placeholder path."
     }
   },
   "candidates": {
@@ -55,6 +132,42 @@
         "B": "dark_fuchsia/candidates/LR_01_Lobby_Ambient_P2_B.mp3"
       },
       "notes": "Prompt 2 (Rhodes / slow burn). Confronta P2_A vs P2_B; se vince su Prompt 1, promuovi in loops/."
+    },
+    "LR_06_Extraction_Drumroll": {
+      "prompt": 2,
+      "sunoTitle": "The Reveal",
+      "files": {
+        "A": "dark_fuchsia/candidates/LR_06_Extraction_Drumroll_P2_A.mp3",
+        "B": "dark_fuchsia/candidates/LR_06_Extraction_Drumroll_P2_B.mp3"
+      },
+      "notes": "Prompt 2 v2 (2026-06-19): A/B «The Reveal» / «The Reveal (1)», ~8.2s, orchestrale + ticking. Pronti al live senza trim. Legacy: P2_legacy_A «Casino Roulette Tension Roll». Promuovi in stingers/ se preferisci vs Prompt 1 v3."
+    },
+    "LR_06_Extraction_Drumroll_P3": {
+      "prompt": 3,
+      "sunoTitle": "Rising Snare Vault",
+      "files": {
+        "A": "dark_fuchsia/candidates/LR_06_Extraction_Drumroll_P3_A.mp3",
+        "B": "dark_fuchsia/candidates/LR_06_Extraction_Drumroll_P3_B.mp3"
+      },
+      "notes": "Prompt 3 (2026-06-19): A/B «Rising Snare Vault» / «(1)», ~122–128s grezzo. Styles+Lyrics Song mode. Tagliare 12–18s (Intro→Silence) in post. Electronic build-drop vs orchestrale P2."
+    },
+    "LR_16_Winner_Stinger": {
+      "prompt": 2,
+      "sunoTitle": "Grand Prize Reveal",
+      "files": {
+        "A": "dark_fuchsia/candidates/LR_16_Winner_Stinger_P2_A.mp3",
+        "B": "dark_fuchsia/candidates/LR_16_Winner_Stinger_P2_B.mp3"
+      },
+      "notes": "Prompt 2 (2026-06-20): A «Grand Prize Reveal» (~9.6s), B «Grand Prize Reveal (1)» (~4.6s). Synth brass + sub boom. Confronta vs Confetti Strike in stingers/; P2_B più vicino al target 5s."
+    },
+    "LR_16_Winner_Stinger_P3": {
+      "prompt": 3,
+      "sunoTitle": "Golden Moment",
+      "files": {
+        "A": "dark_fuchsia/candidates/LR_16_Winner_Stinger_P3_A.mp3",
+        "B": "dark_fuchsia/candidates/LR_16_Winner_Stinger_P3_B.mp3"
+      },
+      "notes": "Prompt 3 (2026-06-20): A «Golden Moment» (~7s, target brief), B «Golden Moment (1)» (~14s). Choir pad + clap stack. Crossfade pulito verso LR_15."
     }
   }
 }

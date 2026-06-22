@@ -38,6 +38,8 @@ export interface EventConfig {
   tie_breaker: "animator_manual" | "sudden_death";
   question_mode: "fixed" | "dynamic";
   data_retention_days: number;
+  /** Se true, il giocatore deve inserire il codice badge al join. */
+  badge_required: boolean;
 }
 
 export const DEFAULT_EVENT_CONFIG: EventConfig = {
@@ -60,6 +62,7 @@ export const DEFAULT_EVENT_CONFIG: EventConfig = {
   tie_breaker: "animator_manual",
   question_mode: "fixed",
   data_retention_days: 30,
+  badge_required: false,
 };
 
 /** @deprecated Standalone schema — use LoveRouletteEvent from @/lib/musicpro/types */
@@ -99,9 +102,9 @@ export interface Pair {
 }
 
 export const CHALLENGE_LABELS: Record<ChallengeId, string> = {
-  dance: "La Prova del Ballo",
-  kiss: "La Prova del Bacio",
-  declaration: "La Dichiarazione d'Amore",
+  dance: "Vamos a bailar",
+  kiss: "Baciami, stupido!",
+  declaration: "In ginocchio da te",
   kamasutra: "Posizione Kamasutra",
 };
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { KeyRound, Megaphone, SlidersHorizontal } from "lucide-react";
+import { KeyRound, Megaphone, Settings, SlidersHorizontal } from "lucide-react";
 import {
   AdminAudioPanel,
   ADMIN_SOUNDTRACK_AUTO_UNLOCK,
@@ -14,8 +14,11 @@ import { AdminDeckPanel } from "@/components/admin/AdminDeckPanel";
 import { AdminGeneratorePanel } from "@/components/admin/AdminGeneratorePanel";
 import { AdminPinModal } from "@/components/admin/AdminPinModal";
 import { AdminNewGamePanel } from "@/components/admin/AdminNewGamePanel";
+import { AdminQuizPrepPanel } from "@/components/admin/AdminQuizPrepPanel";
+import { AdminFinalsPanel } from "@/components/admin/AdminFinalsPanel";
 import { AdminQuizPanel } from "@/components/admin/AdminQuizPanel";
 import { AdminRegiaPanel } from "@/components/admin/AdminRegiaPanel";
+import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { DisplayPreview } from "@/components/admin/DisplayPreview";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,11 +30,12 @@ import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import { normalizeEventSlug } from "@/lib/musicpro/slug";
 import { postQuizAction } from "@/lib/admin/animator-api";
 
-type AdminTab = "controlli" | "regia";
+type AdminTab = "controlli" | "regia" | "impostazioni";
 
 const TABS: { id: AdminTab; label: string; icon: typeof SlidersHorizontal }[] = [
   { id: "controlli", label: "Controlli", icon: SlidersHorizontal },
   { id: "regia", label: "Regia", icon: Megaphone },
+  { id: "impostazioni", label: "Impostazioni", icon: Settings },
 ];
 
 interface SessionPayload {
@@ -48,13 +52,11 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<EventStats>({
     onlineCount: 0,
     participantCount: 0,
+    pairProgress: null,
   });
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>("controlli");
-  const [quizOverride, setQuizOverride] = useState<QuizSessionState | null>(
-    null,
-  );
   const [questionsRefreshKey, setQuestionsRefreshKey] = useState(0);
   const [soundtrackUnlocked, setSoundtrackUnlocked] = useState<
     boolean | null
@@ -74,20 +76,22 @@ export default function AdminDashboardPage() {
     pinRequired: event?.animatorPinRequired ?? false,
   });
 
-  const { runtimeState, quizState } = useLoveRouletteSession({
+  const {
+    runtimeState,
+    quizState,
+    voting,
+    finalsShow,
+    lastReveal,
+    syncStatus,
+    applyQuizUpdate,
+    applyFinalsUpdate,
+  } = useLoveRouletteSession({
     eventSlug: eventCode,
     eventId: event?.id,
+    initialEvent: event,
     initialRuntimeState: event?.runtimeState ?? "lobby",
     enabled: Boolean(event),
   });
-
-  const effectiveQuizState = quizOverride ?? quizState;
-
-  useEffect(() => {
-    if (!quizState) {
-      setQuizOverride(null);
-    }
-  }, [quizState?.updatedAt, quizState]);
 
   const loadSessionStats = useCallback(async () => {
     const response = await fetch(
@@ -96,6 +100,14 @@ export default function AdminDashboardPage() {
     if (!response.ok) return null;
     return (await response.json()) as SessionPayload;
   }, [eventCode]);
+
+  const refreshSessionStats = useCallback(async () => {
+    const sessionPayload = await loadSessionStats();
+    if (sessionPayload) {
+      setStats(sessionPayload.stats);
+    }
+    return sessionPayload;
+  }, [loadSessionStats]);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,7 +165,11 @@ export default function AdminDashboardPage() {
     };
 
     void refreshStats();
-    const interval = window.setInterval(refreshStats, 10000);
+    const statsPollMs =
+      runtimeState === "extraction" || runtimeState === "elimination"
+        ? 3000
+        : 10000;
+    const interval = window.setInterval(refreshStats, statsPollMs);
 
     return () => {
       cancelled = true;
@@ -163,18 +179,28 @@ export default function AdminDashboardPage() {
 
   const controlsDisabled = !pinReady || loading || pinVerifying;
 
-  const handleQuizChange = useCallback((quiz: QuizSessionState | null) => {
-    setQuizOverride(quiz);
-  }, []);
+  const handleQuizChange = useCallback(
+    (quiz: QuizSessionState | null) => {
+      applyQuizUpdate(quiz);
+    },
+    [applyQuizUpdate],
+  );
+
+  const handleFinalsChange = useCallback(
+    (payload: Parameters<typeof applyFinalsUpdate>[0]) => {
+      applyFinalsUpdate(payload);
+    },
+    [applyFinalsUpdate],
+  );
 
   const handleResetComplete = useCallback(async () => {
-    setQuizOverride(null);
+    applyQuizUpdate(null);
     setQuestionsRefreshKey((key) => key + 1);
     const sessionPayload = await loadSessionStats();
     if (sessionPayload) {
       setStats(sessionPayload.stats);
     }
-  }, [loadSessionStats]);
+  }, [applyQuizUpdate, loadSessionStats]);
 
   const handleQuestionsImported = useCallback(() => {
     void handleResetComplete();
@@ -219,6 +245,7 @@ export default function AdminDashboardPage() {
         runtimeState={runtimeState}
         onlineCount={stats.onlineCount}
         participantCount={stats.participantCount}
+        syncStatus={syncStatus}
       >
         <div className="flex flex-col gap-2 h-full min-h-0">
           <div className="flex items-center gap-1 shrink-0">
@@ -257,6 +284,18 @@ export default function AdminDashboardPage() {
             <div className="space-y-2 overflow-y-auto min-h-0 h-full pr-0.5">
               {activeTab === "controlli" ? (
                 <>
+                  {(runtimeState === "finals" || runtimeState === "winner") && (
+                    <AdminFinalsPanel
+                      variant="deck"
+                      eventCode={eventCode}
+                      animatorPin={pin}
+                      disabled={controlsDisabled}
+                      finalsShow={finalsShow}
+                      voting={voting}
+                      onInvalidPin={handleInvalidPin}
+                      onFinalsChange={handleFinalsChange}
+                    />
+                  )}
                   <AdminPreflightPanel
                     variant="deck"
                     eventCode={eventCode}
@@ -274,14 +313,27 @@ export default function AdminDashboardPage() {
                     initialExtractionMode={event.config.extraction_mode}
                     disabled={controlsDisabled}
                     onInvalidPin={handleInvalidPin}
-                    onQuizChange={handleQuizChange}
                     questionsRefreshKey={questionsRefreshKey}
+                    pairProgress={stats.pairProgress}
+                    onRefreshProgress={refreshSessionStats}
                   />
-                  {runtimeState === "quiz" && effectiveQuizState ? (
+                  {runtimeState === "lobby" ? (
+                    <AdminQuizPrepPanel
+                      variant="deck"
+                      eventCode={eventCode}
+                      animatorPin={pin}
+                      quizSetup={event.quizSetup}
+                      disabled={controlsDisabled}
+                      questionsRefreshKey={questionsRefreshKey}
+                      onInvalidPin={handleInvalidPin}
+                      onQuizChange={handleQuizChange}
+                    />
+                  ) : null}
+                  {runtimeState === "quiz" && quizState ? (
                     <AdminQuizPanel
                       variant="deck"
                       eventCode={eventCode}
-                      quizState={effectiveQuizState}
+                      quizState={quizState}
                       animatorPin={pin}
                       onlineCount={stats.onlineCount}
                       participantCount={stats.participantCount}
@@ -290,7 +342,7 @@ export default function AdminDashboardPage() {
                       onQuizChange={handleQuizChange}
                     />
                   ) : null}
-                  {runtimeState === "quiz" && !effectiveQuizState ? (
+                  {runtimeState === "quiz" && !quizState ? (
                     <AdminDeckPanel
                       title="Quiz senza domande"
                       subtitle="La fase quiz è attiva ma il set non è inizializzato."
@@ -317,14 +369,6 @@ export default function AdminDashboardPage() {
                       </Button>
                     </AdminDeckPanel>
                   ) : null}
-                  <AdminAudioPanel
-                    variant="deck"
-                    eventCode={eventCode}
-                    runtimeState={runtimeState}
-                    quizState={effectiveQuizState}
-                    disabled={controlsDisabled}
-                    onUnlockedChange={setSoundtrackUnlocked}
-                  />
                   <AdminNewGamePanel
                     variant="deck"
                     eventCode={eventCode}
@@ -333,15 +377,21 @@ export default function AdminDashboardPage() {
                     onInvalidPin={handleInvalidPin}
                     onReset={() => void handleResetComplete()}
                   />
-                  <AdminGeneratorePanel
-                    variant="deck"
-                    eventCode={eventCode}
-                    animatorPin={pin}
-                    disabled={controlsDisabled}
-                    onImported={handleQuestionsImported}
-                  />
                 </>
               ) : null}
+
+              <div className={activeTab === "regia" ? undefined : "hidden"}>
+                <AdminAudioPanel
+                  variant="deck"
+                  eventCode={eventCode}
+                  runtimeState={runtimeState}
+                  quizState={quizState}
+                  lastReveal={lastReveal}
+                  finalsShow={finalsShow}
+                  disabled={controlsDisabled}
+                  onUnlockedChange={setSoundtrackUnlocked}
+                />
+              </div>
 
               {activeTab === "regia" ? (
                 <AdminRegiaPanel
@@ -352,6 +402,39 @@ export default function AdminDashboardPage() {
                   disabled={controlsDisabled}
                   onInvalidPin={handleInvalidPin}
                 />
+              ) : null}
+
+              {activeTab === "impostazioni" ? (
+                <>
+                  <AdminSettingsPanel
+                    variant="deck"
+                    eventCode={eventCode}
+                    animatorPin={pin}
+                    badgeRequired={event.config.badge_required}
+                    disabled={controlsDisabled}
+                    onInvalidPin={handleInvalidPin}
+                    onConfigChange={({ badgeRequired }) =>
+                      setEvent((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              config: {
+                                ...prev.config,
+                                badge_required: badgeRequired,
+                              },
+                            }
+                          : prev,
+                      )
+                    }
+                  />
+                  <AdminGeneratorePanel
+                    variant="deck"
+                    eventCode={eventCode}
+                    animatorPin={pin}
+                    disabled={controlsDisabled}
+                    onImported={handleQuestionsImported}
+                  />
+                </>
               ) : null}
             </div>
           </div>

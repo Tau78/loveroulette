@@ -1,7 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  collectLockedParticipantIds,
+  filterValidMaleFemalePairs,
+  isValidMaleFemalePair,
+  maxAllowedExtractions,
   selectNextPair,
   type ExtractionMode,
+  type ParticipantGender,
 } from "@/lib/matching/affinity";
 import { parseLoveRouletteConfig } from "./event-config";
 import type { DisplayOverlay } from "./display-overlay";
@@ -92,6 +97,99 @@ export function getLastReveal(
   };
 }
 
+async function loadParticipantGenderContext(
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<{
+  genderById: Map<string, ParticipantGender>;
+  maleCount: number;
+  femaleCount: number;
+}> {
+  const { data, error } = await supabase
+    .from("love_roulette_participants")
+    .select("id, gender")
+    .eq("event_id", eventId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const genderById = new Map<string, ParticipantGender>();
+  let maleCount = 0;
+  let femaleCount = 0;
+
+  for (const row of data ?? []) {
+    const id = String(row.id);
+    const gender: ParticipantGender =
+      row.gender === "female" ? "female" : "male";
+    genderById.set(id, gender);
+    if (gender === "male") maleCount++;
+    else femaleCount++;
+  }
+
+  return { genderById, maleCount, femaleCount };
+}
+
+async function assertParticipantsNotAlreadyPaired(
+  supabase: SupabaseClient,
+  eventId: string,
+  maleId: string,
+  femaleId: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("love_roulette_pairs")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("was_shown", true)
+    .or(
+      [
+        `participant_male_id.eq.${maleId}`,
+        `participant_female_id.eq.${maleId}`,
+        `participant_male_id.eq.${femaleId}`,
+        `participant_female_id.eq.${femaleId}`,
+      ].join(","),
+    )
+    .limit(1);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if ((data ?? []).length > 0) {
+    throw new ExtractionError(
+      "Uno dei due giocatori è già stato estratto in un'altra coppia.",
+      409,
+    );
+  }
+}
+
+async function retirePhantomPairsForParticipants(
+  supabase: SupabaseClient,
+  eventId: string,
+  pairId: string,
+  maleId: string,
+  femaleId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("love_roulette_pairs")
+    .update({ is_eliminated: true })
+    .eq("event_id", eventId)
+    .eq("was_shown", false)
+    .neq("id", pairId)
+    .or(
+      [
+        `participant_male_id.eq.${maleId}`,
+        `participant_female_id.eq.${maleId}`,
+        `participant_male_id.eq.${femaleId}`,
+        `participant_female_id.eq.${femaleId}`,
+      ].join(","),
+    );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function extractNextCouple(
   supabase: SupabaseClient,
   eventId: string,
@@ -117,6 +215,16 @@ export async function extractNextCouple(
 
   const typedPairs = pairs as PairRow[];
 
+  const { genderById, maleCount, femaleCount } =
+    await loadParticipantGenderContext(supabase, eventId);
+
+  if (maleCount === 0 || femaleCount === 0) {
+    throw new ExtractionError(
+      "Servono almeno un uomo e una donna per formare le coppie.",
+      404,
+    );
+  }
+
   const { data: eventRow, error: eventError } = await supabase
     .from("events")
     .select("metadata")
@@ -130,9 +238,33 @@ export async function extractNextCouple(
   const metadata = (eventRow.metadata ?? {}) as Record<string, unknown>;
   const config = parseLoveRouletteConfig(metadata);
   const randomShownCount = typedPairs.filter((pair) => pair.was_shown).length;
+  const maxExtractions = maxAllowedExtractions(
+    maleCount,
+    femaleCount,
+    config.extraction_count,
+  );
+
+  if (randomShownCount >= maxExtractions) {
+    throw new ExtractionError(
+      `Limite coppie raggiunto (${maxExtractions}): ogni giocatore può essere estratto una sola volta.`,
+      404,
+    );
+  }
+
+  const eligiblePairs = filterValidMaleFemalePairs(
+    typedPairs.map((row) => ({
+      id: row.id,
+      rank: row.rank,
+      was_shown: row.was_shown,
+      is_eliminated: row.is_eliminated,
+      participant_male_id: row.participant_male_id,
+      participant_female_id: row.participant_female_id,
+    })),
+    genderById,
+  );
 
   const selected = selectNextPair(
-    typedPairs,
+    eligiblePairs,
     mode,
     config.hybrid_random_count,
     randomShownCount,
@@ -140,7 +272,7 @@ export async function extractNextCouple(
 
   if (!selected) {
     throw new ExtractionError(
-      "Tutte le coppie sono già state estratte.",
+      "Non restano coppie disponibili: ogni uomo e ogni donna possono essere estratti una sola volta.",
       404,
     );
   }
@@ -149,6 +281,37 @@ export async function extractNextCouple(
   if (!pair) {
     throw new ExtractionError("Coppia selezionata non trovata.", 404);
   }
+
+  if (
+    !isValidMaleFemalePair(
+      pair.participant_male_id,
+      pair.participant_female_id,
+      genderById,
+    )
+  ) {
+    throw new ExtractionError(
+      "Coppia non valida: ogni coppia deve essere 1 uomo + 1 donna.",
+      400,
+    );
+  }
+
+  const locked = collectLockedParticipantIds(typedPairs);
+  if (
+    locked.has(pair.participant_male_id) ||
+    locked.has(pair.participant_female_id)
+  ) {
+    throw new ExtractionError(
+      "Uno dei due giocatori è già stato estratto in un'altra coppia.",
+      409,
+    );
+  }
+
+  await assertParticipantsNotAlreadyPaired(
+    supabase,
+    eventId,
+    pair.participant_male_id,
+    pair.participant_female_id,
+  );
 
   const participantIds = [pair.participant_male_id, pair.participant_female_id];
   const { data: participants, error: participantsError } = await supabase
@@ -172,14 +335,32 @@ export async function extractNextCouple(
 
   const now = new Date().toISOString();
 
-  const { error: updatePairError } = await supabase
+  const { data: markedShown, error: updatePairError } = await supabase
     .from("love_roulette_pairs")
     .update({ was_shown: true })
-    .eq("id", pair.id);
+    .eq("id", pair.id)
+    .eq("was_shown", false)
+    .select("id")
+    .maybeSingle();
 
   if (updatePairError) {
     throw new Error(updatePairError.message);
   }
+
+  if (!markedShown) {
+    throw new ExtractionError(
+      "Coppia già estratta o non più disponibile. Riprova.",
+      409,
+    );
+  }
+
+  await retirePhantomPairsForParticipants(
+    supabase,
+    eventId,
+    pair.id,
+    pair.participant_male_id,
+    pair.participant_female_id,
+  );
 
   const lastReveal: LastReveal = {
     maleNick: maleNick.trim(),

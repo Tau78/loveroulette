@@ -1,5 +1,6 @@
 import { mergeEventConfig } from "@/lib/events";
 import type { EventConfig } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** LR config stored in events.metadata.love_roulette (MusicPro convention). */
 export function parseLoveRouletteConfig(
@@ -35,4 +36,38 @@ export function getLoveRouletteTitle(
     return `Love Roulette @ ${venueName}`;
   }
   return `Love Roulette — ${eventDate}`;
+}
+
+export async function updateLoveRouletteConfig(
+  supabase: SupabaseClient,
+  eventId: string,
+  patch: Partial<EventConfig>,
+): Promise<EventConfig> {
+  const { data: row, error: readError } = await supabase
+    .from("events")
+    .select("metadata")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (readError) throw new Error(readError.message);
+
+  const metadata = (row?.metadata ?? {}) as Record<string, unknown>;
+  const nextConfig = mergeEventConfig({
+    ...parseLoveRouletteConfig(metadata),
+    ...patch,
+  });
+
+  const { error: writeError } = await supabase
+    .from("events")
+    .update({
+      metadata: {
+        ...metadata,
+        love_roulette: nextConfig,
+      },
+    })
+    .eq("id", eventId);
+
+  if (writeError) throw new Error(writeError.message);
+
+  return nextConfig;
 }

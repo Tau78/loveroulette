@@ -11,6 +11,8 @@ import {
   type QuizMancheTheme,
   type QuizTimingConfig,
   isPhaseExpired,
+  nextQuizDisplayPhase,
+  resolvePhaseAfterQuestionAdvance,
 } from "./quiz-display";
 import type { LoveRouletteQuestionSource } from "./types";
 import { updateSessionRuntimeState } from "./session";
@@ -89,6 +91,71 @@ export function getQuizMancheFromMetadata(
   metadata: Record<string, unknown> | null | undefined,
 ): QuizMancheTheme[] | undefined {
   return normalizeManche(metadata?.love_roulette_manche);
+}
+
+export interface QuizSetupPrefs {
+  /** Ultima scelta animatore (null = tutte le domande caricate). */
+  questionCount: number | null;
+  questionSeconds: number;
+}
+
+export function getQuizSetupPrefs(
+  metadata: Record<string, unknown> | null | undefined,
+): QuizSetupPrefs {
+  const timing = normalizeTiming(metadata?.love_roulette_quiz_timing);
+  const raw = metadata?.love_roulette_quiz_prefs;
+  let questionCount: number | null = null;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const value = (raw as Record<string, unknown>).questionCount;
+    if (typeof value === "number" && value >= 1) {
+      questionCount = value;
+    }
+  }
+  return {
+    questionCount,
+    questionSeconds: timing.questionSeconds,
+  };
+}
+
+export interface StartQuizSessionOptions {
+  questionCount?: number;
+  questionSeconds?: number;
+}
+
+async function persistQuizSetupMetadata(
+  supabase: SupabaseClient,
+  eventId: string,
+  prefs: QuizSetupPrefs,
+  timing: QuizTimingConfig,
+): Promise<void> {
+  const { data: row, error: fetchError } = await supabase
+    .from("events")
+    .select("metadata")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (fetchError || !row) {
+    throw new Error(fetchError?.message ?? "Event not found");
+  }
+
+  const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+  const nextMetadata = {
+    ...metadata,
+    love_roulette_quiz_timing: timing,
+    love_roulette_quiz_prefs: {
+      questionCount: prefs.questionCount,
+      questionSeconds: prefs.questionSeconds,
+    },
+  };
+
+  const { error: updateError } = await supabase
+    .from("events")
+    .update({ metadata: nextMetadata })
+    .eq("id", eventId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
 }
 
 export function getQuizSessionState(
@@ -216,6 +283,7 @@ function freshPhase(
 export async function startQuizSession(
   supabase: SupabaseClient,
   eventId: string,
+  options: StartQuizSessionOptions = {},
 ): Promise<QuizSessionState> {
   const { data: eventRow } = await supabase
     .from("events")
@@ -225,7 +293,12 @@ export async function startQuizSession(
 
   const metadata = (eventRow?.metadata ?? {}) as Record<string, unknown>;
   const manche = getQuizMancheFromMetadata(metadata);
-  const timing = normalizeTiming(metadata.love_roulette_quiz_timing);
+  let timing = normalizeTiming(metadata.love_roulette_quiz_timing);
+
+  if (options.questionSeconds !== undefined) {
+    const seconds = Math.max(5, Math.min(120, options.questionSeconds));
+    timing = { ...timing, questionSeconds: seconds };
+  }
 
   const { questions, source } = await getQuestionsForEvent(supabase, eventId);
 
@@ -238,14 +311,25 @@ export async function startQuizSession(
       ? await materializePoolQuestionsForEvent(supabase, eventId, questions)
       : questions;
 
+  let questionIds = quizQuestions.map((q) => q.id);
+  if (options.questionCount !== undefined) {
+    const limit = Math.max(1, Math.min(questionIds.length, options.questionCount));
+    questionIds = questionIds.slice(0, limit);
+  }
+
+  await persistQuizSetupMetadata(supabase, eventId, {
+    questionCount: questionIds.length,
+    questionSeconds: timing.questionSeconds,
+  }, timing);
+
   const at = nowIso();
   const quiz: QuizSessionState = {
-    questionIds: quizQuestions.map((q) => q.id),
+    questionIds,
     currentIndex: 0,
-    total: quizQuestions.length,
+    total: questionIds.length,
     source: source === "pool" ? "event" : source,
     autoplaySeconds: timing.questionSeconds,
-    autoplayEnabled: false,
+    autoplayEnabled: true,
     updatedAt: at,
     displayPhase: "start_countdown",
     phaseStartedAt: at,
@@ -281,23 +365,11 @@ async function loadCurrentQuiz(
 function nextDisplayPhase(
   current: QuizSessionState,
 ): QuizDisplayPhase | "advance_index" | "finish" {
-  switch (current.displayPhase) {
-    case "start_countdown":
-      return "theme_intro";
-    case "theme_intro":
-      return "question";
-    case "question":
-      return "answers";
-    case "answers":
-      return "results";
-    case "results":
-      if (current.currentIndex + 1 >= current.total) {
-        return "finish";
-      }
-      return "next_question";
-    case "next_question":
-      return "advance_index";
-  }
+  return nextQuizDisplayPhase(
+    current.displayPhase,
+    current.currentIndex,
+    current.total,
+  );
 }
 
 export async function tickQuizPhase(
@@ -305,7 +377,7 @@ export async function tickQuizPhase(
   eventId: string,
   force = false,
 ): Promise<{ quiz: QuizSessionState | null; runtimeState: EventState }> {
-  const current = await loadCurrentQuiz(supabase, eventId);
+  let current = await loadCurrentQuiz(supabase, eventId);
 
   if (
     !force &&
@@ -318,43 +390,63 @@ export async function tickQuizPhase(
     return { quiz: current, runtimeState: "quiz" };
   }
 
-  const next = nextDisplayPhase(current);
+  const maxSteps = 8;
 
-  if (next === "finish") {
-    await computeAndPersistPairs(supabase, eventId, {
-      questionIds: current.questionIds,
-    });
-    await writeQuizState(supabase, eventId, null);
-    await updateSessionRuntimeState(supabase, eventId, "matching");
-    return { quiz: null, runtimeState: "matching" };
+  for (let step = 0; step < maxSteps; step++) {
+    const next = nextDisplayPhase(current);
+
+    if (next === "finish") {
+      await computeAndPersistPairs(supabase, eventId, {
+        questionIds: current.questionIds,
+      });
+      await writeQuizState(supabase, eventId, null);
+      await updateSessionRuntimeState(supabase, eventId, "matching");
+      return { quiz: null, runtimeState: "matching" };
+    }
+
+    if (next === "advance_index") {
+      const newIndex = current.currentIndex + 1;
+      current = freshPhase(
+        {
+          ...current,
+          currentIndex: newIndex,
+        },
+        resolvePhaseAfterQuestionAdvance(
+          current.questionIds,
+          newIndex,
+          current.manche,
+        ),
+      );
+      await writeQuizState(supabase, eventId, current);
+    } else {
+      const gongCueKey =
+        !force &&
+        current.displayPhase === "answers" &&
+        next === "results"
+          ? `${current.currentIndex}:${current.phaseStartedAt}`
+          : undefined;
+
+      current = freshPhase(
+        current,
+        next,
+        gongCueKey ? { gongCueKey } : undefined,
+      );
+      await writeQuizState(supabase, eventId, current);
+    }
+
+    if (
+      force ||
+      !isPhaseExpired(
+        current.displayPhase,
+        current.phaseStartedAt,
+        current.timing,
+      )
+    ) {
+      return { quiz: current, runtimeState: "quiz" };
+    }
   }
 
-  if (next === "advance_index") {
-    const quiz = freshPhase(
-      {
-        ...current,
-        currentIndex: current.currentIndex + 1,
-      },
-      "theme_intro",
-    );
-    await writeQuizState(supabase, eventId, quiz);
-    return { quiz, runtimeState: "quiz" };
-  }
-
-  const gongCueKey =
-    !force &&
-    current.displayPhase === "answers" &&
-    next === "results"
-      ? `${current.currentIndex}:${current.phaseStartedAt}`
-      : undefined;
-
-  const quiz = freshPhase(
-    current,
-    next,
-    gongCueKey ? { gongCueKey } : undefined,
-  );
-  await writeQuizState(supabase, eventId, quiz);
-  return { quiz, runtimeState: "quiz" };
+  return { quiz: current, runtimeState: "quiz" };
 }
 
 export async function skipQuizPhase(
@@ -377,17 +469,36 @@ export async function backQuizQuestion(
   eventId: string,
 ): Promise<QuizSessionState> {
   const current = await loadCurrentQuiz(supabase, eventId);
+  const newIndex = Math.max(0, current.currentIndex - 1);
 
   const quiz = freshPhase(
     {
       ...current,
-      currentIndex: Math.max(0, current.currentIndex - 1),
+      currentIndex: newIndex,
     },
-    "theme_intro",
+    resolvePhaseAfterQuestionAdvance(
+      current.questionIds,
+      newIndex,
+      current.manche,
+    ),
   );
 
   await writeQuizState(supabase, eventId, quiz);
   return quiz;
+}
+
+export async function transitionToMatching(
+  supabase: SupabaseClient,
+  eventId: string,
+  options?: { questionIds?: string[]; force?: boolean },
+): Promise<{ pairCount: number; skipped: boolean }> {
+  const result = await computeAndPersistPairs(supabase, eventId, {
+    questionIds: options?.questionIds,
+    force: options?.force ?? false,
+  });
+  await writeQuizState(supabase, eventId, null);
+  await updateSessionRuntimeState(supabase, eventId, "matching");
+  return result;
 }
 
 export async function finishQuizSession(
@@ -403,11 +514,9 @@ export async function finishQuizSession(
   const metadata = (row?.metadata ?? {}) as Record<string, unknown>;
   const current = getQuizSessionState(metadata);
 
-  await computeAndPersistPairs(supabase, eventId, {
+  await transitionToMatching(supabase, eventId, {
     questionIds: current?.questionIds,
   });
-  await writeQuizState(supabase, eventId, null);
-  await updateSessionRuntimeState(supabase, eventId, "matching");
   return "matching";
 }
 

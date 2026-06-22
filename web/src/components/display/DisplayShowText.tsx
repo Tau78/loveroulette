@@ -5,6 +5,10 @@ import { cn } from "@/lib/utils";
 
 const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
 
+/** Titolo prova finale — massimo impatto sul proiettore. */
+export const DISPLAY_CHALLENGE_TITLE_CLASS =
+  "max-w-full text-[clamp(4rem,11vw,12rem)] leading-[0.92] tracking-wide";
+
 interface DisplayPhaseHeroProps {
   kicker?: string;
   headline: string;
@@ -14,6 +18,12 @@ interface DisplayPhaseHeroProps {
   pulse?: boolean;
   /** Trasforma headline e subline in maiuscolo (quiz display). */
   uppercase?: boolean;
+  /** Titolo prova finale a tutto schermo. */
+  challengeTitle?: boolean;
+  /** Override dimensioni titolo principale. */
+  headlineClassName?: string;
+  /** Override dimensioni sottotitolo. */
+  sublineClassName?: string;
 }
 
 function StaggerWords({
@@ -63,6 +73,9 @@ export function DisplayPhaseHero({
   className,
   pulse = false,
   uppercase = false,
+  challengeTitle = false,
+  headlineClassName,
+  sublineClassName,
 }: DisplayPhaseHeroProps) {
   const reduceMotion = useReducedMotion();
 
@@ -81,7 +94,12 @@ export function DisplayPhaseHero({
       <div className="relative z-10 flex flex-col items-center gap-5 px-4 py-8 md:gap-7 md:py-12">
         {kicker ? (
           <motion.p
-            className="text-sm md:text-lg font-semibold uppercase tracking-[0.45em] text-white/90"
+            className={cn(
+              "font-semibold uppercase text-white/90",
+              challengeTitle
+                ? "text-2xl md:text-4xl tracking-[0.38em]"
+                : "text-sm md:text-lg tracking-[0.45em]",
+            )}
             style={{
               textShadow:
                 "0 0 24px rgba(233,30,140,0.55), 0 2px 12px rgba(0,0,0,0.95)",
@@ -96,12 +114,23 @@ export function DisplayPhaseHero({
 
         <motion.h1
           className={cn(
-            "font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.08] text-transparent bg-clip-text bg-gradient-to-b from-white via-primary to-primary/85 max-w-5xl",
-            uppercase && "uppercase",
+            "font-display font-bold",
+            challengeTitle
+              ? cn(
+                  "uppercase text-white max-w-full",
+                  headlineClassName ?? DISPLAY_CHALLENGE_TITLE_CLASS,
+                )
+              : cn(
+                  "text-4xl md:text-6xl lg:text-7xl leading-[1.08] text-transparent bg-clip-text bg-gradient-to-b from-white via-primary to-primary/85 max-w-5xl",
+                  uppercase && "uppercase",
+                  headlineClassName,
+                ),
           )}
           style={{
             fontFamily: "var(--font-display), serif",
-            filter: "drop-shadow(0 4px 0 rgba(0,0,0,0.95)) drop-shadow(0 0 32px rgba(233,30,140,0.75))",
+            filter: challengeTitle
+              ? "drop-shadow(0 6px 0 rgba(0,0,0,1)) drop-shadow(0 0 48px rgba(233,30,140,0.9))"
+              : "drop-shadow(0 4px 0 rgba(0,0,0,0.95)) drop-shadow(0 0 32px rgba(233,30,140,0.75))",
           }}
           animate={
             reduceMotion || !pulse
@@ -129,6 +158,7 @@ export function DisplayPhaseHero({
             className={cn(
               "text-lg md:text-2xl text-white/85 max-w-3xl leading-relaxed",
               uppercase && "uppercase",
+              sublineClassName,
             )}
             style={{ textShadow: "0 2px 16px rgba(0,0,0,0.95)" }}
             initial={reduceMotion ? false : { opacity: 0, y: 12 }}

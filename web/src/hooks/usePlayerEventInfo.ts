@@ -7,6 +7,7 @@ export interface PlayerEventInfo {
   venueName: string | null;
   eventDate: string;
   eventTime: string | null;
+  badgeRequired: boolean;
 }
 
 export function usePlayerEventInfo(eventSlug: string) {
@@ -28,6 +29,7 @@ export function usePlayerEventInfo(eventSlug: string) {
         }
         const data = (await res.json()) as PlayerEventInfo & {
           venueName?: string | null;
+          config?: { badge_required?: boolean };
         };
         if (!cancelled) {
           setInfo({
@@ -35,6 +37,7 @@ export function usePlayerEventInfo(eventSlug: string) {
             venueName: data.venueName ?? null,
             eventDate: data.eventDate,
             eventTime: data.eventTime ?? null,
+            badgeRequired: data.config?.badge_required === true,
           });
         }
       } catch {

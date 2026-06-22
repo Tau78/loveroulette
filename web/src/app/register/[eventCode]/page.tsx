@@ -6,7 +6,6 @@ import { useState } from "react";
 import { DataVisibilitySelector } from "@/components/player/DataVisibilitySelector";
 import { DEFAULT_PARTICIPANT_DATA_VISIBILITY } from "@/lib/player/data-visibility";
 import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
-import { PLAYER_PRIVACY_SHARING_NOTICE } from "@/lib/player/public-copy";
 
 export default function RegisterPage() {
   const params = useParams();
@@ -111,10 +110,6 @@ export default function RegisterPage() {
               la partecipazione a Love Roulette.
             </span>
           </label>
-
-          <p className="text-xs leading-relaxed text-muted">
-            {PLAYER_PRIVACY_SHARING_NOTICE}
-          </p>
 
           {formError ? (
             <p className="text-sm text-destructive" role="alert">

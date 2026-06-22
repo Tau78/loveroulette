@@ -7,39 +7,33 @@ import { STINGER_IDS } from "@/lib/audio/stingers";
 import type { SoundtrackManifest } from "@/lib/audio/types";
 
 /** Proiettore / PA: leggermente sotto il full per evitare picchi. */
-export const QUIZ_GONG_VOLUME = 0.9;
-
-/** Pitch del gong in semitoni (negativo = più grave). */
-export const QUIZ_GONG_PITCH_SEMITONES = -24;
+export const QUIZ_GONG_VOLUME = 0.85;
 
 const GONG_TRACK_ID = STINGER_IDS.quizQuestionGong;
 
 let manifestCache: SoundtrackManifest | null = null;
 let manifestLoadPromise: Promise<SoundtrackManifest | null> | null = null;
+let preloadedUrl: string | null = null;
 let preloadedAudio: HTMLAudioElement | null = null;
 let preloadPromise: Promise<boolean> | null = null;
 
 export interface PlayQuizGongOptions {
   volume?: number;
-  /** Pitch shift in semitoni (default -24). */
-  pitchSemitones?: number;
   onEnded?: () => void;
-  /** Evita doppio trigger (Strict Mode / sorgenti multiple) entro 2s. */
+  /** Evita doppio trigger sulla stessa domanda/fase. */
   dedupKey?: string;
 }
 
-const GONG_DEDUP_MS = 2000;
-let lastPlayedKey: string | null = null;
-let lastPlayedAt = 0;
+const playedKeys = new Set<string>();
 
 function shouldSkipGongDedup(dedupKey: string | undefined): boolean {
-  const key = dedupKey ?? "__default__";
-  const now = Date.now();
-  if (key === lastPlayedKey && now - lastPlayedAt < GONG_DEDUP_MS) {
-    return true;
+  if (!dedupKey) return false;
+  if (playedKeys.has(dedupKey)) return true;
+  playedKeys.add(dedupKey);
+  if (playedKeys.size > 32) {
+    const first = playedKeys.values().next().value;
+    if (first) playedKeys.delete(first);
   }
-  lastPlayedKey = key;
-  lastPlayedAt = now;
   return false;
 }
 
@@ -81,7 +75,7 @@ export function preloadQuizGongSound(): void {
 
 export async function preloadQuizGong(): Promise<boolean> {
   if (typeof window === "undefined") return false;
-  if (preloadedAudio) return true;
+  if (preloadedUrl) return true;
   if (preloadPromise) return preloadPromise;
 
   preloadPromise = (async () => {
@@ -117,6 +111,7 @@ export async function preloadQuizGong(): Promise<boolean> {
 
     if (!ready) return false;
 
+    preloadedUrl = url;
     preloadedAudio = audio;
     return true;
   })().finally(() => {
@@ -131,50 +126,39 @@ export async function playQuizGongFromManifest(
 ): Promise<boolean> {
   if (typeof window === "undefined") return false;
 
-  const {
-    volume = QUIZ_GONG_VOLUME,
-    pitchSemitones = QUIZ_GONG_PITCH_SEMITONES,
-    onEnded,
-  } = options;
+  const { volume = QUIZ_GONG_VOLUME, onEnded } = options;
 
-  const manifest = await loadManifest();
-  if (!manifest) return false;
-
-  const url = resolveGongUrl(manifest);
+  let url = preloadedUrl;
+  if (!url) {
+    const manifest = await loadManifest();
+    if (!manifest) return false;
+    url = resolveGongUrl(manifest);
+  }
   if (!url) return false;
 
+  const audio =
+    preloadedUrl === url && preloadedAudio
+      ? preloadedAudio
+      : new Audio(url);
+
+  if (audio !== preloadedAudio) {
+    audio.preload = "auto";
+  }
+
+  audio.volume = volume;
+  audio.currentTime = 0;
+
+  const onEnd = () => {
+    audio.removeEventListener("ended", onEnd);
+    onEnded?.();
+  };
+  audio.addEventListener("ended", onEnd);
+
   try {
-    const AudioContextCtor =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
-    if (!AudioContextCtor) return false;
-
-    const ctx = new AudioContextCtor();
-    const res = await fetch(url);
-    if (!res.ok) {
-      await ctx.close();
-      return false;
-    }
-
-    const buffer = await ctx.decodeAudioData(await res.arrayBuffer());
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.detune.value = pitchSemitones * 100;
-
-    const gain = ctx.createGain();
-    gain.gain.value = volume;
-    source.connect(gain);
-    gain.connect(ctx.destination);
-
-    source.onended = () => {
-      void ctx.close();
-      onEnded?.();
-    };
-
-    source.start();
+    await audio.play();
     return true;
   } catch {
+    audio.removeEventListener("ended", onEnd);
     return false;
   }
 }
@@ -183,7 +167,6 @@ export async function playQuizGongFromManifest(
 export function playQuizGong(
   volume = QUIZ_GONG_VOLUME,
   onEnded?: () => void,
-  pitchSemitones = QUIZ_GONG_PITCH_SEMITONES,
 ): void {
   if (typeof window === "undefined") return;
 
@@ -196,28 +179,35 @@ export function playQuizGong(
 
     const ctx = new AudioContextCtor();
     const now = ctx.currentTime;
-    const pitchRatio = Math.pow(2, pitchSemitones / 12);
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    const partials = [
+      { freq: 880, gain: 1 },
+      { freq: 1320, gain: 0.45 },
+      { freq: 1760, gain: 0.2 },
+    ];
 
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(520 * pitchRatio, now);
-    osc.frequency.exponentialRampToValueAtTime(180 * pitchRatio, now + 1.2);
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0, now);
+    master.gain.linearRampToValueAtTime(volume, now + 0.008);
+    master.gain.exponentialRampToValueAtTime(0.001, now + 0.95);
+    master.connect(ctx.destination);
 
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(volume, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+    for (const partial of partials) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(partial.freq, now);
+      gain.gain.setValueAtTime(partial.gain, now);
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(now);
+      osc.stop(now + 1);
+    }
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 1.5);
-
-    osc.onended = () => {
+    window.setTimeout(() => {
       void ctx.close();
       onEnded?.();
-    };
+    }, 1000);
   } catch {
     // ignore autoplay restrictions
   }
@@ -238,10 +228,6 @@ export async function playQuizGongSound(
 
   const played = await playQuizGongFromManifest({ ...options, onEnded });
   if (!played) {
-    playQuizGong(
-      options.volume ?? QUIZ_GONG_VOLUME,
-      onEnded,
-      options.pitchSemitones ?? QUIZ_GONG_PITCH_SEMITONES,
-    );
+    playQuizGong(options.volume ?? QUIZ_GONG_VOLUME, onEnded);
   }
 }

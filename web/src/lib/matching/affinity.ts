@@ -49,6 +49,83 @@ export interface PairForExtraction {
   rank: number;
   was_shown: boolean;
   is_eliminated: boolean;
+  participant_male_id: string;
+  participant_female_id: string;
+}
+
+export type ParticipantGender = "male" | "female";
+
+/** Coppia valida solo se 1 uomo (U) + 1 donna (D), id distinti. */
+export function isValidMaleFemalePair(
+  maleId: string,
+  femaleId: string,
+  genderById: Map<string, ParticipantGender>,
+): boolean {
+  if (!maleId || !femaleId || maleId === femaleId) return false;
+  return (
+    genderById.get(maleId) === "male" &&
+    genderById.get(femaleId) === "female"
+  );
+}
+
+export function filterValidMaleFemalePairs<
+  T extends Pick<
+    PairForExtraction,
+    "participant_male_id" | "participant_female_id"
+  >,
+>(pairs: T[], genderById: Map<string, ParticipantGender>): T[] {
+  return pairs.filter((pair) =>
+    isValidMaleFemalePair(
+      pair.participant_male_id,
+      pair.participant_female_id,
+      genderById,
+    ),
+  );
+}
+
+/** Massimo coppie estratte in esclusiva: min(U, D), opzionale cap da config. */
+export function maxAllowedExtractions(
+  maleCount: number,
+  femaleCount: number,
+  extractionCountLimit: number | null | undefined,
+): number {
+  const exclusiveCap = Math.min(maleCount, femaleCount);
+  if (
+    typeof extractionCountLimit === "number" &&
+    extractionCountLimit > 0
+  ) {
+    return Math.min(exclusiveCap, extractionCountLimit);
+  }
+  return exclusiveCap;
+}
+
+/** Giocatori già in una coppia estratta — non riaccoppiabili fino a nuova partita. */
+export function collectLockedParticipantIds(
+  pairs: Pick<
+    PairForExtraction,
+    "was_shown" | "participant_male_id" | "participant_female_id"
+  >[],
+): Set<string> {
+  const locked = new Set<string>();
+  for (const pair of pairs) {
+    if (!pair.was_shown) continue;
+    locked.add(pair.participant_male_id);
+    locked.add(pair.participant_female_id);
+  }
+  return locked;
+}
+
+export function filterPairsAvailableForExtraction(
+  pairs: PairForExtraction[],
+): PairForExtraction[] {
+  const locked = collectLockedParticipantIds(pairs);
+  return pairs.filter(
+    (pair) =>
+      !pair.is_eliminated &&
+      !pair.was_shown &&
+      !locked.has(pair.participant_male_id) &&
+      !locked.has(pair.participant_female_id),
+  );
 }
 
 export function selectNextPair(
@@ -57,7 +134,7 @@ export function selectNextPair(
   hybridRandomCount: number,
   randomShownCount: number,
 ): PairForExtraction | null {
-  const available = pairs.filter((p) => !p.was_shown && !p.is_eliminated);
+  const available = filterPairsAvailableForExtraction(pairs);
   if (available.length === 0) return null;
 
   if (mode === "ranked") {

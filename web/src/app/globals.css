@@ -151,6 +151,76 @@
   font-family: var(--font-display), Georgia, "Times New Roman", serif;
 }
 
+.finals-header-band {
+  container-type: size;
+  padding-inline: clamp(1.25rem, 7cqw, 2.75rem);
+  padding-block: clamp(0.65rem, 8cqh, 1.1rem);
+}
+
+.finals-header-kicker {
+  font-size: clamp(0.875rem, 11cqh, 1.35rem);
+}
+
+.finals-header-title {
+  font-size: clamp(1.65rem, 28cqh, 3.35rem);
+  line-height: 1.05;
+  max-width: 96%;
+}
+
+.finals-header-sub {
+  font-size: clamp(0.8rem, 12cqh, 1.45rem);
+  line-height: 1.2;
+  max-width: 94%;
+}
+
+.finals-couple-card {
+  container-type: size;
+  padding-inline: clamp(1rem, 6cqw, 2.25rem);
+  padding-block: clamp(0.85rem, 4cqh, 1.5rem);
+}
+
+.finals-card-coppia {
+  font-size: clamp(0.875rem, 5cqh, 1.5rem);
+}
+
+.finals-card-name {
+  font-size: clamp(1.35rem, 10cqh, 3.25rem);
+  line-height: 0.98;
+  max-width: 100%;
+  padding-inline: clamp(0.35rem, 2cqw, 0.75rem);
+}
+
+.finals-card-amp {
+  font-size: clamp(1rem, 6.5cqh, 2rem);
+}
+
+.finals-card-votes-num {
+  font-size: clamp(2.5rem, 16cqh, 6.75rem);
+  line-height: 0.92;
+}
+
+.finals-card-votes-label {
+  font-size: clamp(0.7rem, 3.2cqh, 1.15rem);
+}
+
+.finals-card-bar {
+  height: clamp(10px, 2.8cqh, 22px);
+  margin-inline: clamp(0.25rem, 2cqw, 0.75rem);
+}
+
+.finals-card-votes-block {
+  padding-inline: clamp(0.5rem, 3cqw, 1.25rem);
+}
+
+.finals-vote-countdown {
+  font-size: clamp(2.5rem, 11vh, 5.25rem);
+  line-height: 0.95;
+}
+
+.finals-vote-cta {
+  font-size: clamp(1rem, 2.6vh, 1.85rem);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-spin-slow,
   .animate-fade-in {

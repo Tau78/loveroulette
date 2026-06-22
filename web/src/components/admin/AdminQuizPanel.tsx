@@ -17,8 +17,12 @@ import { QUIZ_PHASE_LABELS } from "@/lib/musicpro/quiz-display";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { cn } from "@/lib/utils";
 import { AdminQuizQuestionReel } from "@/components/admin/AdminQuizQuestionReel";
+import {
+  AdminQuizSetupFields,
+  MAX_QUESTION_SECONDS,
+  MIN_QUESTION_SECONDS,
+} from "@/components/admin/AdminQuizSetupFields";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 
 const QUIZ_STATS_POLL_MS = 1500;
 
@@ -48,7 +52,7 @@ export function AdminQuizPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [answerStats, setAnswerStats] = useState<QuestionResults | null>(null);
-  const tickingRef = useRef(false);
+  const [secondsDraft, setSecondsDraft] = useState("15");
   const busyRef = useRef(false);
 
   const { questions, progressLabel, loading, error: questionsError } =
@@ -63,6 +67,10 @@ export function AdminQuizPanel({
 
   const questionSeconds = quizState?.timing.questionSeconds ?? 15;
   const autoplayEnabled = quizState?.autoplayEnabled === true;
+
+  useEffect(() => {
+    setSecondsDraft(String(questionSeconds));
+  }, [questionSeconds]);
 
   const runAction = useCallback(
     async (
@@ -114,31 +122,18 @@ export function AdminQuizPanel({
     [animatorPin, disabled, eventCode, onInvalidPin, onQuizChange],
   );
 
-  const { remaining } = useQuizPhaseSync({
+  const { remaining, displayPhase } = useQuizPhaseSync({
     eventSlug: eventCode,
     quizState,
     enabled: Boolean(quizState) && !disabled,
-    driveTicks: false,
+    driveTicks: autoplayEnabled && !disabled,
     onTick: (quiz) => onQuizChange?.(quiz),
   });
-
-  useEffect(() => {
-    if (!autoplayEnabled || !quizState || disabled || remaining > 0) return;
-    if (tickingRef.current || busyRef.current) return;
-
-    tickingRef.current = true;
-    void runAction("tick").finally(() => {
-      window.setTimeout(() => {
-        tickingRef.current = false;
-      }, 500);
-    });
-  }, [autoplayEnabled, disabled, quizState, remaining, runAction]);
 
   const currentQuestionId =
     quizState?.questionIds[quizState.currentIndex] ?? null;
   const pollAnswerStats =
-    quizState?.displayPhase === "answers" ||
-    quizState?.displayPhase === "results";
+    displayPhase === "answers" || displayPhase === "results";
 
   useEffect(() => {
     if (!pollAnswerStats || !currentQuestionId) {
@@ -177,15 +172,30 @@ export function AdminQuizPanel({
   const isLastQuestion = quizState.currentIndex >= quizState.total - 1;
   const onLastResults =
     isLastQuestion &&
-    (quizState.displayPhase === "results" ||
-      quizState.displayPhase === "next_question");
+    (displayPhase === "results" || displayPhase === "next_question");
   const phaseLabel =
-    QUIZ_PHASE_LABELS[quizState.displayPhase] ?? quizState.displayPhase;
+    QUIZ_PHASE_LABELS[displayPhase] ?? displayPhase;
 
   const answerCap = onlineCount > 0 ? onlineCount : participantCount;
   const totalAnswers = answerStats?.totalAnswers ?? 0;
   const answerRatio = answerCap > 0 ? totalAnswers / answerCap : 0;
   const showAnswerCount = pollAnswerStats && currentQuestionId;
+
+  function commitQuestionSeconds() {
+    const value = Number(secondsDraft);
+    if (!Number.isFinite(value)) {
+      setSecondsDraft(String(questionSeconds));
+      return;
+    }
+    const clamped = Math.max(
+      MIN_QUESTION_SECONDS,
+      Math.min(MAX_QUESTION_SECONDS, value),
+    );
+    setSecondsDraft(String(clamped));
+    if (clamped !== questionSeconds) {
+      void runAction("setAutoplaySeconds", { autoplaySeconds: clamped });
+    }
+  }
 
   return (
     <AdminPanelShell
@@ -245,6 +255,17 @@ export function AdminQuizPanel({
         </Button>
       </div>
 
+      <AdminQuizSetupFields
+        availableQuestionCount={quizState.total}
+        questionCount={quizState.total}
+        questionSeconds={secondsDraft}
+        onQuestionCountChange={() => {}}
+        onQuestionSecondsChange={setSecondsDraft}
+        onQuestionSecondsBlur={commitQuestionSeconds}
+        questionCountReadOnly
+        disabled={disabled || busy}
+      />
+
       <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/40 px-2.5 py-2">
         <Button
           type="button"
@@ -259,25 +280,6 @@ export function AdminQuizPanel({
         >
           Autoplay: {autoplayEnabled ? "On" : "Off"}
         </Button>
-        <div className="flex items-center gap-1.5">
-          <Label htmlFor="autoplay-seconds" className="text-[10px] shrink-0">
-            Domanda (s)
-          </Label>
-          <input
-            id="autoplay-seconds"
-            type="number"
-            min={5}
-            max={120}
-            value={questionSeconds}
-            disabled={disabled || busy}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              if (!Number.isFinite(value)) return;
-              void runAction("setAutoplaySeconds", { autoplaySeconds: value });
-            }}
-            className="w-14 rounded-md border border-input bg-input/30 px-1.5 py-0.5 text-xs"
-          />
-        </div>
         <p className="text-xs text-primary ml-auto tabular-nums">{remaining}s</p>
       </div>
 

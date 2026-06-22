@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" role="img" aria-label="Mazzo di fiori Love Roulette">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#E91E8C" stop-opacity="0.35"/>
+      <stop offset="55%" stop-color="#6B21A8" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0D0D12" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="petal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff6eb4"/>
+      <stop offset="100%" stop-color="#c026d3"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#14532d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="#120208"/>
+  <rect width="1920" height="1080" fill="url(#glow)"/>
+  <!-- bouquet stems -->
+  <g transform="translate(960 920)">
+    <path d="M-20 0 C-40 -180 -120 -320 -90 -420" fill="none" stroke="#166534" stroke-width="10"/>
+    <path d="M10 0 C30 -200 80 -340 60 -450" fill="none" stroke="#166534" stroke-width="10"/>
+    <path d="M35 0 C80 -160 140 -300 120 -400" fill="none" stroke="#166534" stroke-width="10"/>
+    <path d="M-45 0 C-100 -150 -170 -280 -150 -390" fill="none" stroke="#166534" stroke-width="10"/>
+  </g>
+  <!-- roses cluster -->
+  <g transform="translate(960 520)">
+    <circle cx="0" cy="0" r="95" fill="url(#petal)" opacity="0.95"/>
+    <circle cx="-120" cy="40" r="78" fill="url(#petal)" opacity="0.9"/>
+    <circle cx="125" cy="35" r="82" fill="url(#petal)" opacity="0.92"/>
+    <circle cx="-55" cy="-95" r="70" fill="url(#petal)" opacity="0.88"/>
+    <circle cx="70" cy="-90" r="74" fill="url(#petal)" opacity="0.9"/>
+    <circle cx="0" cy="110" r="68" fill="url(#petal)" opacity="0.85"/>
+    <circle cx="-170" cy="-30" r="58" fill="#f472b6" opacity="0.85"/>
+    <circle cx="175" cy="-25" r="60" fill="#f472b6" opacity="0.85"/>
+    <!-- inner petals -->
+    <circle cx="0" cy="0" r="42" fill="#fce7f3"/>
+    <circle cx="-120" cy="40" r="34" fill="#fce7f3"/>
+    <circle cx="125" cy="35" r="36" fill="#fce7f3"/>
+    <circle cx="-55" cy="-95" r="30" fill="#fce7f3"/>
+    <circle cx="70" cy="-90" r="32" fill="#fce7f3"/>
+  </g>
+  <!-- leaves -->
+  <g transform="translate(960 680)">
+    <ellipse cx="-140" cy="40" rx="70" ry="28" fill="url(#leaf)" transform="rotate(-25 -140 40)"/>
+    <ellipse cx="150" cy="30" rx="75" ry="30" fill="url(#leaf)" transform="rotate(22 150 30)"/>
+    <ellipse cx="-40" cy="120" rx="85" ry="32" fill="url(#leaf)" transform="rotate(8 -40 120)"/>
+    <ellipse cx="60" cy="115" rx="80" ry="30" fill="url(#leaf)" transform="rotate(-10 60 115)"/>
+  </g>
+  <!-- ribbon -->
+  <path d="M760 760 Q960 820 1160 760 L1140 820 Q960 880 780 820 Z" fill="#E91E8C" opacity="0.85"/>
+  <text x="960" y="805" text-anchor="middle" fill="#fff" font-family="Georgia, serif" font-size="42" font-weight="700" letter-spacing="8">LOVE ROULETTE</text>
+</svg>

@@ -5,21 +5,42 @@ import type { EventState } from "@/lib/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import {
   isPhaseExpired,
-  remainingSeconds,
+  resolveSyncedQuizClock,
   type QuizDisplayPhase,
+  type SyncedQuizClock,
 } from "@/lib/musicpro/quiz-display";
 
 interface UseQuizPhaseSyncOptions {
   eventSlug: string;
   quizState: QuizSessionState | null;
   enabled?: boolean;
-  /** Chi può chiamare tick al termine fase (display = true). */
+  /** Chi può chiamare tick al termine fase (proiettore = true). */
   driveTicks?: boolean;
   onPhaseChange?: (phase: QuizDisplayPhase) => void;
   onTick?: (
     quiz: QuizSessionState | null,
     runtimeState?: EventState,
   ) => void;
+}
+
+const IDLE_CLOCK: SyncedQuizClock = {
+  displayPhase: "question",
+  phaseStartedAt: "",
+  remaining: 0,
+  awaitingServerTick: false,
+};
+
+function clocksEqual(a: SyncedQuizClock, b: SyncedQuizClock): boolean {
+  return (
+    a.displayPhase === b.displayPhase &&
+    a.phaseStartedAt === b.phaseStartedAt &&
+    a.remaining === b.remaining &&
+    a.awaitingServerTick === b.awaitingServerTick
+  );
+}
+
+function quizSyncKey(quiz: QuizSessionState): string {
+  return `${quiz.updatedAt}:${quiz.currentIndex}:${quiz.displayPhase}:${quiz.phaseStartedAt}:${quiz.timing.questionSeconds}`;
 }
 
 export function useQuizPhaseSync({
@@ -30,9 +51,24 @@ export function useQuizPhaseSync({
   onPhaseChange,
   onTick,
 }: UseQuizPhaseSyncOptions) {
-  const [remaining, setRemaining] = useState(0);
+  const [synced, setSynced] = useState<SyncedQuizClock>(() =>
+    quizState ? resolveSyncedQuizClock(quizState) : IDLE_CLOCK,
+  );
   const tickingRef = useRef(false);
   const lastPhaseRef = useRef<string | null>(null);
+  const onPhaseChangeRef = useRef(onPhaseChange);
+  const onTickRef = useRef(onTick);
+  const quizStateRef = useRef(quizState);
+
+  quizStateRef.current = quizState;
+
+  useEffect(() => {
+    onPhaseChangeRef.current = onPhaseChange;
+  }, [onPhaseChange]);
+
+  useEffect(() => {
+    onTickRef.current = onTick;
+  }, [onTick]);
 
   const tickServer = useCallback(async () => {
     if (tickingRef.current) return;
@@ -51,43 +87,46 @@ export function useQuizPhaseSync({
           quiz: QuizSessionState | null;
           runtimeState?: EventState;
         };
-        onTick?.(data.quiz ?? null, data.runtimeState);
+        onTickRef.current?.(data.quiz ?? null, data.runtimeState);
       }
     } finally {
       window.setTimeout(() => {
         tickingRef.current = false;
       }, 500);
     }
-  }, [eventSlug, onTick]);
+  }, [eventSlug]);
+
+  const quizKey = quizState ? quizSyncKey(quizState) : null;
 
   useEffect(() => {
-    if (!enabled || !quizState) {
-      setRemaining(0);
+    if (!enabled || !quizKey) {
+      setSynced((prev) => (clocksEqual(prev, IDLE_CLOCK) ? prev : IDLE_CLOCK));
+      lastPhaseRef.current = null;
       return;
     }
 
-    const phaseKey = `${quizState.phaseStartedAt}:${quizState.displayPhase}:${quizState.currentIndex}`;
-    if (lastPhaseRef.current !== phaseKey) {
-      lastPhaseRef.current = phaseKey;
-      onPhaseChange?.(quizState.displayPhase);
-    }
-
     const update = () => {
-      const left = remainingSeconds(
-        quizState.displayPhase,
-        quizState.phaseStartedAt,
-        quizState.timing,
+      const current = quizStateRef.current;
+      if (!current) return;
+
+      const clock = resolveSyncedQuizClock(current);
+      setSynced((prev) => (clocksEqual(prev, clock) ? prev : clock));
+
+      const phaseKey = `${current.currentIndex}:${clock.displayPhase}:${clock.phaseStartedAt}`;
+      if (lastPhaseRef.current !== phaseKey) {
+        lastPhaseRef.current = phaseKey;
+        onPhaseChangeRef.current?.(clock.displayPhase);
+      }
+
+      const serverExpired = isPhaseExpired(
+        current.displayPhase,
+        current.phaseStartedAt,
+        current.timing,
       );
-      setRemaining(left);
 
       if (
         driveTicks &&
-        left <= 0 &&
-        isPhaseExpired(
-          quizState.displayPhase,
-          quizState.phaseStartedAt,
-          quizState.timing,
-        )
+        (clock.awaitingServerTick || serverExpired)
       ) {
         void tickServer();
       }
@@ -96,7 +135,12 @@ export function useQuizPhaseSync({
     update();
     const interval = window.setInterval(update, 200);
     return () => window.clearInterval(interval);
-  }, [driveTicks, enabled, onPhaseChange, quizState, tickServer]);
+  }, [driveTicks, enabled, quizKey, tickServer]);
 
-  return { remaining, tickServer };
+  return {
+    remaining: synced.remaining,
+    displayPhase: synced.displayPhase,
+    awaitingServerTick: synced.awaitingServerTick,
+    tickServer,
+  };
 }

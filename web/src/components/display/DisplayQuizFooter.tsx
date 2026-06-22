@@ -15,6 +15,7 @@ import {
   QUIZ_FOOTER_MASK_BAR_CLASS,
   QUIZ_FOOTER_MASK_PATH,
   QUIZ_FOOTER_MASK_VIEWBOX,
+  QUIZ_FOOTER_COUNTDOWN_OFFSET_CLASS,
 } from "@/lib/display/quiz-footer-metrics";
 
 const LOGO_SRC = "/grafiche/logo-transparent.png";
@@ -211,7 +212,7 @@ export function DisplayQuizFooter({
   return (
     <footer
       className={cn(
-        "relative z-20 w-full shrink-0 px-10 pb-3 pt-[60px]",
+        "relative z-20 w-full shrink-0 px-10 pb-3 pt-[52px]",
         className,
       )}
     >
@@ -230,7 +231,7 @@ export function DisplayQuizFooter({
           <div
             className={cn(
               "pointer-events-none absolute bottom-0 left-1/2 z-20 -translate-x-1/2",
-              "translate-y-[calc(-50%+0.5rem)]",
+              QUIZ_FOOTER_COUNTDOWN_OFFSET_CLASS,
             )}
           >
             {countdown ? (

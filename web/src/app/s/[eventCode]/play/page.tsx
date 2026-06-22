@@ -12,6 +12,8 @@ import { PlayerRuntimeGlow } from "@/components/player/PlayerRuntimeGlow";
 import { PlayerStageTransition } from "@/components/player/PlayerStageTransition";
 import { QuizPlayer } from "@/components/player/QuizPlayer";
 import { VotingPlayer } from "@/components/player/VotingPlayer";
+import { FinalistCheerPlayer } from "@/components/player/FinalistCheerPlayer";
+import { FINALS_COPY } from "@/lib/game/late-game-copy";
 import { CoupleTakeover } from "@/components/player/CoupleTakeover";
 import type { WaveMode } from "@/components/player/ColorWave";
 import {
@@ -26,7 +28,9 @@ import {
   readStoredParticipantProfile,
   type StoredParticipantProfile,
 } from "@/lib/player/participant-storage";
+import { SessionSyncIndicator } from "@/components/session/SessionSyncIndicator";
 import { useLoveRouletteSession } from "@/hooks/useLoveRouletteSession";
+import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { usePlayerEventInfo } from "@/hooks/usePlayerEventInfo";
 import { isEventUuid, normalizeEventSlug } from "@/lib/musicpro/slug";
 import { Button } from "@/components/ui/button";
@@ -37,11 +41,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PLAYER_PRIVACY_SHARING_NOTICE } from "@/lib/player/public-copy";
 import { playerPresenceSubtitle } from "@/lib/player/presence-copy";
 import { DataVisibilitySelector } from "@/components/player/DataVisibilitySelector";
 import { DEFAULT_PARTICIPANT_DATA_VISIBILITY } from "@/lib/player/data-visibility";
 import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
+import { isParticipantInFinalists } from "@/lib/player/finalist-cheer";
 
 type JoinField = "nickname" | "badge" | "dataVisibility";
 
@@ -49,7 +53,7 @@ type RestoreState = "pending" | "ready";
 
 interface JoinResponse {
   error?: string;
-  code?: "NICKNAME_TAKEN" | "BADGE_TAKEN";
+  code?: "NICKNAME_TAKEN" | "BADGE_TAKEN" | "BADGE_REQUIRED";
   participant?: {
     id: string;
     nickname?: string;
@@ -142,6 +146,7 @@ export default function PlayerPlayPage() {
 
   const { info: eventInfo, loading: eventInfoLoading } =
     usePlayerEventInfo(eventSlug);
+  const badgeRequired = eventInfo?.badgeRequired === true;
 
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
@@ -160,26 +165,70 @@ export default function PlayerPlayPage() {
   const joinedRef = useRef(false);
   const lastRevealAtRef = useRef<string | null>(null);
 
-  const { runtimeState, quizState, lastReveal, voting } =
+  const { runtimeState, quizState, lastReveal, voting, finalsShow, syncStatus } =
     useLoveRouletteSession({
       eventSlug,
       enabled: joined,
     });
 
+  const { remaining: quizPhaseRemaining, displayPhase: quizDisplayPhase } =
+    useQuizPhaseSync({
+    eventSlug,
+    quizState,
+    enabled: joined && runtimeState === "quiz" && Boolean(quizState),
+    driveTicks: false,
+  });
+
+  const isFinalist = useMemo(() => {
+    const pool = finalsShow?.finalists?.length
+      ? finalsShow.finalists
+      : (voting.current?.finalists ?? []);
+    return isParticipantInFinalists(nickname, pool);
+  }, [finalsShow?.finalists, nickname, voting.current?.finalists]);
+
+  const finalsVotingOpen =
+    finalsShow?.phase === "voting" && voting.current?.status === "open";
+
+  const showVotePrepCard =
+    Boolean(participantId) &&
+    runtimeState === "finals" &&
+    finalsShow?.phase === "voting_prep" &&
+    !isFinalist;
+
+  const showVotingCard =
+    Boolean(participantId) &&
+    runtimeState === "finals" &&
+    finalsVotingOpen &&
+    !isFinalist;
+
+  const showFinalistCheer =
+    Boolean(participantId) &&
+    runtimeState === "finals" &&
+    finalsVotingOpen &&
+    isFinalist;
+  const showQuizCard = Boolean(participantId) && runtimeState === "quiz";
+
   const presenceSubtitle = playerPresenceSubtitle(runtimeState, {
-    quizPhase: quizState?.displayPhase ?? null,
-    votingOpen: voting.current?.status === "open",
+    quizPhase: quizDisplayPhase ?? null,
+    votingOpen: finalsVotingOpen,
+    answersRemaining:
+      quizDisplayPhase === "answers" ? quizPhaseRemaining : undefined,
+    suppressForCard: showQuizCard || showVotingCard || showVotePrepCard || showFinalistCheer,
   });
 
   const playerStageKey = useMemo(() => {
     if (runtimeState === "quiz" && quizState) {
-      return `quiz-${quizState.displayPhase}-${quizState.currentIndex}-${quizState.phaseStartedAt}`;
+      const questionId = quizState.questionIds[quizState.currentIndex] ?? "none";
+      return `quiz-${quizState.currentIndex}-${questionId}`;
+    }
+    if (runtimeState === "finals" && finalsShow) {
+      return `finals-${finalsShow.phase}-${finalsShow.updatedAt}`;
     }
     if (runtimeState === "finals" && voting.current) {
       return `finals-${voting.current.status}-${voting.current.updatedAt}`;
     }
     return runtimeState;
-  }, [quizState, runtimeState, voting.current]);
+  }, [finalsShow, quizState, runtimeState, voting.current]);
 
   const applyParticipant = useCallback(
     (
@@ -214,7 +263,13 @@ export default function PlayerPlayPage() {
         setJoinError(data.error ?? "Questo nickname è già in sala.");
       } else if (data.code === "BADGE_TAKEN") {
         setFieldError("badge");
-        setJoinError(data.error ?? "Badge non valido.");
+        setJoinError(
+          data.error ??
+            "Questo badge è già usato da un altro giocatore. Lascia il campo vuoto se non hai una pettorina numerata.",
+        );
+      } else if (data.code === "BADGE_REQUIRED") {
+        setFieldError("badge");
+        setJoinError(data.error ?? "Inserisci il codice badge.");
       } else if (status === 400) {
         clearStoredParticipant(eventSlug);
         setJoinError("Sessione scaduta — riprova a entrare.");
@@ -234,7 +289,7 @@ export default function PlayerPlayPage() {
       participantId?: string | null;
     }) => {
       const nick = input.nickname.trim();
-      const badge = input.badgeCode.trim();
+      const badge = badgeRequired ? input.badgeCode.trim() : "";
       const storedId =
         input.participantId ?? readStoredParticipantId(eventSlug) ?? undefined;
 
@@ -259,7 +314,7 @@ export default function PlayerPlayPage() {
       );
       return result;
     },
-    [applyParticipant, eventSlug],
+    [applyParticipant, badgeRequired, eventSlug],
   );
 
   useEffect(() => {
@@ -299,6 +354,7 @@ export default function PlayerPlayPage() {
         setJoined(false);
         joinedRef.current = false;
         setParticipantId(null);
+        handleJoinFailure(result.status, result.data);
       }
 
       setRestoreState("ready");
@@ -309,7 +365,7 @@ export default function PlayerPlayPage() {
     return () => {
       cancelled = true;
     };
-  }, [eventSlug, performJoin]);
+  }, [eventSlug, performJoin, handleJoinFailure]);
 
   useEffect(() => {
     if (!joined || !participantId) return;
@@ -407,6 +463,12 @@ export default function PlayerPlayPage() {
       return;
     }
 
+    if (badgeRequired && !badgeCode.trim()) {
+      setFieldError("badge");
+      setJoinError("Inserisci il codice badge sulla pettorina.");
+      return;
+    }
+
     setJoinError(null);
     setFieldError(null);
     setJoining(true);
@@ -452,6 +514,9 @@ export default function PlayerPlayPage() {
           loading={eventInfoLoading}
           nickname={runtimeState !== "lobby" ? nickname : null}
         />
+        <div className="flex justify-center px-4 -mt-2 mb-1">
+          <SessionSyncIndicator status={syncStatus} />
+        </div>
         <AmbientBackground waveMode={waveMode} className="flex flex-1 flex-col">
           <div className="flex flex-1 flex-col items-center justify-center px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             <div className="w-full max-w-md space-y-6">
@@ -460,8 +525,13 @@ export default function PlayerPlayPage() {
                   nickname={nickname}
                   gender={gender}
                   runtimeState={runtimeState}
-                  quizPhase={quizState?.displayPhase ?? null}
-                  votingOpen={voting.current?.status === "open"}
+                  quizPhase={quizDisplayPhase ?? null}
+                  votingOpen={finalsVotingOpen}
+                  answersRemaining={
+                    quizDisplayPhase === "answers"
+                      ? quizPhaseRemaining
+                      : undefined
+                  }
                   subtitle={presenceSubtitle}
                 />
 
@@ -471,11 +541,24 @@ export default function PlayerPlayPage() {
                   <PlayerRuntimeGlow runtimeState={runtimeState} />
                 ) : null}
 
-                {participantId && voting.current?.status === "open" &&
-                runtimeState === "finals" ? (
+                {showFinalistCheer && gender ? (
+                  <FinalistCheerPlayer
+                    participantId={participantId!}
+                    gender={gender}
+                  />
+                ) : showVotePrepCard ? (
+                  <div className="flex min-h-[min(50vh,420px)] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-primary/40 bg-black/70 p-8 text-center backdrop-blur-md">
+                    <p className="font-display text-3xl font-bold uppercase text-white leading-tight">
+                      {FINALS_COPY.displayVotePrepHeadline}
+                    </p>
+                    <p className="font-display text-2xl font-bold uppercase text-primary leading-snug">
+                      {FINALS_COPY.displayVotePrepSubline}
+                    </p>
+                  </div>
+                ) : showVotingCard && voting.current ? (
                   <VotingPlayer
                     eventSlug={eventSlug}
-                    participantId={participantId}
+                    participantId={participantId!}
                     session={voting.current}
                   />
                 ) : participantId ? (
@@ -586,39 +669,38 @@ export default function PlayerPlayPage() {
                   disabled={joining}
                 />
 
-                <div className="space-y-2">
-                  <Label htmlFor="badge">Codice badge (opzionale)</Label>
-                  <Input
-                    id="badge"
-                    value={badgeCode}
-                    onChange={(e) => {
-                      setBadgeCode(e.target.value);
-                      if (fieldError === "badge") {
-                        setFieldError(null);
-                        setJoinError(null);
-                      }
-                    }}
-                    placeholder="Es. 12"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    aria-invalid={fieldError === "badge"}
-                    className={cn(
-                      "h-11 bg-background/50",
-                      fieldError === "badge" &&
-                        "border-destructive ring-destructive/30",
-                    )}
-                  />
-                </div>
+                {badgeRequired ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="badge">Codice badge</Label>
+                    <Input
+                      id="badge"
+                      value={badgeCode}
+                      onChange={(e) => {
+                        setBadgeCode(e.target.value);
+                        if (fieldError === "badge") {
+                          setFieldError(null);
+                          setJoinError(null);
+                        }
+                      }}
+                      placeholder="Es. 12"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      required
+                      aria-invalid={fieldError === "badge"}
+                      className={cn(
+                        "h-11 bg-background/50",
+                        fieldError === "badge" &&
+                          "border-destructive ring-destructive/30",
+                      )}
+                    />
+                  </div>
+                ) : null}
 
                 {joinError ? (
                   <p className="text-sm text-destructive" role="alert">
                     {joinError}
                   </p>
                 ) : null}
-
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {PLAYER_PRIVACY_SHARING_NOTICE}
-                </p>
 
                 <Button
                   type="button"

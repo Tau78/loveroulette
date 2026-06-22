@@ -5,12 +5,14 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ExternalLink,
+  FastForward,
   Maximize,
   Minimize,
   Pencil,
   Plus,
   Smartphone,
   Trash2,
+  Users,
   WifiOff,
 } from "lucide-react";
 import {
@@ -19,6 +21,7 @@ import {
   fetchParticipants,
   isInvalidAnimatorPinError,
   playerTerminalTestUrl,
+  postSimulatePlayers,
   updateParticipant,
 } from "@/lib/admin/animator-api";
 import type { AdminParticipantRow } from "@/lib/musicpro/participant-admin";
@@ -67,6 +70,11 @@ export function AdminPlayersManager({
   const [newBadge, setNewBadge] = useState("");
   const [newGender, setNewGender] = useState<"male" | "female">("male");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [simulateBusy, setSimulateBusy] = useState(false);
+  const [simulateMode, setSimulateMode] = useState<"couples" | "matching" | null>(
+    null,
+  );
+  const [simulateSuccess, setSimulateSuccess] = useState<string | null>(null);
 
   const {
     pin,
@@ -215,6 +223,56 @@ export function AdminPlayersManager({
     }
   }
 
+  async function handleSimulateCouples(goToMatching: boolean) {
+    if (disabled || simulateBusy) return;
+
+    const confirmed = window.confirm(
+      goToMatching
+        ? "Creare 10 coppie test, compilare il quiz e passare subito al matching? I bot precedenti verranno sostituiti."
+        : "Creare 10 coppie di test (Bot U01–U10 / Bot D01–D10) con risposte quiz già compilate? I bot precedenti verranno sostituiti.",
+    );
+    if (!confirmed) return;
+
+    setSimulateBusy(true);
+    setSimulateMode(goToMatching ? "matching" : "couples");
+    setError(null);
+    setSimulateSuccess(null);
+
+    try {
+      const res = await postSimulatePlayers(
+        eventCode,
+        { coupleCount: 10, replace: true, goToMatching },
+        pin,
+      );
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+        answersInserted?: number;
+        questionCount?: number;
+        pairCount?: number;
+      } | null;
+
+      if (!res.ok) {
+        const message = data?.error ?? "Simulazione non riuscita.";
+        if (res.status === 401 || isInvalidAnimatorPinError(message)) {
+          handleInvalidPin("PIN non valido.");
+        }
+        throw new Error(message);
+      }
+
+      setSimulateSuccess(
+        goToMatching
+          ? `Matching pronto — ${data?.pairCount ?? 0} coppie calcolate (${data?.answersInserted ?? 0} risposte). Torna alla dashboard per l'estrazione.`
+          : `10 coppie pronte — ${data?.answersInserted ?? 0} risposte su ${data?.questionCount ?? "?"} domande.`,
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore di rete.");
+    } finally {
+      setSimulateBusy(false);
+      setSimulateMode(null);
+    }
+  }
+
   async function handleForceOffline(playerId: string) {
     if (disabled) return;
     setBusyId(playerId);
@@ -304,6 +362,30 @@ export function AdminPlayersManager({
             ) : null}
             <Button
               size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              disabled={disabled || simulateBusy}
+              onClick={() => void handleSimulateCouples(false)}
+            >
+              <Users className="size-3.5" />
+              {simulateBusy && simulateMode === "couples"
+                ? "Simulo…"
+                : "10 coppie test"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs border-primary/35 text-primary"
+              disabled={disabled || simulateBusy}
+              onClick={() => void handleSimulateCouples(true)}
+            >
+              <FastForward className="size-3.5" />
+              {simulateBusy && simulateMode === "matching"
+                ? "Matching…"
+                : "→ matching"}
+            </Button>
+            <Button
+              size="sm"
               className="h-8 text-xs"
               disabled={disabled}
               onClick={() => {
@@ -326,6 +408,12 @@ export function AdminPlayersManager({
           {error ? (
             <p className="text-sm text-destructive rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2">
               {error}
+            </p>
+          ) : null}
+
+          {simulateSuccess ? (
+            <p className="text-sm text-emerald-400 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
+              {simulateSuccess}
             </p>
           ) : null}
 
@@ -599,6 +687,15 @@ export function AdminPlayersManager({
           </section>
 
           <p className="text-[11px] text-muted-foreground leading-relaxed">
+            <strong>10 coppie test</strong> crea 20 giocatori bot, li segna online
+            e compila le risposte del quiz.
+            <strong className="font-semibold text-foreground/80">
+              {" "}
+              → matching
+            </strong>{" "}
+            fa lo stesso e passa subito alla fase matching (100 coppie
+            calcolate) — torna alla dashboard per l&apos;estrazione.
+            <br />
             <strong>Test terminale</strong> apre la vista giocatore in una nuova
             finestra con lo stesso profilo (utile per simulare più dispositivi).
             <ExternalLink className="inline size-3 ml-1 opacity-60" />

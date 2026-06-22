@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Monitor, Volume2, VolumeX, Maximize } from "lucide-react";
 import type { EventState } from "@/lib/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
-import { STINGER_IDS } from "@/lib/audio/stingers";
+import type { LastReveal } from "@/lib/musicpro/extraction";
+import type { FinalsShowState } from "@/lib/musicpro/finals-show";
 import { useLoveRouletteSoundtrack } from "@/hooks/useLoveRouletteSoundtrack";
+import { useQuizGongAtCountdownEnd } from "@/hooks/useQuizGongAtCountdownEnd";
+import { useCurrentQuizQuestion } from "@/hooks/useQuizQuestions";
+import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { Button } from "@/components/ui/button";
 import { displayUrl, openProjectorWindow } from "@/lib/display/embed";
@@ -17,6 +21,8 @@ interface AdminAudioPanelProps {
   eventCode: string;
   runtimeState: EventState;
   quizState?: QuizSessionState | null;
+  lastReveal?: LastReveal | null;
+  finalsShow?: FinalsShowState | null;
   disabled?: boolean;
   variant?: "card" | "deck";
   onUnlockedChange?: (unlocked: boolean) => void;
@@ -26,28 +32,29 @@ export function AdminAudioPanel({
   eventCode,
   runtimeState,
   quizState = null,
+  lastReveal = null,
+  finalsShow = null,
   disabled = false,
   variant = "card",
   onUnlockedChange,
 }: AdminAudioPanelProps) {
-  const [gongStingerToken, setGongStingerToken] = useState(0);
-  const gongPlayedForRef = useRef<string | null>(null);
+  const extractionPrevUpdatedAtRef = useRef<string | null>(null);
+  const prevFinalsPhaseRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (runtimeState !== "quiz" || !quizState?.gongCueKey) {
-      return;
-    }
+  const quizActive = runtimeState === "quiz" && Boolean(quizState);
 
-    if (gongPlayedForRef.current === quizState.gongCueKey) return;
+  const { displayPhase: syncedQuizPhase } = useQuizPhaseSync({
+    eventSlug: eventCode,
+    quizState,
+    enabled: quizActive && !disabled,
+    driveTicks: false,
+  });
 
-    gongPlayedForRef.current = quizState.gongCueKey;
-    setGongStingerToken((token) => token + 1);
-  }, [quizState?.gongCueKey, runtimeState]);
-
-  const gongDedupKey =
-    runtimeState === "quiz" && quizState?.gongCueKey
-      ? quizState.gongCueKey
-      : null;
+  const { currentQuestion } = useCurrentQuizQuestion(
+    eventCode,
+    quizState,
+    runtimeState,
+  );
 
   const {
     unlocked,
@@ -57,14 +64,80 @@ export function AdminAudioPanel({
     missingFilesWarning,
     unlock,
     toggleMute,
+    playExtractionSequence,
+    playWinnerSequence,
+    playVotingSequence,
   } = useLoveRouletteSoundtrack({
     runtimeState,
+    quizDisplayPhase: quizActive ? syncedQuizPhase : null,
+    quizThemeCategory: currentQuestion?.category ?? null,
+    finalsShowPhase: finalsShow?.phase ?? null,
     enabled: !disabled,
     autoUnlock: ADMIN_SOUNDTRACK_AUTO_UNLOCK,
-    stingerId: STINGER_IDS.quizQuestionGong,
-    stingerToken: gongStingerToken,
-    stingerDedupKey: gongDedupKey,
+    eventCode,
   });
+
+  useQuizGongAtCountdownEnd({
+    quizState,
+    enabled:
+      !disabled && unlocked && runtimeState === "quiz" && !muted,
+  });
+
+  useEffect(() => {
+    if (runtimeState !== "extraction") {
+      extractionPrevUpdatedAtRef.current = null;
+      return;
+    }
+
+    if (!lastReveal) {
+      extractionPrevUpdatedAtRef.current = null;
+      return;
+    }
+
+    const previousUpdatedAt = extractionPrevUpdatedAtRef.current;
+
+    if (previousUpdatedAt === null) {
+      extractionPrevUpdatedAtRef.current = lastReveal.updatedAt;
+      return;
+    }
+
+    if (previousUpdatedAt === lastReveal.updatedAt) {
+      return;
+    }
+
+    extractionPrevUpdatedAtRef.current = lastReveal.updatedAt;
+    playExtractionSequence(lastReveal.updatedAt);
+  }, [lastReveal, playExtractionSequence, runtimeState]);
+
+  useEffect(() => {
+    const phase = finalsShow?.phase ?? null;
+    const previousPhase = prevFinalsPhaseRef.current;
+    prevFinalsPhaseRef.current = phase;
+
+    if (!finalsShow) return;
+
+    const cueKey = `${finalsShow.updatedAt}:${finalsShow.phaseStartedAt}`;
+
+    if (phase === "voting_prep" && previousPhase !== "voting_prep") {
+      playVotingSequence(cueKey, { resumeOnly: previousPhase === null });
+    }
+
+    if (
+      phase === "voting" &&
+      previousPhase !== "voting" &&
+      previousPhase !== "voting_prep"
+    ) {
+      playVotingSequence(cueKey, { resumeOnly: true });
+    }
+
+    if (
+      phase === "winner_spectacle" &&
+      previousPhase !== "winner_spectacle" &&
+      previousPhase !== null
+    ) {
+      playWinnerSequence(cueKey);
+    }
+  }, [finalsShow, playVotingSequence, playWinnerSequence]);
 
   useEffect(() => {
     onUnlockedChange?.(unlocked);

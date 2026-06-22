@@ -51,6 +51,19 @@ export async function POST(
 
     await ensureLoveRouletteSession(supabase, event.id);
 
+    if (event.config.badge_required) {
+      const badge = body.badgeCode?.trim();
+      if (!badge) {
+        return NextResponse.json(
+          {
+            error: "Inserisci il codice badge sulla pettorina.",
+            code: "BADGE_REQUIRED",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const participant = await joinParticipant(supabase, {
       eventId: event.id,
       nickname: body.nickname,

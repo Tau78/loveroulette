@@ -8,6 +8,7 @@ import type {
   LoveRouletteParticipant,
   ParticipantDataVisibility,
 } from "./types";
+import { isDataVisibilitySchemaError } from "./participant-schema";
 
 export type JoinParticipantErrorCode =
   | "NICKNAME_TAKEN"
@@ -37,11 +38,6 @@ const PARTICIPANT_SELECT_BASE =
   "id, event_id, nickname, gender, badge_code, role, is_online";
 
 const PARTICIPANT_SELECT_WITH_VISIBILITY = `${PARTICIPANT_SELECT_BASE}, data_visibility`;
-
-function isMissingDataVisibilityColumn(error: { message?: string }): boolean {
-  const msg = error.message?.toLowerCase() ?? "";
-  return msg.includes("data_visibility") && msg.includes("does not exist");
-}
 
 function mapParticipantRow(row: Record<string, unknown>): LoveRouletteParticipant {
   return {
@@ -94,7 +90,7 @@ async function findParticipantById(
       : null;
   }
 
-  if (!isMissingDataVisibilityColumn(withVisibility.error)) {
+  if (!isDataVisibilitySchemaError(withVisibility.error)) {
     throw new Error(withVisibility.error.message);
   }
 
@@ -129,7 +125,7 @@ async function findParticipantByNickname(
       : null;
   }
 
-  if (!isMissingDataVisibilityColumn(withVisibility.error)) {
+  if (!isDataVisibilitySchemaError(withVisibility.error)) {
     throw new Error(withVisibility.error.message);
   }
 
@@ -164,7 +160,7 @@ async function findParticipantByBadge(
       : null;
   }
 
-  if (!isMissingDataVisibilityColumn(withVisibility.error)) {
+  if (!isDataVisibilitySchemaError(withVisibility.error)) {
     throw new Error(withVisibility.error.message);
   }
 
@@ -216,7 +212,7 @@ async function markParticipantOnline(
     .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
     .single();
 
-  if (result.error && isMissingDataVisibilityColumn(result.error)) {
+  if (result.error && isDataVisibilitySchemaError(result.error)) {
     const { data_visibility: _removed, ...updateWithoutVisibility } = update;
     result = await supabase
       .from("love_roulette_participants")
@@ -281,7 +277,7 @@ export async function joinParticipant(
         if (badgeOwner && badgeOwner.id !== existingById.id) {
           throw new JoinParticipantError(
             "BADGE_TAKEN",
-            "Questo numero non sembra il tuo, ricontrolla?",
+            "Questo badge è già usato da un altro giocatore. Lascia il campo vuoto se non hai una pettorina numerata.",
           );
         }
       }
@@ -325,7 +321,7 @@ export async function joinParticipant(
       if (badgeOwner && badgeOwner.id !== existingNick.id) {
         throw new JoinParticipantError(
           "BADGE_TAKEN",
-          "Questo numero non sembra il tuo, ricontrolla?",
+          "Questo badge è già usato da un altro giocatore. Lascia il campo vuoto se non hai una pettorina numerata.",
         );
       }
     }
@@ -347,7 +343,7 @@ export async function joinParticipant(
     if (badgeOwner) {
       throw new JoinParticipantError(
         "BADGE_TAKEN",
-        "Questo numero non sembra il tuo, ricontrolla?",
+        "Questo badge è già usato da un altro giocatore. Lascia il campo vuoto se non hai una pettorina numerata.",
       );
     }
   }
@@ -367,7 +363,7 @@ export async function joinParticipant(
     .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
     .single();
 
-  if (result.error && isMissingDataVisibilityColumn(result.error)) {
+  if (result.error && isDataVisibilitySchemaError(result.error)) {
     result = await supabase
       .from("love_roulette_participants")
       .insert(insertBase)
@@ -381,7 +377,7 @@ export async function joinParticipant(
       if (msg.includes("badge")) {
         throw new JoinParticipantError(
           "BADGE_TAKEN",
-          "Questo numero non sembra il tuo, ricontrolla?",
+          "Questo badge è già usato da un altro giocatore. Lascia il campo vuoto se non hai una pettorina numerata.",
         );
       }
       throw new JoinParticipantError(

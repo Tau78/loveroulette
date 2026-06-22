@@ -55,12 +55,13 @@ export function DisplayLocalMediaLayer({
           ref={videoRef}
           key={item.url}
           src={item.url}
-          className="size-full object-contain"
+          className="size-full object-cover"
           autoPlay
           playsInline
           muted={state.muted}
           loop={!playlistLoop}
           onEnded={playlistLoop ? goNext : undefined}
+          onError={playlistLoop ? goNext : undefined}
         />
       ) : (
         <div className="relative size-full">
@@ -68,7 +69,8 @@ export function DisplayLocalMediaLayer({
           <img
             src={item.url}
             alt=""
-            className="size-full object-contain"
+            className="size-full object-cover"
+            onError={playlistLoop ? goNext : undefined}
           />
         </div>
       )}

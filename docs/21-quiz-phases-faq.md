@@ -96,6 +96,14 @@ Ogni fase quiz ha un **sottofondo distinto** sul proiettore (tinta, glow e inten
 
 Il gong suona **solo** quando scade il timer della fase **Domanda + risposte** (`answers`) — non se l’animatore salta con AVANTI prima dello zero, non in fase risultati.
 
-Pitch del sample: **−24 semitoni** (più grave). File: `LR_Quiz_Question_Gong` in `music/dark_fuchsia/stingers/`.
+Allineato al **countdown del proiettore**: stesso orologio `resolveSyncedQuizClock`, trigger nel passaggio `answers` → `results` (sul «0» visivo). File: `LR_Quiz_Question_Gong` — [Pixabay Zildjian gong](https://pixabay.com/sound-effects/musical-old-zildjian-gong-quite-natural-34294/), trim ~4 s.
+
+In fase **results** la colonna sonora passa a **`LR_25_Quiz_Results_Reveal`** (bed reveal %, crossfade ~1,5 s).
+
+## Audio: sottofondo per tema manche
+
+Durante **Tema** (`theme_intro`), **Domanda**, **Risposte** e **Prossima domanda**, il bed segue la **categoria** della domanda corrente (allineata alle slide tema Generatore: lifestyle, romantic, adventure, values, fun, intimacy).
+
+Mapping in `web/src/lib/audio/quiz-theme-tracks.ts` — oggi tutte le categorie usano `LR_02_Quiz_Tension` finché non esporti loop SUNO dedicati per manche; aggiorna `QUIZ_THEME_BED_TRACK` + manifest quando pronti.
 
 Quando il proiettore passa a **results** (dopo il gong), compaiono le percentuali in sala.

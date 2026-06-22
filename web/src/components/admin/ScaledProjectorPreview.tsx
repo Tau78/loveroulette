@@ -27,7 +27,7 @@ export function ScaledProjectorPreview({
         title="Anteprima proiettore"
         src={src}
         className="size-full border-0 bg-black"
-        loading="lazy"
+        loading="eager"
         scrolling="no"
       />
     </div>

@@ -2,8 +2,9 @@ import type { EventConfig, EventState } from "@/lib/types";
 import type { DisplayOverlay } from "./display-overlay";
 import type { LastReveal } from "./extraction";
 import type { FinalistCouple, LastElimination } from "./elimination";
-import type { QuizSessionState } from "./quiz-state";
+import type { QuizSessionState, QuizSetupPrefs } from "./quiz-state";
 import type { VotingMetadata } from "./voting";
+import type { FinalsShowState } from "./finals-show";
 
 export type EventGameFormat = "cervellone" | "love_roulette";
 
@@ -53,6 +54,8 @@ export interface LoveRouletteEvent {
   displayAudioCue: { enabled: boolean; updatedAt: string } | null;
   /** Stato quiz corrente (domanda attiva, indice, totale). */
   quizState: QuizSessionState | null;
+  /** Preferenze regia quiz (numero domande, secondi risposta). */
+  quizSetup: QuizSetupPrefs;
   /** Ultima coppia estratta (sync mobile). */
   lastReveal: LastReveal | null;
   /** Ultima coppia eliminata (sync display). */
@@ -61,6 +64,8 @@ export interface LoveRouletteEvent {
   finalists: FinalistCouple[];
   /** Votazione finali (metadata love_roulette_voting). */
   voting: VotingMetadata;
+  /** Spettacolo finali (slide prove, countdown, podio). */
+  finalsShow: FinalsShowState | null;
   joinUrl: string;
   /** True when `metadata.animator_pin` is set for this event. */
   animatorPinRequired: boolean;

@@ -2,13 +2,16 @@
 
 import { motion } from "framer-motion";
 import { CHALLENGE_LABELS, type ChallengeId } from "@/lib/types";
+import type { FinalistCouple } from "@/lib/musicpro/elimination";
 import type { VotingSessionState } from "@/lib/musicpro/voting";
+import { FINALS_COPY } from "@/lib/game/late-game-copy";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { cn } from "@/lib/utils";
 
 interface DisplayFinalsStageProps {
   session: VotingSessionState | null;
   runtimeState: "finals" | "winner";
+  finalists?: FinalistCouple[];
 }
 
 function coupleLabel(finalist: VotingSessionState["finalists"][number]): string {
@@ -18,15 +21,34 @@ function coupleLabel(finalist: VotingSessionState["finalists"][number]): string 
 export function DisplayFinalsStage({
   session,
   runtimeState,
+  finalists = [],
 }: DisplayFinalsStageProps) {
   if (!session) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center px-4 pb-16 md:pb-20">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 pb-16 md:pb-20 gap-8">
         <DisplayPhaseHero
-          kicker="Finali"
-          headline="In attesa della prossima prova"
-          subline="L'animatore avvierà la votazione"
+          kicker={FINALS_COPY.displayKicker}
+          headline={FINALS_COPY.displayHeadline}
+          subline={FINALS_COPY.displayWaitingSubline}
+          uppercase
         />
+        {finalists.length > 0 ? (
+          <div className="w-full max-w-2xl space-y-3">
+            {finalists.map((finalist, index) => (
+              <div
+                key={finalist.pairId}
+                className="rounded-xl border border-white/15 bg-black/35 px-5 py-4 text-center"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/90">
+                  Finalista {index + 1}
+                </p>
+                <p className="mt-1 text-xl font-display font-semibold text-white">
+                  {finalist.maleNick} & {finalist.femaleNick}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -41,20 +63,38 @@ export function DisplayFinalsStage({
       ? session.finalists.find((f) => f.pairId === session.winnerPairId)
       : null;
 
+  const heroSubline =
+    runtimeState === "winner" && winner
+      ? coupleLabel(winner)
+      : session.status === "open"
+        ? FINALS_COPY.displayVoteSubline
+        : winner
+          ? coupleLabel(winner)
+          : FINALS_COPY.displayVoteClosed;
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center w-full max-w-4xl mx-auto px-4 pb-20 md:pb-24 gap-8 md:gap-10">
       <DisplayPhaseHero
-        kicker={runtimeState === "winner" ? "Vincitori" : "Votazione"}
-        headline={challengeLabel}
-        subline={
-          session.status === "open"
-            ? "Votate dal telefono!"
-            : winner
-              ? `${coupleLabel(winner)} in testa`
-              : "Votazione chiusa"
+        kicker={
+          runtimeState === "winner"
+            ? FINALS_COPY.displayWinnerKicker
+            : FINALS_COPY.displayKicker
         }
+        headline={
+          runtimeState === "winner"
+            ? FINALS_COPY.displayWinnerHeadline
+            : FINALS_COPY.displayHeadline
+        }
+        subline={heroSubline}
         pulse={session.status === "open"}
+        uppercase
       />
+
+      {runtimeState !== "winner" && challengeLabel ? (
+        <p className="-mt-4 text-center text-sm font-semibold uppercase tracking-[0.22em] text-primary/90">
+          {FINALS_COPY.displayChallengePrefix}: {challengeLabel}
+        </p>
+      ) : null}
 
       <div className="w-full space-y-4 md:space-y-5">
         {session.finalists.map((finalist, index) => {

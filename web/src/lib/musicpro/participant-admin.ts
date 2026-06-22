@@ -5,10 +5,47 @@ import type {
   LoveRouletteParticipant,
   LoveRouletteParticipantRole,
 } from "./types";
+import { isDataVisibilitySchemaError } from "./participant-schema";
 import { JoinParticipantError } from "./participants";
 
-const PARTICIPANT_ADMIN_SELECT =
-  "id, event_id, nickname, gender, badge_code, role, is_online, data_visibility, last_seen_at";
+const PARTICIPANT_ADMIN_SELECT_BASE =
+  "id, event_id, nickname, gender, badge_code, role, is_online, last_seen_at";
+
+const PARTICIPANT_ADMIN_SELECT = `${PARTICIPANT_ADMIN_SELECT_BASE}, data_visibility`;
+
+type AdminParticipantQueryResult = {
+  data: unknown;
+  error: { message: string; code?: string } | null;
+};
+
+async function withDataVisibilityFallback<T>(
+  run: (select: string) => PromiseLike<AdminParticipantQueryResult>,
+  map: (rows: Record<string, unknown>[]) => T,
+): Promise<T> {
+  const primary = await run(PARTICIPANT_ADMIN_SELECT);
+  if (!primary.error) {
+    const rows = Array.isArray(primary.data)
+      ? (primary.data as Record<string, unknown>[])
+      : primary.data
+        ? [primary.data as Record<string, unknown>]
+        : [];
+    return map(rows);
+  }
+
+  if (!isDataVisibilitySchemaError(primary.error)) {
+    throw new Error(primary.error.message);
+  }
+
+  const fallback = await run(PARTICIPANT_ADMIN_SELECT_BASE);
+  if (fallback.error) throw new Error(fallback.error.message);
+
+  const rows = Array.isArray(fallback.data)
+    ? (fallback.data as Record<string, unknown>[])
+    : fallback.data
+      ? [fallback.data as Record<string, unknown>]
+      : [];
+  return map(rows);
+}
 
 export interface AdminParticipantRow extends LoveRouletteParticipant {
   last_seen_at: string | null;
@@ -49,14 +86,15 @@ export async function listEventParticipants(
   supabase: SupabaseClient,
   eventId: string,
 ): Promise<AdminParticipantRow[]> {
-  const { data, error } = await supabase
-    .from("love_roulette_participants")
-    .select(PARTICIPANT_ADMIN_SELECT)
-    .eq("event_id", eventId)
-    .order("nickname", { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => mapRow(row as Record<string, unknown>));
+  return withDataVisibilityFallback(
+    (select) =>
+      supabase
+        .from("love_roulette_participants")
+        .select(select)
+        .eq("event_id", eventId)
+        .order("nickname", { ascending: true }),
+    (rows) => rows.map((row) => mapRow(row)),
+  );
 }
 
 export async function getEventParticipant(
@@ -64,16 +102,16 @@ export async function getEventParticipant(
   eventId: string,
   participantId: string,
 ): Promise<AdminParticipantRow | null> {
-  const { data, error } = await supabase
-    .from("love_roulette_participants")
-    .select(PARTICIPANT_ADMIN_SELECT)
-    .eq("event_id", eventId)
-    .eq("id", participantId)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  if (!data) return null;
-  return mapRow(data as Record<string, unknown>);
+  return withDataVisibilityFallback(
+    (select) =>
+      supabase
+        .from("love_roulette_participants")
+        .select(select)
+        .eq("event_id", eventId)
+        .eq("id", participantId)
+        .maybeSingle(),
+    (rows) => (rows[0] ? mapRow(rows[0]) : null),
+  );
 }
 
 async function assertNicknameAvailable(
@@ -134,7 +172,7 @@ export async function createParticipantAdmin(
   await assertNicknameAvailable(supabase, input.eventId, nickname);
   await assertBadgeAvailable(supabase, input.eventId, badge_code);
 
-  const { data, error } = await supabase
+  const insertResult = await supabase
     .from("love_roulette_participants")
     .insert({
       event_id: input.eventId,
@@ -144,17 +182,23 @@ export async function createParticipantAdmin(
       role: input.role ?? "player",
       is_online: false,
     })
-    .select(PARTICIPANT_ADMIN_SELECT)
+    .select("id")
     .single();
 
-  if (error) {
-    if (error.code === "23505") {
+  if (insertResult.error) {
+    if (insertResult.error.code === "23505") {
       throw new JoinParticipantError("NICKNAME_TAKEN", "Nickname già in uso.");
     }
-    throw new Error(error.message);
+    throw new Error(insertResult.error.message);
   }
 
-  return mapRow(data as Record<string, unknown>);
+  const created = await getEventParticipant(
+    supabase,
+    input.eventId,
+    String(insertResult.data.id),
+  );
+  if (!created) throw new Error("Giocatore creato ma non trovato.");
+  return created;
 }
 
 export async function updateParticipantAdmin(
@@ -189,16 +233,17 @@ export async function updateParticipantAdmin(
   if (input.badgeCode !== undefined) update.badge_code = badge_code;
   if (input.role !== undefined) update.role = input.role;
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("love_roulette_participants")
     .update(update)
     .eq("id", participantId)
-    .eq("event_id", eventId)
-    .select(PARTICIPANT_ADMIN_SELECT)
-    .single();
+    .eq("event_id", eventId);
 
   if (error) throw new Error(error.message);
-  return mapRow(data as Record<string, unknown>);
+
+  const updated = await getEventParticipant(supabase, eventId, participantId);
+  if (!updated) throw new Error("Giocatore non trovato dopo aggiornamento.");
+  return updated;
 }
 
 export async function deleteParticipantAdmin(
@@ -240,14 +285,15 @@ export async function setParticipantOfflineAdmin(
   eventId: string,
   participantId: string,
 ): Promise<AdminParticipantRow> {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("love_roulette_participants")
     .update({ is_online: false })
     .eq("id", participantId)
-    .eq("event_id", eventId)
-    .select(PARTICIPANT_ADMIN_SELECT)
-    .single();
+    .eq("event_id", eventId);
 
   if (error) throw new Error(error.message);
-  return mapRow(data as Record<string, unknown>);
+
+  const updated = await getEventParticipant(supabase, eventId, participantId);
+  if (!updated) throw new Error("Giocatore non trovato.");
+  return updated;
 }

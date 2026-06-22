@@ -73,6 +73,8 @@ export async function postQuizAction(
       | "skipPhase"
       | "setPhase";
     autoplaySeconds?: number;
+    questionCount?: number;
+    questionSeconds?: number;
     enabled?: boolean;
     displayPhase?:
       | "start_countdown"
@@ -116,6 +118,18 @@ export async function patchSessionRuntimeState(
   });
 }
 
+export async function patchEventConfig(
+  eventCode: string,
+  body: { badgeRequired: boolean },
+  pin: string | null,
+): Promise<Response> {
+  return fetch(`/api/events/${encodeURIComponent(eventCode)}/config`, {
+    method: "PATCH",
+    headers: animatorAuthHeaders(pin),
+    body: JSON.stringify(body),
+  });
+}
+
 export async function postDisplayCommand(
   eventCode: string,
   body: Record<string, string>,
@@ -144,6 +158,10 @@ export async function postVotingAction(
   eventCode: string,
   body:
     | { action: "start_challenge"; challengeId: string }
+    | { action: "advance" }
+    | { action: "tick" }
+    | { action: "proclaim_winner" }
+    | { action: "simulate_bot_votes" }
     | { action: "vote"; participantId: string; pairId: string }
     | { action: "close" },
   pin: string | null,
@@ -235,6 +253,21 @@ export async function deleteParticipant(
     {
       method: "DELETE",
       headers: animatorAuthHeaders(pin),
+    },
+  );
+}
+
+export async function postSimulatePlayers(
+  eventCode: string,
+  body: { coupleCount?: number; replace?: boolean; goToMatching?: boolean },
+  pin: string | null,
+): Promise<Response> {
+  return fetch(
+    `/api/events/${encodeURIComponent(eventCode)}/simulate-players`,
+    {
+      method: "POST",
+      headers: animatorAuthHeaders(pin),
+      body: JSON.stringify(body),
     },
   );
 }

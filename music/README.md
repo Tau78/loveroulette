@@ -70,15 +70,20 @@ Dopo ogni export SUNO, sincronizza nel player web:
 cd web && npm run sync:audio
 ```
 
+## Tracce P0 in repo
+
+| File A / B | Fase | SUNO take (primary A) |
+|------------|------|------------------------|
+| `LR_06_Extraction_Drumroll_A/B` | Estrazione (drumroll) | Empty Room Impact / (1) (~9 s) — **pronti al live** |
+| `LR_07_Extraction_Reveal_A/B` | Estrazione (ding) | Fuchsia Fanfare / Fuchsia Fanfare (1) |
+| `LR_15_Winner_Anthem_A/B` | Vincitori (loop) | Victory Confetti (~50 s) / Love Roulette Champions (~114 s) |
+| `LR_16_Winner_Stinger_A/B` | Vincitori (hit) | Confetti Strike / Confetti Strike_1 |
+
 ## Prossime tracce P0
 
 | File A / B | Fase |
 |------------|------|
 | `LR_02_Quiz_Tension_A/B` | Quiz |
-| `LR_06_Extraction_Drumroll_A/B` | Estrazione (stinger) |
-| `LR_07_Extraction_Reveal_A/B` | Estrazione (ding) |
-| `LR_15_Winner_Anthem_A/B` | Vincitori |
-| `LR_16_Winner_Stinger_A/B` | Vincitori (hit) |
 
 Stinger: di solito **una sola** take basta (scegli A o B); per i loop conviene tenere entrambe.
 

@@ -8,16 +8,15 @@ Third-party sound effects used in Love Roulette. All listed assets are licensed 
 | --- | --- |
 | **Track ID** | `LR_Quiz_Question_Gong` |
 | **Files** | `dark_fuchsia/stingers/LR_Quiz_Question_Gong_A.mp3`, `LR_Quiz_Question_Gong_B.mp3` |
-| **Source** | BigSoundBank (La Sonothèque) |
-| **Author** | Joseph SARDIN |
-| **Original recordings** | [Gong, strong #1](https://bigsoundbank.com/gong-strong-1-s1483.html) (variant A), [Gong, strong #2](https://bigsoundbank.com/gong-strong-2-s1484.html) (variant B) |
-| **License** | **CC0 1.0** (public domain) — free for commercial and personal use; attribution not required |
-| **License page** | https://bigsoundbank.com/licenses.html |
+| **Source** | [Pixabay — Musical Old Zildjian Gong Quite Natural](https://pixabay.com/sound-effects/musical-old-zildjian-gong-quite-natural-34294/) |
+| **Original recording** | SaftJesus — «Old Zildjian Gong Quite Natural» (Freesound #151532) |
+| **License** | **Pixabay Content License** — free for commercial use; no attribution required |
+| **Archive** | `dark_fuchsia/stingers/candidates/Pixabay_Zildjian_Gong_Natural_full.flac` (54 s source) |
 
 ### Processing
 
-Original studio recordings (~15 s each, 48 kHz mono) were trimmed to ~2.9 s with a short fade-out for quiz “time’s up” stinger use. Exported as 48 kHz stereo MP3 @ 192 kbps to match other stingers in this project.
+Trimmed to **~4.0 s** from the natural strike (fade-out from 3.0 s, 1.0 s), loudness-normalized, exported 48 kHz stereo MP3 @ 192 kbps. Variant B is a duplicate of A (manifest placeholder).
 
 ### Usage in app
 
-Loaded via `web/public/audio/manifest.json` → `LR_Quiz_Question_Gong`. Fallback synthetic WebAudio gong in `web/src/lib/audio/gong.ts` applies only if manifest playback fails.
+Loaded via `web/public/audio/manifest.json` → `LR_Quiz_Question_Gong`. Plays once at end of quiz answers countdown (`useQuizGongAtCountdownEnd`). Fallback synthetic bell in `web/src/lib/audio/gong.ts` if manifest playback fails.

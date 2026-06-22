@@ -1,0 +1,113 @@
+---
+description: Testo proiettore sempre leggibile — piastra/scrim/contorno obbligatori (standard broadcast & game show)
+globs: web/src/components/display/**,web/src/app/s/**/display/**,web/src/lib/display/**
+alwaysApply: false
+---
+
+# Display text legibility — Love Roulette
+
+## Regola assoluta
+
+**Nessun testo “nudo” sopra video, roulette, bokeh o texture decorative.**
+
+Ogni stringa visibile a distanza in sala (proiettore, anteprima admin, overlay) deve avere **almeno uno** di:
+
+1. **Piastra (plate)** — pannello scuro semitrasparente dietro il blocco testo  
+2. **Scrim locale** — vignetta/gradiente che isola la zona di lettura  
+3. **Contorno tipografico** — stack `text-shadow` multiplo e/o `-webkit-text-stroke`  
+
+I leader di settore (ProPresenter, Resolume, broadcast sports, game show TV) non posano mai copy direttamente sul background: usano **lower third**, **bug/plate**, **stroke + drop shadow** o **boxed titles**. Love Roulette segue lo stesso principio.
+
+## Perché
+
+- Il pubblico legge da 5–20 m con luci variabili e motion sullo sfondo  
+- Gradient text (`bg-clip-text`) **senza piastra** scompare su elementi chiari o busy (ruota, cuori, numeri)  
+- `text-white/90` da solo non basta su video ad alto contrasto  
+
+## Pattern approvati (in ordine di preferenza)
+
+### 1. Piastra glass — default per titoli e fasi
+
+Come `DisplayPhaseHero`: scrim assoluto + contenuto `relative z-10`.
+
+```tsx
+<div className="relative ...">
+  <div
+    className="pointer-events-none absolute -inset-x-4 -inset-y-6 rounded-[2rem] bg-gradient-to-b from-black/80 via-black/70 to-black/80 backdrop-blur-md border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
+    aria-hidden
+  />
+  <div className="relative z-10 ...">{children}</div>
+</div>
+```
+
+### 2. Stack ombra broadcast — kicker, numeri countdown, label piccole
+
+Minimo **due** layer: glow brand + ombra nera dura.
+
+```tsx
+style={{
+  textShadow:
+    "0 0 24px rgba(233,30,140,0.5), 0 2px 8px rgba(0,0,0,1), 0 4px 24px rgba(0,0,0,0.85)",
+}}
+```
+
+### 3. Contorno su display font — headline molto grandi
+
+Per `font-display` su sfondo ancora visibile:
+
+```tsx
+className="[text-shadow:0_2px_0_rgba(0,0,0,0.95),0_0_40px_rgba(0,0,0,0.8)] [-webkit-text-stroke:1px_rgba(0,0,0,0.35)]"
+```
+
+Preferire **testo bianco pieno** + ombre; il solo gradient clip è ammesso **solo** dentro una piastra.
+
+## Vietato
+
+- ❌ Headline/kicker direttamente sulla roulette o sul video loop  
+- ❌ Solo `drop-shadow` colorato (rosa) senza ombra nera  
+- ❌ Assumere che `backdrop-blur` sul body basti — serve isolamento **per blocco di testo**  
+- ❌ Testo sotto il 4.5:1 di contrasto sulla regione effettiva di lettura  
+
+## Checklist prima di chiudere una PR display
+
+- [ ] Ogni riga di copy ha piastra, scrim o stroke stack?  
+- [ ] Anteprima su frame **busy** (roulette + luci), non su nero piatto?  
+- [ ] Countdown/numeri: leggibili al tick con glow **e** halo scuro?  
+- [ ] `prefers-reduced-motion`: piastra resta, animazioni opzionali?  
+- [ ] **Safe zone bassa**: nessun testo/card invade logo, sync o footer?
+
+## Safe zone bassa (footer proiettore)
+
+Canvas fisso **1920×1080**. In basso è **riservata** una fascia per:
+
+- Logo Love Roulette (angolo basso-destra)  
+- Indicatore sync / rendering (angolo basso-sinistra)  
+- Footer quiz (`DisplayQuizFooter`) o footer finalisti (3 colonne)
+
+**Regola:** il contenuto del `<main>` **non deve mai coprire** questa area.
+
+### Costanti (`projector-canvas.ts`)
+
+- `PROJECTOR_BOTTOM_SAFE_ZONE_PX` — altezza fascia riservata (152px)  
+- `PROJECTOR_MAIN_BOTTOM_SAFE_CLASS` — `pb-[152px]` sul `<main>` quando il footer finalisti **non** è visibile  
+- `PROJECTOR_FINALISTS_FOOTER_MIN_CLASS` — footer finalisti `shrink-0` nel flex column  
+
+### Pattern
+
+1. **Quiz:** layout a tre zone (`DisplayQuizStage` + `DisplayQuizFooter`) — il main non usa padding extra.  
+2. **Finali full-bleed** (votazione, prep, risultati): wrapper `DisplayFinalsSafeStage` con `min-h-0 overflow-hidden`; numeri con `clamp(..., vh, ...)` per adattarsi allo spazio sopra la safe zone.  
+3. **Altre fasi** (lobby, estrazione, …): applicare `PROJECTOR_MAIN_BOTTOM_SAFE_CLASS` al `<main>` se non c’è footer dedicato.  
+
+### Vietato
+
+- ❌ Card o numeri giganti con `pb-16` arbitrario che finiscono sopra logo/sync  
+- ❌ `absolute bottom-*` sul contenuto centrale che invade la fascia brand  
+- ❌ Ignorare il footer finalisti nel flex — usare `shrink-0` sul footer, `min-h-0` sul main  
+
+## Riferimenti nel repo
+
+- `DisplayPhaseHero` — pattern piastra + shadow stack  
+- `DisplayFinalsSafeStage` — contenitore finali con overflow controllato  
+- `projector-canvas.ts` — safe zone bassa e classi padding  
+- `DisplayQuizGameLayout` header panels — `bg-black/55 backdrop-blur-md border`  
+- `docs/02-design-system.md` — contrasto e tipografia display  

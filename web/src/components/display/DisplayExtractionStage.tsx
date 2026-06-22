@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { LastReveal } from "@/lib/musicpro/extraction";
+import { EXTRACTION_COPY } from "@/lib/game/late-game-copy";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { cn } from "@/lib/utils";
+import { EXTRACTION_SPIN_DURATION_MS } from "@/lib/game/extraction-timing";
 import { PROJECTOR_EXTRACTION_WHEEL_PX } from "@/lib/display/projector-canvas";
 
-const SPIN_DURATION_MS = 2500;
+const SPIN_DURATION_MS = EXTRACTION_SPIN_DURATION_MS;
 const WHEEL_SEGMENT_COUNT = 12;
 const WHEEL_LABEL_RADIUS_PERCENT = 38;
 
@@ -301,9 +303,11 @@ export function DisplayExtractionStage({
           >
             <RouletteWheel spinning={false} />
             <DisplayPhaseHero
-              kicker="Estrazione"
-              headline="La coppia sta per essere rivelata"
+              kicker={EXTRACTION_COPY.displayKicker}
+              headline={EXTRACTION_COPY.displayHeadline}
+              subline={EXTRACTION_COPY.displaySubline}
               pulse
+              uppercase
             />
           </motion.div>
         ) : null}

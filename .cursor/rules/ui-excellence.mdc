@@ -22,7 +22,7 @@ Ogni modifica visibile (display proiettore, player mobile, admin) deve passare q
 - **Layout fisso e stabile**: header · centro · footer — niente elementi che saltano o cambiano altezza tra fasi.
 - **Domande e risposte quiz**: sempre **MAIUSCOLO** (`uppercase`) su proiettore — domanda in header, opzioni A–D e label risultati. Token in `web/src/lib/display/quiz-display-typography.ts`.
 - **Tipografia responsive**: domande/risposte usano `clamp()` + `min(vh,vw)` per riempire lo spazio disponibile senza overflow; `line-clamp` su testi lunghi, grid `flex-1` / `grid-rows-4` per le quattro opzioni.
-- **Leggibilità a distanza**: sans (Geist) per corpo quiz; numeri e % grandi; contrasto alto su video/roulette.
+- **Leggibilità a distanza**: sans (Geist) per corpo quiz; numeri e % grandi; contrasto alto su video/roulette. **Regola piastra**: vedi `.cursor/rules/display-text-legibility.mdc` — niente testo nudo sul background.
 - **Motion con purpose**: Framer Motion per tick, reveal, transizioni fase — mai animazione gratuita. Rispetta `prefers-reduced-motion`.
 - **Footer quiz**: solo countdown centrale — cuore e logo restano negli angoli bassi (`display-brand-metrics.ts`), **non** nel footer.
 

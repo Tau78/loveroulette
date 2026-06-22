@@ -1,9 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventState } from "@/lib/types";
+import type { PairProgress } from "./pair-progress";
+import { getPairProgress } from "./pair-progress";
 
 export interface EventStats {
   onlineCount: number;
   participantCount: number;
+  pairProgress: PairProgress | null;
 }
 
 export interface SessionRuntimeUpdate {
@@ -55,9 +58,17 @@ export async function getEventStats(
     throw new Error(onlineError.message);
   }
 
+  let pairProgress: PairProgress | null = null;
+  try {
+    pairProgress = await getPairProgress(supabase, eventId);
+  } catch {
+    pairProgress = null;
+  }
+
   return {
     onlineCount: onlineCount ?? 0,
     participantCount: participantCount ?? 0,
+    pairProgress,
   };
 }
 

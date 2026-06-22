@@ -109,10 +109,12 @@ export default async function EventJoinPage({
                   Pre-registrati
                 </Button>
               </Link>
-              <p className="text-center text-sm text-muted-foreground pt-1 flex items-center justify-center gap-1.5">
-                <Ticket className="size-3.5 shrink-0 opacity-70" />
-                Hai un badge? Scansiona il QR sulla pettorina a cuore.
-              </p>
+              {event.config.badge_required ? (
+                <p className="text-center text-sm text-muted-foreground pt-1 flex items-center justify-center gap-1.5">
+                  <Ticket className="size-3.5 shrink-0 opacity-70" />
+                  Hai un badge? Scansiona il QR sulla pettorina a cuore.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         ) : (

@@ -30,3 +30,21 @@ export const PROJECTOR_QUIZ_HEADER_HEIGHT = "h-[152px]";
 
 /** Quiz — contenuto centrale padding */
 export const PROJECTOR_QUIZ_MAIN_PAD = "px-4 py-3";
+
+/**
+ * Fascia bassa riservata — logo Love Roulette (dx), sync indicator (sx), footer quiz/finalisti.
+ * Il contenuto del `<main>` non deve mai invadere questa area (1920×1080).
+ */
+export const PROJECTOR_BOTTOM_SAFE_ZONE_PX = 152;
+
+/** Padding bottom sul main quando il footer finalisti non è visibile. */
+export const PROJECTOR_MAIN_BOTTOM_SAFE_CLASS = "pb-[152px]";
+
+/** Footer finalisti a tre colonne — altezza minima nel flex column. */
+export const PROJECTOR_FINALISTS_FOOTER_MIN_CLASS = "shrink-0 min-h-[168px]";
+
+/** Finali — fascia titolo fissa (px su 1080p), corpo sotto con minmax(0,1fr). */
+export const PROJECTOR_FINALS_HEADER_HEIGHT_PX = 220;
+
+export const PROJECTOR_FINALS_ZONE_GRID_CLASS =
+  "grid h-full min-h-0 w-full grid-rows-[220px_minmax(0,1fr)] gap-3";

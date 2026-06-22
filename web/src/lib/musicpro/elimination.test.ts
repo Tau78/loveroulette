@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getFinalistsFromMetadata,
   getLastElimination,
+  selectFinalistCandidates,
 } from "@/lib/musicpro/elimination";
 
 describe("getLastElimination", () => {
@@ -58,5 +59,61 @@ describe("getFinalistsFromMetadata", () => {
 
     expect(result.map((f) => f.rank)).toEqual([1, 3]);
     expect(result[0]?.maleNick).toBe("A");
+  });
+});
+
+describe("selectFinalistCandidates", () => {
+  it("keeps only extracted non-eliminated pairs", () => {
+    const result = selectFinalistCandidates([
+      {
+        id: "p1",
+        rank: 1,
+        is_eliminated: false,
+        was_shown: true,
+        participant_male_id: "m1",
+        participant_female_id: "f1",
+        affinity_score: 0,
+        is_finalist: false,
+      },
+      {
+        id: "p2",
+        rank: 2,
+        is_eliminated: false,
+        was_shown: false,
+        participant_male_id: "m2",
+        participant_female_id: "f2",
+        affinity_score: 0,
+        is_finalist: false,
+      },
+    ]);
+
+    expect(result.map((p) => p.id)).toEqual(["p1"]);
+  });
+
+  it("skips overlapping players from legacy was_shown rows", () => {
+    const result = selectFinalistCandidates([
+      {
+        id: "p1",
+        rank: 1,
+        is_eliminated: false,
+        was_shown: true,
+        participant_male_id: "m1",
+        participant_female_id: "f1",
+        affinity_score: 0,
+        is_finalist: false,
+      },
+      {
+        id: "p2",
+        rank: 2,
+        is_eliminated: false,
+        was_shown: true,
+        participant_male_id: "m2",
+        participant_female_id: "f1",
+        affinity_score: 0,
+        is_finalist: false,
+      },
+    ]);
+
+    expect(result.map((p) => p.id)).toEqual(["p1"]);
   });
 });

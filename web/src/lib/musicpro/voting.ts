@@ -35,6 +35,8 @@ export interface VotingMetadata {
       }
     >
   >;
+  /** Serialized finals show — normalize with normalizeFinalsShow(). */
+  show?: unknown;
 }
 
 const CHALLENGE_IDS: ChallengeId[] = [
@@ -158,7 +160,7 @@ export function getVotingMetadata(
     }
   }
 
-  return { current, completed };
+  return { current, completed, show: record.show ?? null };
 }
 
 export function getVotingSessionState(
@@ -167,7 +169,7 @@ export function getVotingSessionState(
   return getVotingMetadata(metadata).current;
 }
 
-async function readEventMetadata(
+export async function readEventMetadata(
   supabase: SupabaseClient,
   eventId: string,
 ): Promise<Record<string, unknown>> {
@@ -184,7 +186,7 @@ async function readEventMetadata(
   return (data.metadata ?? {}) as Record<string, unknown>;
 }
 
-async function writeVotingMetadata(
+export async function writeVotingMetadataBundle(
   supabase: SupabaseClient,
   eventId: string,
   voting: VotingMetadata,
@@ -205,6 +207,14 @@ async function writeVotingMetadata(
   }
 }
 
+async function writeVotingMetadata(
+  supabase: SupabaseClient,
+  eventId: string,
+  voting: VotingMetadata,
+): Promise<void> {
+  await writeVotingMetadataBundle(supabase, eventId, voting);
+}
+
 export async function loadTopFinalistPairs(
   supabase: SupabaseClient,
   eventId: string,
@@ -223,10 +233,11 @@ export async function loadTopFinalistPairs(
   const { data: pairs, error: pairsError } = await supabase
     .from("love_roulette_pairs")
     .select(
-      "id, participant_male_id, participant_female_id, rank, is_eliminated",
+      "id, participant_male_id, participant_female_id, rank, is_eliminated, was_shown",
     )
     .eq("event_id", eventId)
     .eq("is_eliminated", false)
+    .eq("was_shown", true)
     .order("rank", { ascending: true })
     .limit(3);
 
@@ -318,7 +329,7 @@ export async function submitVote(
 ): Promise<VotingSessionState> {
   const { data: participant, error: participantError } = await supabase
     .from("love_roulette_participants")
-    .select("id")
+    .select("id, role")
     .eq("id", participantId)
     .eq("event_id", eventId)
     .maybeSingle();
@@ -329,6 +340,10 @@ export async function submitVote(
 
   if (!participant) {
     throw new VotingError("Partecipante non valido.", 404);
+  }
+
+  if (participant.role === "finalist") {
+    throw new VotingError("I finalisti non possono votare.", 403);
   }
 
   const metadata = await readEventMetadata(supabase, eventId);

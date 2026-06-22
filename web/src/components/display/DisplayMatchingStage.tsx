@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
+import { MATCHING_COPY } from "@/lib/game/late-game-copy";
 import { cn } from "@/lib/utils";
 
 const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
@@ -157,10 +158,11 @@ export function DisplayMatchingStage({ className }: DisplayMatchingStageProps) {
       aria-label="Calcolo affinità in corso"
     >
       <DisplayPhaseHero
-        kicker="Roulette"
-        headline="Calcolo affinità..."
-        subline="Le coppie stanno per essere svelate"
+        kicker={MATCHING_COPY.displayKicker}
+        headline={MATCHING_COPY.displayHeadline}
+        subline={MATCHING_COPY.displaySubline}
         pulse
+        uppercase
       />
       <SpinningAffinityWheel />
       <MatchingProgressDots />

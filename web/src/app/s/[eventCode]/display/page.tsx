@@ -2,6 +2,7 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
+import { DisplayFinalsShowStage } from "@/components/display/DisplayFinalsShowStage";
 import { DisplayFinalsStage } from "@/components/display/DisplayFinalsStage";
 import { DisplayOverlay } from "@/components/display/DisplayOverlay";
 import { DisplayMatchingStage } from "@/components/display/DisplayMatchingStage";
@@ -10,18 +11,24 @@ import { DisplayStageBackground } from "@/components/display/DisplayStageBackgro
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { DisplayEliminationStage } from "@/components/display/DisplayEliminationStage";
 import { DisplayExtractionStage } from "@/components/display/DisplayExtractionStage";
+import { DisplayQuizLaunchInterstitial } from "@/components/display/DisplayQuizLaunchSpectacle";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
+import { CLOSED_COPY } from "@/lib/game/late-game-copy";
 import { useCurrentQuizQuestion } from "@/hooks/useQuizQuestions";
+import { useFinalsShowSync } from "@/hooks/useFinalsShowSync";
 import { useLoveRouletteSession } from "@/hooks/useLoveRouletteSession";
 import { runtimeStateLabel } from "@/lib/events";
+import type { ChallengeId } from "@/lib/types";
 import { isEventUuid, normalizeEventSlug } from "@/lib/musicpro/slug";
 import { Badge } from "@/components/ui/badge";
+import { SessionSyncIndicator } from "@/components/session/SessionSyncIndicator";
 import { cn } from "@/lib/utils";
 import { isDisplayEmbedMode } from "@/lib/display/embed";
-import { PROJECTOR_CANVAS, PROJECTOR_HEADER_CLASS } from "@/lib/display/projector-canvas";
+import { PROJECTOR_CANVAS, PROJECTOR_HEADER_CLASS, PROJECTOR_MAIN_BOTTOM_SAFE_CLASS, PROJECTOR_FINALISTS_FOOTER_MIN_CLASS } from "@/lib/display/projector-canvas";
 import { DisplayProjectorRoot } from "@/components/display/DisplayProjectorRoot";
 import { DisplayProjectorHeader } from "@/components/display/DisplayProjectorHeader";
 import { DisplayFixedCanvas } from "@/components/display/DisplayFixedCanvas";
+import { DisplayChallengeBackdrop } from "@/components/display/DisplayChallengeBackdrop";
 import { DisplayLocalMediaLayer } from "@/components/display/DisplayLocalMediaLayer";
 import { useRegiaLocalMediaReceiver } from "@/hooks/useRegiaLocalMediaReceiver";
 
@@ -72,9 +79,20 @@ export default function DisplayPage() {
     lastElimination,
     finalists,
     voting,
+    finalsShow,
     applyQuizUpdate,
+    applyFinalsUpdate,
+    syncStatus,
   } = useLoveRouletteSession({
     eventSlug,
+  });
+
+  const { remaining: finalsRemaining } = useFinalsShowSync({
+    eventSlug,
+    show: finalsShow,
+    enabled: Boolean(finalsShow),
+    driveTicks: true,
+    onTick: applyFinalsUpdate,
   });
   const { currentQuestion, progressLabel } = useCurrentQuizQuestion(
     eventSlug,
@@ -90,12 +108,33 @@ export default function DisplayPage() {
   const phaseLabel = runtimeStateLabel(runtimeState);
   const isLobby = runtimeState === "lobby";
   const showFinalistsFooter =
-    runtimeState === "finals" || runtimeState === "winner";
+    (runtimeState === "finals" || runtimeState === "winner") &&
+    finalsShow?.phase !== "voting" &&
+    finalsShow?.phase !== "voting_prep" &&
+    finalsShow?.phase !== "results";
 
   const footerFinalists =
-    voting.current?.finalists?.length ? voting.current.finalists : finalists;
+    finalsShow?.finalists?.length
+      ? finalsShow.finalists
+      : voting.current?.finalists?.length
+        ? voting.current.finalists
+        : finalists;
 
   const isQuiz = runtimeState === "quiz" && Boolean(quizState);
+  const finalsFullBleed =
+    (runtimeState === "finals" || runtimeState === "winner") &&
+    (finalsShow?.phase === "challenge_intro" ||
+      finalsShow?.phase === "voting" ||
+      finalsShow?.phase === "voting_prep" ||
+      finalsShow?.phase === "results");
+  const hideBackgroundRoulette =
+    runtimeState === "extraction" ||
+    runtimeState === "matching" ||
+    finalsShow?.phase === "couple_reveal" ||
+    finalsShow?.phase === "challenge_intro" ||
+    finalsShow?.phase === "voting" ||
+    finalsShow?.phase === "voting_prep" ||
+    finalsShow?.phase === "results";
 
   const { state: localMediaState, active: localMediaActive } =
     useRegiaLocalMediaReceiver(eventSlug);
@@ -141,10 +180,15 @@ export default function DisplayPage() {
       <DisplayStageBackground
         logoScale={isLobby ? "full" : "compact"}
         quizPhase={isQuiz ? quizState!.displayPhase : null}
-        hideBackgroundRoulette={
-          runtimeState === "extraction" || runtimeState === "matching"
-        }
+        hideBackgroundRoulette={hideBackgroundRoulette}
       />
+
+      {finalsShow ? (
+        <DisplayChallengeBackdrop
+          challengeId={(finalsShow.challengeId as ChallengeId | null) ?? null}
+          phase={finalsShow.phase}
+        />
+      ) : null}
 
       <DisplayLocalMediaLayer
         state={localMediaState}
@@ -152,6 +196,10 @@ export default function DisplayPage() {
       />
 
       <DisplayProjectorHeader embedMode={embedMode} className={PROJECTOR_HEADER_CLASS}>
+        <SessionSyncIndicator
+          status={syncStatus}
+          className="bg-black/35 backdrop-blur-sm text-white/90"
+        />
         <Badge
           variant="outline"
           className="text-sm uppercase tracking-wider px-3 py-1.5 border-white/15 bg-black/35 backdrop-blur-sm"
@@ -167,7 +215,10 @@ export default function DisplayPage() {
             ? "items-stretch w-full"
             : runtimeState === "extraction" || runtimeState === "elimination"
               ? "items-stretch w-full h-full"
-              : "items-center px-12",
+              : finalsFullBleed
+                ? "items-stretch w-full px-6"
+                : "items-center px-12",
+          !isQuiz && !showFinalistsFooter && PROJECTOR_MAIN_BOTTOM_SAFE_CLASS,
         )}
       >
         {runtimeState === "matching" ? (
@@ -188,18 +239,31 @@ export default function DisplayPage() {
             onQuizUpdate={applyQuizUpdate}
           />
         ) : runtimeState === "quiz" ? (
-          <div className="flex flex-1 flex-col items-center justify-center px-4 pb-16 md:pb-20">
+          <DisplayQuizLaunchInterstitial className="flex-1" />
+        ) : runtimeState === "finals" || runtimeState === "winner" ? (
+          finalsShow ? (
+            <DisplayFinalsShowStage
+              show={finalsShow}
+              session={voting.current}
+              remaining={finalsRemaining}
+              runtimeState={runtimeState === "winner" ? "winner" : "finals"}
+            />
+          ) : (
+            <DisplayFinalsStage
+              session={voting.current}
+              runtimeState={runtimeState === "winner" ? "winner" : "finals"}
+              finalists={finalists}
+            />
+          )
+        ) : runtimeState === "closed" ? (
+          <div className="flex flex-1 flex-col items-center justify-center px-8">
             <DisplayPhaseHero
-              kicker="Quiz"
-              headline="Quiz in corso"
-              subline="Rispondete dallo smartphone"
+              kicker={CLOSED_COPY.displayKicker}
+              headline={CLOSED_COPY.displayHeadline}
+              subline={CLOSED_COPY.displaySubline}
+              uppercase
             />
           </div>
-        ) : runtimeState === "finals" || runtimeState === "winner" ? (
-          <DisplayFinalsStage
-            session={voting.current}
-            runtimeState={runtimeState === "winner" ? "winner" : "finals"}
-          />
         ) : isLobby ? (
           <div className="relative z-10 flex flex-1 w-full items-end pb-14 px-16 animate-fade-in">
             <div className="flex flex-col items-start gap-4 max-w-[320px]">
@@ -219,7 +283,12 @@ export default function DisplayPage() {
       </main>
 
       {showFinalistsFooter ? (
-        <footer className="relative z-10 grid grid-cols-3 gap-4 px-8 py-5 border-t border-white/10 bg-black/40 backdrop-blur-sm">
+        <footer
+          className={cn(
+            "relative z-10 grid grid-cols-3 gap-5 px-8 py-6 border-t border-white/15 bg-black/55 backdrop-blur-md",
+            PROJECTOR_FINALISTS_FOOTER_MIN_CLASS,
+          )}
+        >
           {(footerFinalists.length > 0
             ? footerFinalists
             : [
@@ -248,18 +317,67 @@ export default function DisplayPage() {
               const label = finalist.femaleNick
                 ? `${finalist.maleNick} & ${finalist.femaleNick}`
                 : finalist.maleNick;
-              const votes = voting.current?.counts[finalist.pairId];
+              const cumulative = finalsShow?.cumulativeScores[finalist.pairId];
+              const roundVotes = voting.current?.counts[finalist.pairId];
+              const scoreLabel =
+                typeof cumulative === "number" && cumulative > 0
+                  ? `${cumulative} pt`
+                  : typeof roundVotes === "number"
+                    ? `${roundVotes} voti`
+                    : `#${index + 1}`;
+              const activeCoupleIndex =
+                finalsShow?.phase === "couple_reveal"
+                  ? finalsShow.coupleIndex - 1
+                  : -1;
+              const isActive = index === activeCoupleIndex;
+
               return (
                 <div
                   key={finalist.pairId}
-                  className="rounded-xl py-4 text-center text-xl font-semibold bg-black/30 border border-white/10 text-white/80"
+                  className={cn(
+                    "relative rounded-2xl border py-5 px-4 text-center transition-all duration-300",
+                    isActive
+                      ? "z-10 scale-[1.03] border-primary/70 bg-gradient-to-b from-primary/40 via-primary/20 to-black/75 shadow-[0_0_56px_rgba(233,30,140,0.55),0_16px_48px_rgba(0,0,0,0.55)] ring-4 ring-primary/70"
+                      : activeCoupleIndex >= 0
+                        ? "border-white/8 bg-black/30 opacity-30 shadow-none"
+                        : "border-white/15 bg-black/50 opacity-100 shadow-[0_8px_32px_rgba(0,0,0,0.45)]",
+                  )}
                 >
-                  {label}
-                  <span className="block text-sm font-normal text-white/45 mt-1">
-                    {typeof votes === "number"
-                      ? `${votes} voti`
-                      : `#${index + 1}`}
-                  </span>
+                  {isActive ? (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-primary/60 bg-primary px-3 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_20px_rgba(233,30,140,0.65)]">
+                      In pista
+                    </span>
+                  ) : null}
+                  <p
+                    className={cn(
+                      "font-display font-bold text-white leading-tight",
+                      isActive
+                        ? "text-[clamp(1.75rem,3.2vw,3.25rem)]"
+                        : "text-3xl md:text-5xl",
+                    )}
+                    style={{
+                      fontFamily: "var(--font-display), serif",
+                      textShadow: isActive
+                        ? "0 4px 0 rgba(0,0,0,1), 0 0 40px rgba(233,30,140,0.85)"
+                        : "0 3px 0 rgba(0,0,0,1), 0 2px 16px rgba(0,0,0,0.95)",
+                    }}
+                  >
+                    {label}
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-3 font-display font-bold tabular-nums",
+                      isActive ? "text-3xl md:text-5xl text-white" : "text-4xl md:text-6xl text-primary",
+                    )}
+                    style={{
+                      fontFamily: "var(--font-display), serif",
+                      textShadow: isActive
+                        ? "0 3px 0 rgba(0,0,0,1), 0 0 32px rgba(255,255,255,0.35)"
+                        : "0 0 36px rgba(233,30,140,0.75)",
+                    }}
+                  >
+                    {isActive ? `#${index + 1}` : scoreLabel}
+                  </p>
                 </div>
               );
             })}

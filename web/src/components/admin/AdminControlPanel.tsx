@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useEventQuestionCount } from "@/hooks/useEventQuestionCount";
 import {
-  CHALLENGE_LABELS,
-  type ChallengeId,
   type EventState,
   type ExtractionMode,
 } from "@/lib/types";
@@ -13,14 +11,13 @@ import {
   patchSessionRuntimeState,
   postExtractCouple,
   postEliminatePair,
-  postQuizAction,
-  postVotingAction,
 } from "@/lib/admin/animator-api";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { runtimeStateLabel } from "@/lib/events";
-import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
+import type { PairProgress } from "@/lib/musicpro/pair-progress";
+import type { EventStats } from "@/lib/musicpro/session";
 
 interface AdminControlPanelProps {
   eventCode: string;
@@ -29,9 +26,10 @@ interface AdminControlPanelProps {
   initialExtractionMode?: ExtractionMode;
   disabled?: boolean;
   onInvalidPin?: () => void;
-  onQuizChange?: (quiz: QuizSessionState | null) => void;
   questionsRefreshKey?: number;
   variant?: "card" | "deck";
+  pairProgress?: PairProgress | null;
+  onRefreshProgress?: () => Promise<{ stats: EventStats } | null>;
 }
 
 export function AdminControlPanel({
@@ -41,9 +39,10 @@ export function AdminControlPanel({
   initialExtractionMode = "random",
   disabled = false,
   onInvalidPin,
-  onQuizChange,
   questionsRefreshKey = 0,
   variant = "card",
+  pairProgress = null,
+  onRefreshProgress,
 }: AdminControlPanelProps) {
   const { count: questionCount, loading: questionCountLoading } =
     useEventQuestionCount(eventCode, true, questionsRefreshKey);
@@ -51,11 +50,13 @@ export function AdminControlPanel({
   const [error, setError] = useState<string | null>(null);
   const [extractionMode, setExtractionMode] =
     useState<ExtractionMode>(initialExtractionMode);
-  const [activeChallenge, setActiveChallenge] = useState<ChallengeId | null>(
-    null,
-  );
 
   const compact = variant === "deck";
+
+  const refreshProgress = useCallback(async () => {
+    if (!onRefreshProgress) return;
+    await onRefreshProgress();
+  }, [onRefreshProgress]);
 
   async function goTo(nextState: EventState) {
     if (disabled || busy) return;
@@ -80,39 +81,8 @@ export function AdminControlPanel({
         }
         throw new Error(message);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore di rete.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
-  async function startQuiz() {
-    if (disabled || busy) return;
-
-    setBusy(true);
-    setError(null);
-
-    try {
-      const response = await postQuizAction(
-        eventCode,
-        { action: "start" },
-        animatorPin,
-      );
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        const message = payload?.error ?? "Impossibile avviare il quiz.";
-        if (response.status === 401 || isInvalidAnimatorPinError(message)) {
-          onInvalidPin?.();
-        }
-        throw new Error(message);
-      }
-
-      const data = (await response.json()) as { quiz: QuizSessionState | null };
-      onQuizChange?.(data.quiz ?? null);
+      await refreshProgress();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore di rete.");
     } finally {
@@ -143,6 +113,8 @@ export function AdminControlPanel({
         }
         throw new Error(message);
       }
+
+      await refreshProgress();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore di rete.");
     } finally {
@@ -169,6 +141,8 @@ export function AdminControlPanel({
         }
         throw new Error(message);
       }
+
+      await refreshProgress();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore di rete.");
     } finally {
@@ -176,69 +150,26 @@ export function AdminControlPanel({
     }
   }
 
-  async function startVoting(challengeId: ChallengeId) {
-    if (disabled || busy) return;
-
-    setBusy(true);
-    setError(null);
-
-    try {
-      const response = await postVotingAction(
-        eventCode,
-        { action: "start_challenge", challengeId },
-        animatorPin,
-      );
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        const message = payload?.error ?? "Impossibile avviare la votazione.";
-        if (response.status === 401 || isInvalidAnimatorPinError(message)) {
-          onInvalidPin?.();
-        }
-        throw new Error(message);
-      }
-
-      setActiveChallenge(challengeId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore di rete.");
-    } finally {
-      setBusy(false);
+  async function handleExtractionPrimaryAction() {
+    if (pairProgress?.canExtractMore === false) {
+      await goTo("elimination");
+      return;
     }
+    await extractNextCouple();
   }
 
-  async function closeVoting() {
-    if (disabled || busy) return;
-
-    setBusy(true);
-    setError(null);
-
-    try {
-      const response = await postVotingAction(
-        eventCode,
-        { action: "close" },
-        animatorPin,
-      );
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        const message = payload?.error ?? "Impossibile chiudere la votazione.";
-        if (response.status === 401 || isInvalidAnimatorPinError(message)) {
-          onInvalidPin?.();
-        }
-        throw new Error(message);
-      }
-
-      setActiveChallenge(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore di rete.");
-    } finally {
-      setBusy(false);
+  async function handleEliminationPrimaryAction() {
+    if (pairProgress?.canEliminateMore === false) {
+      await goTo("finals");
+      return;
     }
+    await eliminatePair("next");
   }
+
+  const extractionComplete = pairProgress?.canExtractMore === false;
+  const eliminationComplete =
+    pairProgress?.readyForFinals === true &&
+    pairProgress.canEliminateMore === false;
 
   return (
     <AdminPanelShell
@@ -260,17 +191,31 @@ export function AdminControlPanel({
         ) : null}
       </p>
 
+      {pairProgress &&
+      (runtimeState === "extraction" || runtimeState === "elimination") ? (
+        <p className="text-[11px] text-muted-foreground tabular-nums">
+          Coppie estratte{" "}
+          <span className="font-semibold text-foreground">
+            {pairProgress.shownCount}/{pairProgress.maxExtractions}
+          </span>
+          {runtimeState === "elimination" ? (
+            <>
+              {" "}
+              · in gara{" "}
+              <span className="font-semibold text-foreground">
+                {pairProgress.activePairCount}
+              </span>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
       {runtimeState === "lobby" && (
-        <Button
-          size={compact ? "sm" : "lg"}
-          className={compact ? "w-full" : "h-12 px-8 text-base font-semibold"}
-          disabled={disabled || busy}
-          onClick={() => void startQuiz()}
-        >
-          Avvia quiz
-        </Button>
+        <p className="text-xs text-muted-foreground">
+          Imposta numero domande e secondi nel pannello Quiz — regia, poi avvia.
+        </p>
       )}
 
       {runtimeState === "quiz" && (
@@ -292,39 +237,35 @@ export function AdminControlPanel({
 
       {runtimeState === "extraction" && (
         <div className={compact ? "space-y-2" : "space-y-4 max-w-md"}>
-          <div className="space-y-1.5">
-            <Label htmlFor="extraction-mode" className="text-xs">
-              Modalità estrazione
-            </Label>
-            <select
-              id="extraction-mode"
-              value={extractionMode}
-              onChange={(event) =>
-                setExtractionMode(event.target.value as ExtractionMode)
-              }
-              className="block w-full rounded-md border border-input bg-input/30 px-2.5 py-1.5 text-xs"
-            >
-              <option value="random">A sorte</option>
-              <option value="ranked">Classifica (basso → alto)</option>
-              <option value="hybrid">Mix casuale + classifica</option>
-            </select>
-          </div>
+          {pairProgress?.canExtractMore !== false ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="extraction-mode" className="text-xs">
+                Modalità estrazione
+              </Label>
+              <select
+                id="extraction-mode"
+                value={extractionMode}
+                onChange={(event) =>
+                  setExtractionMode(event.target.value as ExtractionMode)
+                }
+                className="block w-full rounded-md border border-input bg-input/30 px-2.5 py-1.5 text-xs"
+              >
+                <option value="random">A sorte</option>
+                <option value="ranked">Classifica (basso → alto)</option>
+                <option value="hybrid">Mix casuale + classifica</option>
+              </select>
+            </div>
+          ) : null}
           <Button
             size={compact ? "sm" : "lg"}
             className="w-full"
             disabled={disabled || busy}
-            onClick={() => void extractNextCouple()}
+            variant={extractionComplete ? "secondary" : "default"}
+            onClick={() => void handleExtractionPrimaryAction()}
           >
-            Estrai prossima coppia
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full h-8 text-xs"
-            disabled={disabled || busy}
-            onClick={() => void goTo("elimination")}
-          >
-            Passa allo sfoltimento →
+            {extractionComplete
+              ? "Fase eliminazione"
+              : "Estrai prossima coppia"}
           </Button>
         </div>
       )}
@@ -335,69 +276,31 @@ export function AdminControlPanel({
             size={compact ? "sm" : "lg"}
             className="w-full"
             disabled={disabled || busy}
-            onClick={() => void eliminatePair("next")}
+            variant={eliminationComplete ? "secondary" : "default"}
+            onClick={() => void handleEliminationPrimaryAction()}
           >
-            Elimina prossima coppia
+            {eliminationComplete
+              ? "Fase prove finali"
+              : "Elimina prossima coppia"}
           </Button>
-          <Button
-            variant="secondary"
-            size={compact ? "sm" : "lg"}
-            className="w-full"
-            disabled={disabled || busy}
-            onClick={() => void eliminatePair("auto_to_finalists")}
-          >
-            Auto → Top 3
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full h-8 text-xs"
-            disabled={disabled || busy}
-            onClick={() => void goTo("finals")}
-          >
-            Top 3 pronti → finali
-          </Button>
+          {pairProgress?.canEliminateMore ? (
+            <Button
+              variant="outline"
+              size={compact ? "sm" : "lg"}
+              className="w-full"
+              disabled={disabled || busy}
+              onClick={() => void eliminatePair("auto_to_finalists")}
+            >
+              Auto → Top 3
+            </Button>
+          ) : null}
         </div>
       )}
 
       {runtimeState === "finals" && (
-        <div className="space-y-2">
-          {(Object.keys(CHALLENGE_LABELS) as ChallengeId[]).map((id) => (
-            <div
-              key={id}
-              className="flex items-center gap-2 rounded-md border border-border/40 px-2.5 py-1.5"
-            >
-              <span className="flex-1 text-xs">{CHALLENGE_LABELS[id]}</span>
-              <Button
-                variant={activeChallenge === id ? "default" : "outline"}
-                size="xs"
-                disabled={disabled || busy}
-                onClick={() => void startVoting(id)}
-              >
-                Votazione
-              </Button>
-            </div>
-          ))}
-          {activeChallenge ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="w-full"
-              disabled={disabled || busy}
-              onClick={() => void closeVoting()}
-            >
-              Chiudi votazione
-            </Button>
-          ) : null}
-          <Button
-            size={compact ? "sm" : "lg"}
-            className="w-full mt-1"
-            disabled={disabled || busy}
-            onClick={() => void goTo("winner")}
-          >
-            Proclama vincitore
-          </Button>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Usa AVANTI in alto per avanzare; prove e regia nel pannello «Finali».
+        </p>
       )}
 
       {runtimeState === "winner" && (

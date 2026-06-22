@@ -1,4 +1,11 @@
 import type { EventConfig, EventState, ThemeId } from "@/lib/types";
+import {
+  CLOSED_COPY,
+  ELIMINATION_COPY,
+  EXTRACTION_COPY,
+  FINALS_COPY,
+  MATCHING_COPY,
+} from "@/lib/game/late-game-copy";
 
 export function mergeEventConfig(
   partial?: Partial<EventConfig> | Record<string, unknown>,
@@ -23,6 +30,7 @@ export function mergeEventConfig(
     tie_breaker: "animator_manual",
     question_mode: "fixed",
     data_retention_days: 30,
+    badge_required: false,
   };
 
   if (!partial) return base;
@@ -43,12 +51,12 @@ export const THEME_OPTIONS: { id: ThemeId; label: string }[] = [
 export const RUNTIME_STATE_LABELS: Record<EventState, string> = {
   lobby: "In attesa dell'inizio",
   quiz: "Quiz in corso",
-  matching: "Roulette",
-  extraction: "Estrazione coppie",
-  elimination: "Sfoltimento",
-  finals: "Finali",
-  winner: "Vincitore",
-  closed: "Serata conclusa",
+  matching: MATCHING_COPY.badge,
+  extraction: EXTRACTION_COPY.badge,
+  elimination: ELIMINATION_COPY.badge,
+  finals: FINALS_COPY.badge,
+  winner: FINALS_COPY.displayWinnerKicker,
+  closed: CLOSED_COPY.badge,
 };
 
 export function runtimeStateLabel(state: EventState): string {

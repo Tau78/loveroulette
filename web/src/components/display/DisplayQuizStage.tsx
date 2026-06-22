@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { EventState } from "@/lib/types";
 import type { LoveRouletteQuestion } from "@/lib/musicpro/types";
@@ -9,10 +9,11 @@ import type { QuestionResults } from "@/lib/musicpro/quiz-results";
 import {
   resolveThemeForQuizIndex,
   type QuizDisplayPhase,
+  isMancheThemeIntroForIndex,
 } from "@/lib/musicpro/quiz-display";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
-import { DisplayStartCountdown } from "@/components/display/DisplayStartCountdown";
+import { DisplayQuizLaunchSpectacle } from "@/components/display/DisplayQuizLaunchSpectacle";
 import {
   QUIZ_ANSWER_LETTER_CLASS,
   QUIZ_ANSWER_TEXT_CLASS,
@@ -335,16 +336,17 @@ export function DisplayQuizStage({
   onQuizUpdate,
 }: DisplayQuizStageProps) {
   const [results, setResults] = useState<QuestionResults | null>(null);
-  const phase = quizState.displayPhase as QuizDisplayPhase;
+  const serverPhase = quizState.displayPhase as QuizDisplayPhase;
   const timing = quizState.timing;
   const heartProgress = resolveEveningHeartProgress("quiz", quizState);
 
-  const { remaining } = useQuizPhaseSync({
+  const autoplayEnabled = quizState.autoplayEnabled === true;
+
+  const { remaining, displayPhase: phase, tickServer } = useQuizPhaseSync({
     eventSlug,
     quizState,
     enabled: true,
-    driveTicks:
-      quizState.autoplayEnabled === true || phase === "start_countdown",
+    driveTicks: autoplayEnabled && serverPhase !== "start_countdown",
     onPhaseChange: (nextPhase) => {
       if (nextPhase === "results") {
         setResults(null);
@@ -392,25 +394,53 @@ export function DisplayQuizStage({
       ? { value: remaining, total: timing.questionSeconds }
       : null;
 
-  if (phase === "start_countdown") {
+  const handleLaunchComplete = useCallback(() => {
+    void tickServer();
+  }, [tickServer]);
+
+  if (serverPhase === "start_countdown") {
     return (
-      <DisplayQuizGameLayout
-        centerKey="start-countdown"
-        header={<CountdownHeaderPanel />}
-        center={
-          remaining > 0 ? (
-            <DisplayStartCountdown value={remaining} />
-          ) : (
-            <div className="h-full" aria-hidden />
-          )
-        }
-        footerCountdown={null}
-        heartProgress={heartProgress}
-      />
+      <div className="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+        <DisplayQuizLaunchSpectacle
+          remaining={remaining}
+          onComplete={handleLaunchComplete}
+          phaseNumber={1}
+          className="flex-1"
+        />
+        <DisplayQuizFooter countdown={null} heartProgress={heartProgress} />
+      </div>
     );
   }
 
   if (phase === "theme_intro" && theme) {
+    if (
+      !isMancheThemeIntroForIndex(
+        quizState.questionIds,
+        quizState.currentIndex,
+        quizState.manche,
+      )
+    ) {
+      return (
+        <DisplayQuizGameLayout
+          centerKey={`next-${quizState.currentIndex}`}
+          header={
+            currentQuestion ? (
+              <QuestionHeaderPanel
+                body={currentQuestion.body}
+                progressLabel={progressLabel}
+                compact
+              />
+            ) : (
+              <CountdownHeaderPanel />
+            )
+          }
+          center={<NextQuestionCenter progressLabel={progressLabel} />}
+          footerCountdown={null}
+          heartProgress={heartProgress}
+        />
+      );
+    }
+
     return (
       <DisplayQuizGameLayout
         centerKey={`theme-${quizState.currentIndex}`}

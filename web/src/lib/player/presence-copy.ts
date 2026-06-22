@@ -1,9 +1,21 @@
 import type { QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
 import type { EventState } from "@/lib/types";
+import {
+  CLOSED_COPY,
+  DEFAULT_PLAYER_SUBTITLE,
+  ELIMINATION_COPY,
+  EXTRACTION_COPY,
+  FINALS_COPY,
+  MATCHING_COPY,
+} from "@/lib/game/late-game-copy";
 
 interface PlayerPresenceOptions {
   quizPhase?: QuizDisplayPhase | null;
   votingOpen?: boolean;
+  /** Sync client — secondi rimasti in fase answers. */
+  answersRemaining?: number;
+  /** Card quiz/voto visibile — il sottotitolo hero resta vuoto (evita doppioni). */
+  suppressForCard?: boolean;
 }
 
 /** Benvenuto/a sotto il saluto. */
@@ -11,12 +23,16 @@ export function playerWelcomeLabel(gender: "male" | "female"): string {
   return gender === "female" ? "BENVENUTA" : "BENVENUTO";
 }
 
-/** Sottotitolo dinamico — vuoto in lobby (saluto statico sopra). */
+/** Sottotitolo hero — una sola fonte per fase; la card quiz/voto fa il resto. */
 export function playerPresenceSubtitle(
   runtimeState: EventState,
   options: PlayerPresenceOptions = {},
 ): string {
-  const { quizPhase, votingOpen } = options;
+  const { quizPhase, votingOpen, suppressForCard } = options;
+
+  if (suppressForCard && (runtimeState === "quiz" || runtimeState === "finals")) {
+    return "";
+  }
 
   switch (runtimeState) {
     case "lobby":
@@ -26,33 +42,25 @@ export function playerPresenceSubtitle(
         case "start_countdown":
           return "Attenti — il quiz parte tra poco!";
         case "theme_intro":
-          return "Nuova manche — guarda gli schermi";
-        case "question":
-          return "Leggi la domanda sugli schermi in sala";
-        case "answers":
-          return "Rispondi ora — hai pochi secondi!";
-        case "results":
-          return "Guarda gli schermi per le statistiche";
-        case "next_question":
-          return "Prossima domanda in arrivo…";
+          return "Nuova manche — guarda gli schermi in sala";
         default:
-          return "Quiz in corso — segui gli schermi in sala";
+          return "";
       }
     case "matching":
-      return "La roulette sta girando…";
+      return MATCHING_COPY.playerSubtitle;
     case "extraction":
-      return "Estrazione coppie in corso!";
+      return EXTRACTION_COPY.playerSubtitle;
     case "elimination":
-      return "Sfoltimento — resta con noi";
+      return ELIMINATION_COPY.playerSubtitle;
     case "finals":
       return votingOpen
-        ? "Vota la coppia preferita!"
-        : "Finali — in attesa della votazione";
+        ? FINALS_COPY.playerVoting
+        : FINALS_COPY.playerWaiting;
     case "winner":
-      return "Ecco la coppia vincitrice!";
+      return FINALS_COPY.playerWinner;
     case "closed":
-      return "La serata è conclusa. Grazie per aver giocato!";
+      return CLOSED_COPY.playerSubtitle;
     default:
-      return "Segui le istruzioni dell'animatore";
+      return DEFAULT_PLAYER_SUBTITLE;
   }
 }

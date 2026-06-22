@@ -97,3 +97,28 @@ export function postRegiaLocalMediaMessage(
   channel.postMessage(message);
   channel.close();
 }
+
+/** Playlist da URL pubblici (baci famosi, kamasutra, cartella custom). */
+export function playPresetMediaPlaylist(
+  eventCode: string,
+  folderName: string,
+  items: RegiaLocalMediaItem[],
+  options?: { muted?: boolean; index?: number },
+): void {
+  if (!items.length) return;
+
+  postRegiaLocalMediaMessage(eventCode, {
+    type: "state",
+    state: {
+      folderName,
+      items,
+      index: options?.index ?? 0,
+      playing: true,
+      muted: options?.muted ?? true,
+    },
+  });
+}
+
+export function stopPresetMedia(eventCode: string): void {
+  postRegiaLocalMediaMessage(eventCode, { type: "clear" });
+}

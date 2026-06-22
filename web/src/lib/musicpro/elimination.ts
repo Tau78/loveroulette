@@ -147,6 +147,48 @@ function buildFinalists(
     }));
 }
 
+function buildFinalistsFromExtracted(
+  pairs: PairRow[],
+  nickById: Map<string, string>,
+): FinalistCouple[] {
+  return selectFinalistCandidates(pairs)
+    .map((pair) => ({
+      pairId: pair.id,
+      maleNick: nickById.get(pair.participant_male_id)?.trim() ?? "?",
+      femaleNick: nickById.get(pair.participant_female_id)?.trim() ?? "?",
+      rank: pair.rank,
+      affinityScore: pair.affinity_score,
+    }));
+}
+
+/** Coppie già estratte e ancora in gara — fino a 3 finalisti (demo / salto sfoltimento). */
+export function selectFinalistCandidates(
+  pairs: PairRow[],
+  max = 3,
+): PairRow[] {
+  const shown = pairs
+    .filter((pair) => !pair.is_eliminated && pair.was_shown)
+    .sort((a, b) => a.rank - b.rank);
+
+  const lockedPlayers = new Set<string>();
+  const selected: PairRow[] = [];
+
+  for (const pair of shown) {
+    if (
+      lockedPlayers.has(pair.participant_male_id) ||
+      lockedPlayers.has(pair.participant_female_id)
+    ) {
+      continue;
+    }
+    selected.push(pair);
+    lockedPlayers.add(pair.participant_male_id);
+    lockedPlayers.add(pair.participant_female_id);
+    if (selected.length >= max) break;
+  }
+
+  return selected;
+}
+
 async function loadPairsContext(
   supabase: SupabaseClient,
   eventId: string,
@@ -299,6 +341,137 @@ async function markFinalists(
   }
 }
 
+async function persistFinalistsMetadata(
+  supabase: SupabaseClient,
+  eventId: string,
+  metadata: Record<string, unknown>,
+  finalists: FinalistCouple[],
+  displayOverlay: DisplayOverlay,
+  lastElimination: LastElimination | null = null,
+): Promise<void> {
+  const { error: metadataError } = await supabase
+    .from("events")
+    .update({
+      metadata: {
+        ...metadata,
+        love_roulette_display: displayOverlay,
+        ...(lastElimination
+          ? { love_roulette_last_elimination: lastElimination }
+          : {}),
+        love_roulette_finalists: finalists,
+      },
+    })
+    .eq("id", eventId);
+
+  if (metadataError) {
+    throw new Error(metadataError.message);
+  }
+}
+
+/**
+ * Conferma le coppie già estratte come finalisti (1–3).
+ * Usato quando si salta lo sfoltimento o restano ≤3 coppie in gara.
+ */
+function sameFinalistIds(a: FinalistCouple[], b: FinalistCouple[]): boolean {
+  if (a.length !== b.length) return false;
+  const ids = (finalists: FinalistCouple[]) =>
+    finalists
+      .map((f) => f.pairId)
+      .sort()
+      .join(",");
+  return ids(a) === ids(b);
+}
+
+export async function ensureFinalistsForEvent(
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<FinalistCouple[]> {
+  const { pairs, nickById, metadata } = await loadPairsContext(
+    supabase,
+    eventId,
+  );
+
+  const expected = buildFinalistsFromExtracted(pairs, nickById);
+  const existing = getFinalistsFromMetadata(metadata);
+
+  if (existing.length > 0 && sameFinalistIds(existing, expected)) {
+    return existing;
+  }
+
+  if (expected.length === 0) {
+    return existing;
+  }
+
+  const candidateRows = selectFinalistCandidates(pairs);
+
+  await markFinalists(supabase, eventId, candidateRows);
+  const now = new Date().toISOString();
+  const names = expected
+    .map((f) => `${f.maleNick} & ${f.femaleNick}`)
+    .join(" · ");
+
+  await persistFinalistsMetadata(
+    supabase,
+    eventId,
+    metadata,
+    expected,
+    {
+      type: "custom",
+      title: "Finalisti pronti!",
+      body: names,
+      updatedAt: now,
+    },
+  );
+
+  return expected;
+}
+
+async function finalizeRemainingAsFinalists(
+  supabase: SupabaseClient,
+  eventId: string,
+  context: Awaited<ReturnType<typeof loadPairsContext>>,
+): Promise<EliminateResult> {
+  const { pairs, nickById, metadata } = context;
+  const candidateRows = selectFinalistCandidates(pairs);
+
+  if (candidateRows.length === 0) {
+    throw new EliminationError(
+      "Nessuna coppia estratta da confermare come finalista.",
+      404,
+    );
+  }
+
+  await markFinalists(supabase, eventId, candidateRows);
+
+  const finalists = buildFinalistsFromExtracted(pairs, nickById);
+  const now = new Date().toISOString();
+  const names = finalists
+    .map((f) => `${f.maleNick} & ${f.femaleNick}`)
+    .join(" · ");
+
+  const displayOverlay: DisplayOverlay = {
+    type: "custom",
+    title: "Finalisti selezionati!",
+    body: names,
+    updatedAt: now,
+  };
+
+  await persistFinalistsMetadata(
+    supabase,
+    eventId,
+    metadata,
+    finalists,
+    displayOverlay,
+  );
+
+  return {
+    eliminated: [],
+    finalists,
+    displayOverlay,
+    lastElimination: getLastElimination(metadata),
+  };
+}
+
 export async function eliminatePairs(
   supabase: SupabaseClient,
   eventId: string,
@@ -314,8 +487,15 @@ export async function eliminatePairs(
   const toEliminateAll = getBottomNonFinalistPairs(active, finalistCount);
 
   if (toEliminateAll.length === 0) {
+    if (mode === "auto_to_finalists") {
+      return finalizeRemainingAsFinalists(supabase, eventId, {
+        pairs,
+        nickById,
+        metadata,
+      });
+    }
     throw new EliminationError(
-      `Restano già ${finalistCount} coppie o meno — nulla da eliminare.`,
+      `Restano già ${finalistCount} coppie o meno — nulla da eliminare. Usa «Auto → Top 3» per confermare i finalisti.`,
       404,
     );
   }
@@ -381,21 +561,14 @@ export async function eliminatePairs(
     updatedAt: now,
   };
 
-  const { error: metadataError } = await supabase
-    .from("events")
-    .update({
-      metadata: {
-        ...metadata,
-        love_roulette_display: displayOverlay,
-        love_roulette_last_elimination: lastElimination,
-        love_roulette_finalists: finalists,
-      },
-    })
-    .eq("id", eventId);
-
-  if (metadataError) {
-    throw new Error(metadataError.message);
-  }
+  await persistFinalistsMetadata(
+    supabase,
+    eventId,
+    metadata,
+    finalists,
+    displayOverlay,
+    lastElimination,
+  );
 
   return {
     eliminated,

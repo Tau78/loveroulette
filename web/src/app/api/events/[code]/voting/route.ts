@@ -4,17 +4,37 @@ import { getLoveRouletteEvent } from "@/lib/musicpro/resolve-event";
 import { verifyAnimatorPin } from "@/lib/musicpro/session";
 import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 import {
+  advanceFinalsShow,
+  initFinalsShow,
+  proclaimWinnerShow,
+  startChallengeShow,
+  tickFinalsShow,
+  normalizeFinalsShow,
+} from "@/lib/musicpro/finals-show";
+import { submitSimBotVotesForSession } from "@/lib/musicpro/simulate-players";
+import {
   closeVotingSession,
   getVotingMetadata,
   startVotingSession,
   submitVote,
   VotingError,
+  writeVotingMetadataBundle,
 } from "@/lib/musicpro/voting";
+import { updateSessionRuntimeState } from "@/lib/musicpro/session";
 
 const postSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("start_challenge"),
     challengeId: z.enum(["dance", "kiss", "declaration", "kamasutra"]),
+  }),
+  z.object({
+    action: z.literal("advance"),
+  }),
+  z.object({
+    action: z.literal("tick"),
+  }),
+  z.object({
+    action: z.literal("proclaim_winner"),
   }),
   z.object({
     action: z.literal("vote"),
@@ -24,7 +44,16 @@ const postSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("close"),
   }),
+  z.object({
+    action: z.literal("simulate_bot_votes"),
+  }),
 ]);
+
+function votingPayload(metadata: Record<string, unknown>) {
+  const voting = getVotingMetadata(metadata);
+  const show = normalizeFinalsShow(voting.show);
+  return { voting: { ...voting, show }, show };
+}
 
 export async function GET(
   _request: Request,
@@ -53,11 +82,12 @@ export async function GET(
       .maybeSingle();
 
     const metadata = (eventRow?.metadata ?? {}) as Record<string, unknown>;
-    const voting = getVotingMetadata(metadata);
+    const { voting, show } = votingPayload(metadata);
 
     return NextResponse.json({
       runtimeState: event.runtimeState,
       voting,
+      show,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Voting state failed";
@@ -88,7 +118,13 @@ export async function POST(
   }
 
   const pin = request.headers.get("X-Animator-Pin");
-  const needsPin = body.action === "start_challenge" || body.action === "close";
+  const needsPin =
+    body.action === "start_challenge" ||
+    body.action === "close" ||
+    body.action === "advance" ||
+    body.action === "proclaim_winner" ||
+    body.action === "simulate_bot_votes";
+  const isPublicTick = body.action === "tick";
 
   try {
     const { createServiceClient } = await import("@/lib/supabase/service");
@@ -114,21 +150,63 @@ export async function POST(
       return NextResponse.json({ error: "Invalid animator PIN" }, { status: 401 });
     }
 
-    if (event.runtimeState !== "finals" && body.action !== "close") {
+    if (
+      event.runtimeState !== "finals" &&
+      event.runtimeState !== "winner" &&
+      body.action !== "close" &&
+      body.action !== "tick"
+    ) {
       return NextResponse.json(
-        { error: "La votazione è disponibile solo in fase finali." },
+        { error: "Disponibile solo in fase finali." },
         { status: 409 },
       );
     }
 
     switch (body.action) {
       case "start_challenge": {
-        const session = await startVotingSession(
+        const result = await startChallengeShow(
           supabase,
           event.id,
           body.challengeId,
         );
-        return NextResponse.json({ session, runtimeState: event.runtimeState });
+        return NextResponse.json({
+          show: result.show,
+          session: result.session,
+          runtimeState: event.runtimeState,
+        });
+      }
+      case "advance": {
+        const result = await advanceFinalsShow(supabase, event.id);
+        return NextResponse.json({
+          show: result.show,
+          session: result.session,
+          runtimeState: event.runtimeState,
+        });
+      }
+      case "tick": {
+        const result = await tickFinalsShow(supabase, event.id);
+        let runtimeState = event.runtimeState;
+        if (result.show?.phase === "winner_podium" && runtimeState === "finals") {
+          await updateSessionRuntimeState(supabase, event.id, "winner");
+          runtimeState = "winner";
+        }
+        return NextResponse.json({
+          show: result.show,
+          session: result.session,
+          runtimeState,
+        });
+      }
+      case "proclaim_winner": {
+        const result = await proclaimWinnerShow(supabase, event.id);
+        if (!result.tie && result.show.phase === "winner_spectacle") {
+          await updateSessionRuntimeState(supabase, event.id, "winner");
+        }
+        return NextResponse.json({
+          show: result.show,
+          session: result.session,
+          tie: result.tie,
+          runtimeState: result.tie ? event.runtimeState : "winner",
+        });
       }
       case "vote": {
         const session = await submitVote(
@@ -142,6 +220,30 @@ export async function POST(
       case "close": {
         const session = await closeVotingSession(supabase, event.id);
         return NextResponse.json({ session, runtimeState: event.runtimeState });
+      }
+      case "simulate_bot_votes": {
+        const votingMeta = getVotingMetadata(metadata);
+        const session = votingMeta.current;
+        if (!session || session.status !== "open") {
+          return NextResponse.json(
+            { error: "Nessuna votazione aperta." },
+            { status: 409 },
+          );
+        }
+        const result = await submitSimBotVotesForSession(
+          supabase,
+          event.id,
+          session,
+        );
+        await writeVotingMetadataBundle(supabase, event.id, {
+          ...votingMeta,
+          current: result.session,
+        });
+        return NextResponse.json({
+          session: result.session,
+          votesSubmitted: result.votesSubmitted,
+          runtimeState: event.runtimeState,
+        });
       }
       default:
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });

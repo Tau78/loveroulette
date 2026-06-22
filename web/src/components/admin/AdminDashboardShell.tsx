@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronRight, ExternalLink, Maximize, Minimize } from "lucide-react";
 import type { EventState } from "@/lib/types";
+import type { SessionSyncStatus } from "@/lib/musicpro/session-sync";
+import { SessionSyncIndicator } from "@/components/session/SessionSyncIndicator";
 import { runtimeStateLabel } from "@/lib/events";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +28,7 @@ interface AdminDashboardShellProps {
   runtimeState: EventState;
   onlineCount: number;
   participantCount: number;
+  syncStatus?: SessionSyncStatus;
   children: ReactNode;
 }
 
@@ -35,6 +38,7 @@ export function AdminDashboardShell({
   runtimeState,
   onlineCount,
   participantCount,
+  syncStatus,
   children,
 }: AdminDashboardShellProps) {
   const currentPhaseIndex = PHASES.findIndex((phase) => phase.id === runtimeState);
@@ -99,6 +103,9 @@ export function AdminDashboardShell({
             >
               {phaseLabel}
             </Badge>
+            {syncStatus ? (
+              <SessionSyncIndicator status={syncStatus} />
+            ) : null}
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">

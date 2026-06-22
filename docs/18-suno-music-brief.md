@@ -16,7 +16,8 @@ Questo documento definisce la **colonna sonora ufficiale** di Love Roulette per 
 | Track name | Phase | Duration target | Mood | BPM range | When played | Loop |
 |------------|-------|-----------------|------|-----------|-------------|------|
 | `LR_01_Lobby_Ambient` | LOBBY | 3:00–4:00 (loop) | Warm anticipation, social buzz | 90–105 | 20:30 briefing → `start_quiz`; sotto chat e QR badge | **Yes** |
-| `LR_02_Quiz_Tension` | QUIZ | 2:30–3:30 (loop) | Focused curiosity, light suspense | 100–118 | Domande 1–22; sotto stats proiettore se attive | **Yes** |
+| `LR_02_Quiz_Tension` | QUIZ | 2:30–3:30 (loop) | Focused curiosity, light suspense | 100–118 | Tema + lettura domanda (`theme_intro`, `question`) | **Yes** |
+| `LR_25_Quiz_Results_Reveal` | QUIZ | 0:45–1:00 (loop) | Satisfying stats reveal | 105–115 | Fase `results` — barre % in sala (dopo gong) | **Yes** |
 | `LR_03_Quiz_Anticipation` | QUIZ | 1:30–2:00 (loop) | Rising heartbeat, “almost match” | 112–128 | Ultime 5 domande; slide `cd_matching_soon`, `wf_love_roulette_wink` | **Yes** |
 | `LR_04_Matching_Transition` | MATCHING | 0:25–0:45 (one-shot) | Algorithmic mystery → reveal tease | 95–110 → 130 | Auto transizione `QUIZ → MATCHING`; backend calcolo affinità | **No** |
 | `LR_05_Extraction_Underscore` | EXTRACTION | 2:00–3:00 (loop) | Game-show glamour, controlled hype | 118–124 | Tra una coppia e l’altra; animatore parla sopra | **Yes** |
@@ -37,7 +38,7 @@ Questo documento definisce la **colonna sonora ufficiale** di Love Roulette per 
 | `LR_20_Phase_Transition` | SLIDES / TRANSITIONS | 0:06–0:10 (whoosh) | Phase banner, ceremonial handoff | 90–105 | `ac_phase_announce`, cambio stato dashboard | **No** |
 | `LR_21_Closed_Outro` | CLOSED | 1:30–2:00 (fade) | Warm goodbye, afterglow | 80–95 | `close_event`, ringraziamenti animatore | **No** (fade out) |
 
-**Totale tracce: 21**
+**Totale tracce: 22** (incl. `LR_25` sotto-fase quiz)
 
 ---
 
@@ -49,7 +50,46 @@ Questo documento definisce la **colonna sonora ufficiale** di Love Roulette per 
 > - Evitare lyrics esplicite; tono **PG-13**, ironico ma mai volgare.
 > - Export consigliato: WAV 48 kHz 24-bit master → MP3 320 kbps per playback web.
 
-> **SUNO Custom — stinger e segmenti corti (<20 s)**
+> **SUNO — quale modalità usare (leggere prima di generare)**
+>
+> Suno ha **due prodotti diversi** nel menu Create → Custom. Se sbagli modalità, la durata nel prompt viene ignorata.
+>
+> | Obiettivo | Menu | Tipo / toggle | Durata tipica | Note |
+> |-----------|------|---------------|---------------|------|
+> | Loop lunghi (lobby, quiz, bed) | **Custom → Song** | **Instrumental = ON** | ~1–4 min (poi tagli loop) | Campo **Style of Music** + opzionale **Lyrics** con `[Verse]`/`[Instrumental]` |
+> | Stinger 2–5 s (ding, hit, whoosh) | **Custom → Sounds** | **One-Shot** | **1–4 s** (fisso) | Ideale per `LR_07`, `LR_09`, slide stinger. **Non chiedere 12 s qui** — resterà ~2 s |
+> | Segmento build 10–20 s (drumroll, countdown) | **Custom → Song** | **Instrumental = ON** | ~15–30 s generati | **Non usare Sounds One-Shot.** Usa Styles + Lyrics a sezioni (sotto) |
+> | Sample ritmico loopabile | **Custom → Sounds** | **Loop** + BPM | variabile | Può aggiungere armonia/melodia indesiderata; preferire Song per drumroll |
+>
+> **Regola pratica Love Roulette**
+> - **`LR_06` drumroll (12–18 s)** → **Song + Instrumental**, mai Sounds One-Shot.
+> - **`LR_07` reveal (3–5 s)** → **Sounds One-Shot** *oppure* Song con Lyrics `[Hit]`/`[Decay]`/`[End]` (Prompt 1 v2 ha funzionato in Song).
+> - Se Sounds One-Shot restituisce ~2 s nonostante «12 seconds» nel testo: **comportamento normale** — Suno Sounds non rispetta la durata numerica come un DAW.
+>
+> **Come ottenere 12–18 s in Song mode (Instrumental)**
+> 1. Create → **Custom** → lasciare **Song** (non Sounds).
+> 2. **Instrumental = ON**.
+> 3. **Style of Music** — mood, strumenti, BPM, produzione (**no timeline**).
+> 4. **Lyrics** — timeline a sezioni; Suno segue l’arco anche senza parole:
+>    ```
+>    [Instrumental]
+>    [Intro — 3 seconds, soft snare rolls]
+>    [Build — 6 seconds, accelerating snare, rising white noise]
+>    [Peak — 3 seconds, maximum tension]
+>    [Silence — hard stop, empty room]
+>    [End]
+>    ```
+> 5. Chiedere **~30 s** in Style se serve margine; tagliare silenzio finale in Audacity/Reaper.
+> 6. Suno restituisce **2 take** → salva `_A` e `_B`.
+>
+> **Sounds — quando usarlo davvero**
+> - Prompt breve, vocabolario SFX: `cinematic whoosh`, `heavy door slam`, `deep 808 kick one shot`.
+> - Durata: accettare ~1–4 s oppure provare «**5 second long** …» — risultato **non garantito**.
+> - **One-Shot** = un colpo. **Loop** = ripetizione (attenzione: può generare mini-brano).
+>
+> Riferimento ufficiale: [Suno Sounds — help center](https://help.suno.com/en/articles/10625537).
+
+> **SUNO Custom Song — stinger e segmenti corti (<20 s)**
 >
 > Un solo campo (Styles **o** Lyrics) spesso fallisce su percussion/SFX strutturati. Usare **entrambi**:
 >
@@ -87,7 +127,10 @@ Minimal nu-disco instrumental, warm analog bass, soft claps every 2 bars, neon h
 
 **When**: domande profilazione 24–27, feedback % opzionale.
 
-**Prompt 1**
+**Prompt 1** — *in repo (2026-06-19):* `LR_02_Quiz_Tension_A` ← SUNO «The Final Question (2)», `_B` ← «The Final Question (3)», primary **A**.
+
+**Per manche/tema (2026-06-20):** il player usa `quiz-theme-tracks.ts` — una loop per categoria slide (`lifestyle`, `romantic`, …). Finora tutte puntano a LR_02; generare varianti SUNO per mood (es. romantic = ballad pulse, fun = uptempo) e aggiornare manifest + `QUIZ_THEME_BED_TRACK`.
+
 ```
 Modern quiz show underscore, pulsing synth bass, ticking percussion subtle, rising curiosity tension, dark fuchsia club palette, syncopated hi-hats, game show intelligence vibe without cheesy TV sound, 108 BPM, instrumental loop, medium energy, leaves space for question text on screen, no vocals
 ```
@@ -100,6 +143,40 @@ Electronic tension bed, muted kick pattern, plucked synth motif repeating every 
 **Prompt 3**
 ```
 Cinematic minimal techno-lite, heartbeat kick at 106 BPM, arpeggiated pink synth, low brass stabs very sparse, suspenseful but playful dating questionnaire mood, dark background mix, loop friendly, no vocals, no melody that competes with animator voice
+```
+
+---
+
+### `LR_25_Quiz_Results_Reveal`
+
+**When**: fase quiz `results` — barre percentuali in sala (dopo gong `LR_Quiz_Question_Gong`).
+
+**Prompt 2 (Styles + Lyrics)** — *in repo (2026-06-19 v2):* `_A` ← «The Final Question (8)», `_B` ← «The Final Question (9)», primary **A**. Sostituisce take (6)/(7).
+
+**Styles**
+```
+Instrumental only, no vocals. Game show results reveal bed, satisfying resolution after tension. Bright fuchsia synth swell, warm major chord lift, soft sparkle arpeggio, crowd-pleasing stats moment. 110 BPM, uplifting but short phrases 4 bars, loopable 60 seconds or clean 8-second arc. No big drop, no vocals, mix sits under percentage bars on screen
+```
+
+**Lyrics**
+```
+[Instrumental]
+
+[Intro — held pad, anticipation release]
+
+[Reveal — chord lift, sparkle pluck, positive game show ding energy without literal SFX]
+
+[Sustain — gentle loop bed for 6 seconds on screen]
+
+[Fade — optional tail for crossfade out]
+
+[End]
+```
+
+**Prompt 1 (legacy)** — take (6)/(7), sostituite da Prompt 2.
+
+```
+Instrumental only, no vocals. Game show results reveal bed, satisfying resolution after tension. Bright fuchsia synth swell, warm major chord lift, soft sparkle arpeggio, crowd-pleasing stats moment. 110 BPM, uplifting but short phrases 4 bars, loopable 60 seconds or clean 8-second arc. No big drop, no vocals, mix sits under percentage bars on screen
 ```
 
 ---
@@ -150,12 +227,14 @@ One-shot bridge music 40 seconds, ambient intro 10s then rising tom fills into e
 
 **When**: pausa tra estrazioni, animatore chiama nickname.
 
-**Prompt 1**
+**Prompt 1 (legacy)** — take «The Final Question (4)/(5)», sostituite da Prompt 2.
+
 ```
 Glamorous game show underscore loop, 120 BPM four-on-the-floor, funky bass line, disco strings stabs every 4 bars, fuchsia and coral accent hits #E91E8C #FF4757, live dating lottery on stage energy, instrumental, medium-high energy but compressed dynamics for voice-over, seamless 2-minute loop, no vocals
 ```
 
-**Prompt 2**
+**Prompt 2** — *in repo (2026-06-19 v2):* `_A` ← «Midnight Game Show», `_B` ← «Midnight Game Show (1)», primary **A**.
+
 ```
 Nu-disco instrumental loop 122 BPM, tight groove, muted guitar chops, shuffling hi-hats, casino-meets-nightclub vibe without literal slot machine sounds, romantic game show presenter bed music, dark mix, loopable, no lead vocal
 ```
@@ -170,6 +249,8 @@ French house influenced instrumental, filtered looped sample feel synthetic, sid
 ### `LR_06_Extraction_Drumroll`
 
 **When**: roulette spin 3–5 s ogni **AVANTI**.
+
+**Prompt 1 — *in repo (2026-06-20 v5):* `_A` ← SUNO «Empty Room Impact» (~**9,8 s**), `_B` ← «Empty Room Impact (1)» (~**9,2 s**), primary **A**. **Styles+Lyrics — pronti al live, no trim.** Archive: `P1_v4_*` Silent Tension Cue, `P1_v3_*`, `P1_legacy_*`, P2/P3 in candidates/.
 
 **Prompt 1** — split SUNO Custom (Styles + Lyrics)
 
@@ -198,12 +279,38 @@ Instrumental only, no vocals, no melody. Game show lottery drumroll, SFX-like pe
 15-second drumroll build instrumental, starting soft snare rolls accelerating to thunderous fill, timpani and taika layers, game show lottery spin tension, ends on sudden silence last 0.5 sec for reveal stinger, 132 BPM accelerating, no melody, no vocals, SFX-like musical segment
 ```
 
+**Prompt 2 — *candidate in repo (2026-06-19 v2):* `P2_A` ← SUNO «The Reveal», `P2_B` ← «The Reveal (1)», ~**8,2 s** ciascuno — **pronti al live, no trim**. Orchestrale + ticking clock. Take precedente «Casino Roulette Tension Roll» in `P2_legacy_A`. Confronta vs Prompt 1 v3 in stingers/.
+
 **Prompt 2**
 ```
 Casino roulette tension roll 18 seconds, orchestral snare crescendo, heartbeat kick speeding up, subtle ticking clock, love roulette wheel spinning, dramatic peak then hard stop, instrumental only, designed as repeatable segment not full loop
 ```
 
-**Prompt 3**
+**Prompt 3 — ⚠️ NON usare Custom → Sounds + One-Shot** (produce ~2 s). Usare **Song + Instrumental** come Prompt 1.
+
+**Prompt 3 — *candidate in repo (2026-06-19):* `P3_A` ← SUNO «Rising Snare Vault» (~122 s), `P3_B` ← «Rising Snare Vault (1)» (~128 s). Styles+Lyrics Song mode — **tagliare 12–18 s** (Intro → Silence) in post. Electronic / white-noise vs orchestrale P2.
+
+**Styles**
+```
+Instrumental only, no vocals, no melody. Electronic build-drop segment, rising white noise and snare pattern, 140 BPM feel, filter opening on synth, dating game roulette spin suspense, dark fuchsia club, maximum suspense then hard cut to silence, tight edit for animation sync, modern cinematic SFX segment not a full song
+```
+
+**Lyrics**
+```
+[Instrumental]
+
+[Intro — 2 seconds, filtered noise bed, sparse snare taps]
+
+[Build — 5 seconds, snare pattern accelerating, white noise rising, synth filter opening]
+
+[Peak — 3 seconds, maximum suspense, full snare roll and noise peak]
+
+[Silence — sudden hard stop, complete silence for reveal stinger]
+
+[End]
+```
+
+**Prompt 3 (legacy — solo testo, per Sounds; atteso ~2 s, non adatto a LR_06)**
 ```
 Electronic build-drop segment 12 seconds, rising white noise and snare pattern 140 BPM feel, filter opening on synth, maximum suspense 4 seconds then cut to silence, dating game extraction moment, no vocals, tight edit for animation sync
 ```
@@ -214,7 +321,9 @@ Electronic build-drop segment 12 seconds, rising white noise and snare pattern 1
 
 **When**: stop roulette → coppia a schermo + confetti leggeri.
 
-**Prompt 1** — split SUNO Custom (Styles + Lyrics)
+**Prompt 1** — *in repo (2026-06-19 v2):* `_A` ← SUNO «Fuchsia Fanfare», `_B` ← «Fuchsia Fanfare (1)», primary **A**. Sostituisce take «Fuchsia Sparkle» (solo _A).
+
+**Prompt 1 (Styles + Lyrics)**
 
 **Styles**
 ```
@@ -375,6 +484,8 @@ Electro-swing lite instrumental 110 BPM, swing drums sampled feel, plucky synth,
 12-second clock tension, tick-tock percussion morphing to stadium stomp last 3 counts, audience vote moment, ends on impact, no vocals
 ```
 
+**Status (2026-06-20):** *manifest placeholder* — path `stingers/LR_13_Voting_Countdown_{A,B}.mp3`; file SUNO **non ancora in repo**. Wiring audio: `playVotingSequence` su transizione `couple_reveal → voting`.
+
 ---
 
 ### `LR_14_Voting_Suspense`
@@ -396,16 +507,22 @@ Minimal techno suspense bed 118 BPM, hypnotic groove, filter slowly opening over
 Orchestral suspense ostinato 110 BPM, repeating string pattern, timpani roll under, live audience voting on phones, 50-second loop, no vocals, moderate volume
 ```
 
+**Status (2026-06-20):** *manifest placeholder* — path `loops/LR_14_Voting_Suspense_{A,B}.mp3`; file SUNO **non ancora in repo**. Bed attivo in `finalsShow.phase === "voting"` (~20 s).
+
 ---
 
 ### `LR_15_Winner_Anthem`
 
 **When**: proclamazione vincitori + premio vacanza + confetti 5 s.
 
+**Prompt 1 — *in repo (2026-06-19):* `_A` ← SUNO «Victory Confetti», ~**50 s**. `_B` = Prompt 2 «Love Roulette Champions» (~114 s) — vedi sotto.
+
 **Prompt 1**
 ```
 Victory anthem instrumental 128 BPM, euphoric four-on-the-floor, big supersaw chords, confetti celebration, vacation prize triumph, fuchsia to coral gradient energy #E91E8C #FF4757, 3-minute loop, optional wordless crowd chant hey-oh, no lyrics, festival drop every 16 bars bright not aggressive
 ```
+
+**Prompt 2 — *in repo (2026-06-19):* `_B` ← SUNO «Love Roulette Champions», ~**114 s** (Prompt 2). Più vicino al target loop del brief vs `_A` Victory Confetti (~50 s).
 
 **Prompt 2**
 ```
@@ -423,15 +540,21 @@ Orchestral-dance hybrid winner theme 126 BPM, brass fanfare hooks with electroni
 
 **When**: primo frame “VINCITORI!” + nick coppia.
 
+**Prompt 1 — *in repo (2026-06-20):* `_A` ← «Confetti Strike» (~3,8 s), `_B` ← «Confetti Strike_1» (~4,6 s), primary **A**. Pronti al live.
+
 **Prompt 1**
 ```
 6-second winner impact stinger, massive chord hit, cymbal crash, sparkle arpeggio ascending, confetti burst sync, instrumental only, tail 2 seconds, louder peak asset in soundtrack pack
 ```
 
+**Prompt 2 — *candidate in repo (2026-06-20):* `P2_A` ← «Grand Prize Reveal» (~9,6 s), `P2_B` ← «Grand Prize Reveal (1)» (~4,6 s). Confronta vs Confetti Strike (stingers/). **P2_B** più aderente al target 5 s.
+
 **Prompt 2**
 ```
 5-second victory fanfare modern, synth brass plus sub boom, game show grand prize reveal, single hit not loop, no vocals
 ```
+
+**Prompt 3 — *candidate in repo (2026-06-20):* `P3_A` ← «Golden Moment» (~**7 s**, target brief), `P3_B` ← «Golden Moment (1)» (~14 s). Choir pad + clap — ottimo crossfade verso `LR_15`.
 
 **Prompt 3**
 ```

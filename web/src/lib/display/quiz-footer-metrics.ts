@@ -4,7 +4,7 @@
  */
 export const QUIZ_FOOTER_MASK_VIEWBOX = { width: 1920, height: 108 } as const;
 
-export const QUIZ_FOOTER_MASK_BUMP_RADIUS = 48;
+export const QUIZ_FOOTER_MASK_BUMP_RADIUS = 58;
 
 export const QUIZ_FOOTER_MASK_PATH = [
   "M 40 108",
@@ -12,8 +12,8 @@ export const QUIZ_FOOTER_MASK_PATH = [
   "Q 40 44 56 42",
   "Q 140 24 280 34",
   "Q 420 42 580 40",
-  "L 912 40",
-  `A ${QUIZ_FOOTER_MASK_BUMP_RADIUS} ${QUIZ_FOOTER_MASK_BUMP_RADIUS} 0 0 1 1008 40`,
+  "L 902 40",
+  `A ${QUIZ_FOOTER_MASK_BUMP_RADIUS} ${QUIZ_FOOTER_MASK_BUMP_RADIUS} 0 0 1 1018 40`,
   "L 1340 40",
   "Q 1500 42 1640 34",
   "Q 1780 24 1864 42",
@@ -22,15 +22,19 @@ export const QUIZ_FOOTER_MASK_PATH = [
   "Z",
 ].join(" ");
 
-export const QUIZ_FOOTER_COUNTDOWN_RING_RADIUS = 30;
-export const QUIZ_FOOTER_COUNTDOWN_VIEWBOX = 64;
+export const QUIZ_FOOTER_COUNTDOWN_RING_RADIUS = 32;
+export const QUIZ_FOOTER_COUNTDOWN_VIEWBOX = 68;
 export const QUIZ_FOOTER_COUNTDOWN_SLOT_CLASS =
-  "relative flex size-[112px] items-center justify-center";
+  "relative flex size-[120px] items-center justify-center";
 
 export const QUIZ_FOOTER_COUNTDOWN_DIGIT_CLASS =
-  "relative font-display font-bold tabular-nums text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] text-[60px]";
+  "relative font-display font-bold tabular-nums text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] text-[64px]";
 
-export const QUIZ_FOOTER_MASK_BAR_CLASS = "relative h-[80px] w-full";
+export const QUIZ_FOOTER_MASK_BAR_CLASS = "relative h-[88px] w-full";
+
+/** Offset verticale countdown — centrato nel bump della maschera. */
+export const QUIZ_FOOTER_COUNTDOWN_OFFSET_CLASS =
+  "translate-y-[calc(-38%+0.35rem)]";
 
 export const QUIZ_FOOTER_BRAND_HEART_CLASS = "size-[104px]";
 

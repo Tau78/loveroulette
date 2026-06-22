@@ -29,6 +29,8 @@ const bodySchema = z.object({
     "setPhase",
   ]),
   autoplaySeconds: z.number().int().min(3).max(120).optional(),
+  questionCount: z.number().int().min(1).max(200).optional(),
+  questionSeconds: z.number().int().min(5).max(120).optional(),
   enabled: z.boolean().optional(),
   displayPhase: z
     .enum([
@@ -93,7 +95,10 @@ export async function POST(
 
     switch (body.action) {
       case "start": {
-        const quiz = await startQuizSession(supabase, event.id);
+        const quiz = await startQuizSession(supabase, event.id, {
+          questionCount: body.questionCount,
+          questionSeconds: body.questionSeconds,
+        });
         return NextResponse.json({
           quiz,
           runtimeState: "quiz" as const,

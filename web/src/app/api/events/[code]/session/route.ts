@@ -4,6 +4,8 @@ import {
   ensureLoveRouletteSession,
   getLoveRouletteEvent,
 } from "@/lib/musicpro/resolve-event";
+import { ensureFinalistsForEvent } from "@/lib/musicpro/elimination";
+import { initFinalsShow } from "@/lib/musicpro/finals-show";
 import {
   getEventStats,
   updateSessionRuntimeState,
@@ -114,6 +116,11 @@ export async function PATCH(
     }
 
     await ensureLoveRouletteSession(supabase, event.id);
+
+    if (body.runtimeState === "finals") {
+      await ensureFinalistsForEvent(supabase, event.id);
+      await initFinalsShow(supabase, event.id);
+    }
 
     const { sessionId, runtimeState } = await updateSessionRuntimeState(
       supabase,

@@ -181,11 +181,11 @@ export function AdminPreflightPanel({
               ? "Colonna sonora sbloccata su questo dispositivo."
               : soundtrackUnlocked === false
                 ? soundtrackAutoUnlock
-                  ? "Autoplay bloccato dal browser — usa «Avvia colonna sonora» sotto."
-                  : "Premi «Avvia colonna sonora» nel pannello sotto."
+                  ? "Autoplay bloccato dal browser — apri Regia e usa «Avvia colonna sonora»."
+                  : "Apri Regia e premi «Avvia colonna sonora»."
                 : soundtrackAutoUnlock
-                  ? "Si avvia automaticamente in «Audio & proiettore»."
-                  : "Sblocca in «Audio & proiettore» sotto."
+                  ? "Si avvia automaticamente in Regia → Audio & proiettore."
+                  : "Sblocca in Regia → Audio & proiettore."
           }
         >
           <p className="text-[11px] text-muted-foreground">

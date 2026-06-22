@@ -12,6 +12,7 @@ interface PlayerPresenceHeroProps {
   runtimeState: EventState;
   quizPhase?: QuizDisplayPhase | null;
   votingOpen?: boolean;
+  answersRemaining?: number;
   subtitle: string;
   className?: string;
 }
@@ -21,6 +22,7 @@ export function PlayerPresenceHero({
   gender,
   runtimeState,
   quizPhase,
+  answersRemaining,
   subtitle,
   className,
 }: PlayerPresenceHeroProps) {
@@ -28,7 +30,9 @@ export function PlayerPresenceHero({
   const showWelcome = runtimeState === "lobby";
   const urgent =
     runtimeState === "quiz" &&
-    (quizPhase === "answers" || quizPhase === "start_countdown");
+    (quizPhase === "start_countdown" ||
+      (quizPhase === "answers" &&
+        (answersRemaining === undefined || answersRemaining > 0)));
   const showSubtitle = Boolean(subtitle.trim());
 
   return (

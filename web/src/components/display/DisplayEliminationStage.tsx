@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { FinalistCouple, LastElimination } from "@/lib/musicpro/elimination";
+import { ELIMINATION_COPY } from "@/lib/game/late-game-copy";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { cn } from "@/lib/utils";
 
@@ -124,7 +125,7 @@ export function DisplayEliminationStage({
           >
             <div className="rounded-[2rem] border border-destructive/35 bg-gradient-to-b from-black/90 via-black/80 to-black/90 px-6 py-10 md:px-14 md:py-16 shadow-[0_0_60px_rgba(255,71,87,0.25)]">
               <p className="font-display text-xl md:text-3xl font-bold uppercase tracking-[0.35em] text-destructive mb-6 md:mb-8">
-                Eliminati
+                {ELIMINATION_COPY.displayEliminatedKicker}
               </p>
               <motion.p
                 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight"
@@ -157,14 +158,15 @@ export function DisplayEliminationStage({
           </motion.div>
         ) : (
           <DisplayPhaseHero
-            kicker="Sfoltimento"
-            headline="Restano solo i finalisti"
+            kicker={ELIMINATION_COPY.displayKicker}
+            headline={ELIMINATION_COPY.displayHeadline}
             subline={
               finalists.length >= 3
-                ? "Top 3 pronti per le finali"
-                : "Eliminazione in corso…"
+                ? ELIMINATION_COPY.displayFinalistsReady
+                : ELIMINATION_COPY.displaySubline
             }
             pulse={finalists.length < 3}
+            uppercase
           />
         )}
       </div>
