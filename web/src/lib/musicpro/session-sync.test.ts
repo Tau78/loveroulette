@@ -13,6 +13,7 @@ const baseQuiz = (): QuizSessionState => ({
   currentIndex: 0,
   total: 3,
   questionIds: ["q1", "q2", "q3"],
+  source: "event",
   displayPhase: "answers",
   phaseStartedAt: new Date(Date.now() - 20_000).toISOString(),
   updatedAt: "2026-06-20T10:00:00.000Z",
@@ -38,7 +39,7 @@ describe("session-sync", () => {
       phase: "voting",
       phaseStartedAt: "2026-06-20T10:00:00.000Z",
       updatedAt: "2026-06-20T10:00:00.000Z",
-      challengeId: "c1",
+      challengeId: "dance",
       coupleIndex: 1,
       cumulativeScores: {},
       completedChallenges: [],
@@ -74,12 +75,13 @@ describe("session-sync", () => {
   it("keeps newer voting session on merge", () => {
     const prev = {
       current: {
-        id: "v1",
         status: "open" as const,
+        challengeId: "dance" as const,
+        startedAt: "2026-06-20T10:00:00.000Z",
         updatedAt: "2026-06-20T10:00:10.000Z",
         finalists: [],
-        votes: {},
-        openedAt: "2026-06-20T10:00:00.000Z",
+        counts: {},
+        ballots: {},
       },
       completed: {},
     };
@@ -100,7 +102,7 @@ describe("session-sync", () => {
       phase: "voting",
       phaseStartedAt: new Date(Date.now() - 25_000).toISOString(),
       updatedAt: "2026-06-20T10:00:00.000Z",
-      challengeId: "c1",
+      challengeId: "dance",
       coupleIndex: 1,
       cumulativeScores: {},
       completedChallenges: [],

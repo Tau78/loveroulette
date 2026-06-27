@@ -97,7 +97,7 @@ flowchart TB
 | Connettività | Hybrid cloud + offline vote queue M3 |
 | Spareggio | Manuale animatore (default) |
 | Admin animatore | Solo PIN 6 cifre v1 (no auth Supabase) |
-| Dominio | `love-roulette.vercel.app` placeholder → `loveroulette.it` |
+| Dominio | `loveroulette.vercel.app` placeholder → `loveroulette.it` |
 | Creazione eventi | Super-admin only v1 |
 | Export dati | Fuori scope M1; altro progetto |
 | Motore domande | Animator-first (override, pacing live) |
@@ -266,7 +266,7 @@ Decisioni §15 [09-decisions-workshop.md](09-decisions-workshop.md) e brainstorm
 
 | # | Area | Decisione v1 |
 |---|------|--------------|
-| A | Dominio | Placeholder `love-roulette.vercel.app` fino ad acquisto `loveroulette.it` |
+| A | Dominio | Placeholder `loveroulette.vercel.app` fino ad acquisto `loveroulette.it` |
 | B | Admin animatore | Solo PIN 6 cifre — **no auth Supabase** per dashboard |
 | C | Pre-reg | Solo email; telefono/WhatsApp milestone successiva |
 | D | Eventi | Creazione **super-admin only** |

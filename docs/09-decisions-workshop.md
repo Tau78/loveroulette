@@ -138,7 +138,7 @@ Questo documento registra le domande residue emerse durante il brainstorming e l
 
 | # | Domanda | **Decisione** |
 |---|---------|---------------|
-| A | Dominio produzione | Placeholder **`love-roulette.vercel.app`** fino ad acquisto dominio `loveroulette.it` |
+| A | Dominio produzione | Placeholder **`loveroulette.vercel.app`** fino ad acquisto dominio `loveroulette.it` |
 | B | Accesso dashboard animatore | **Solo PIN** (6 cifre per evento) in v1 — **nessuna auth Supabase** per animatore |
 | C | Pre-registrazione | **Solo email** v1; telefono / WhatsApp in milestone successiva |
 | D | Creazione eventi | **Solo super-admin** in v1; self-service animatori previsto M3 |
