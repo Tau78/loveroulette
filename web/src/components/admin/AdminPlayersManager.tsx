@@ -1,13 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
-  ArrowLeft,
   ExternalLink,
   FastForward,
-  Maximize,
-  Minimize,
   Pencil,
   Plus,
   Smartphone,
@@ -32,11 +28,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAnimatorPin } from "@/hooks/useAnimatorPin";
-import { useFullscreen } from "@/hooks/useFullscreen";
 
 interface AdminPlayersManagerProps {
   eventCode: string;
-  eventTitle: string;
   pinRequired: boolean;
 }
 
@@ -54,7 +48,6 @@ function formatLastSeen(iso: string | null): string {
 
 export function AdminPlayersManager({
   eventCode,
-  eventTitle,
   pinRequired,
 }: AdminPlayersManagerProps) {
   const [participants, setParticipants] = useState<AdminParticipantRow[]>([]);
@@ -87,9 +80,6 @@ export function AdminPlayersManager({
   } = useAnimatorPin({ eventCode, pinRequired });
 
   const disabled = !pinReady || pinVerifying;
-  const { containerRef, isFullscreen, supported, toggle } = useFullscreen({
-    storageKey: `lr_admin_fullscreen_players_${eventCode}`,
-  });
 
   const load = useCallback(async () => {
     if (!pinReady) return;
@@ -311,100 +301,53 @@ export function AdminPlayersManager({
         onSubmit={submitPin}
       />
 
-      <div
-        ref={containerRef}
-        data-admin-fullscreen={isFullscreen || undefined}
-        className={cn(
-          "min-h-screen flex flex-col theme-dark-fuchsia bg-background",
-          isFullscreen && "h-screen overflow-hidden",
-        )}
-      >
-        <header className="shrink-0 border-b border-border/40 bg-card/70 px-3 py-2">
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href={`/admin/${eventCode}`}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
-            >
-              <ArrowLeft className="size-3.5" />
-              Dashboard
-            </Link>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-sm font-bold truncate">Giocatori — {eventTitle}</h1>
-              {!isFullscreen ? (
-                <p className="text-[11px] text-muted-foreground">
-                  {participants.length} iscritti · {onlineCount} online
-                </p>
-              ) : null}
-            </div>
-            {supported ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                className="size-8 shrink-0"
-                onClick={() => void toggle()}
-                title={
-                  isFullscreen
-                    ? "Esci da schermo intero (Esc)"
-                    : "Schermo intero (F)"
-                }
-                aria-label={
-                  isFullscreen ? "Esci da schermo intero" : "Schermo intero"
-                }
-                aria-pressed={isFullscreen}
-              >
-                {isFullscreen ? (
-                  <Minimize className="size-3.5" />
-                ) : (
-                  <Maximize className="size-3.5" />
-                )}
-              </Button>
-            ) : null}
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              disabled={disabled || simulateBusy}
-              onClick={() => void handleSimulateCouples(false)}
-            >
-              <Users className="size-3.5" />
-              {simulateBusy && simulateMode === "couples"
-                ? "Simulo…"
-                : "10 coppie test"}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs border-primary/35 text-primary"
-              disabled={disabled || simulateBusy}
-              onClick={() => void handleSimulateCouples(true)}
-            >
-              <FastForward className="size-3.5" />
-              {simulateBusy && simulateMode === "matching"
-                ? "Matching…"
-                : "→ matching"}
-            </Button>
-            <Button
-              size="sm"
-              className="h-8 text-xs"
-              disabled={disabled}
-              onClick={() => {
-                setShowAdd((v) => !v);
-                setDeleteConfirmId(null);
-              }}
-            >
-              <Plus className="size-3.5" />
-              Aggiungi
-            </Button>
+      <div className="flex flex-col gap-3 h-full min-h-0 max-w-5xl mx-auto w-full">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-bold">Gestione giocatori</h2>
+            <p className="text-[11px] text-muted-foreground">
+              {participants.length} iscritti · {onlineCount} online
+            </p>
           </div>
-        </header>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            disabled={disabled || simulateBusy}
+            onClick={() => void handleSimulateCouples(false)}
+          >
+            <Users className="size-3.5" />
+            {simulateBusy && simulateMode === "couples"
+              ? "Simulo…"
+              : "10 coppie test"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs border-primary/35 text-primary"
+            disabled={disabled || simulateBusy}
+            onClick={() => void handleSimulateCouples(true)}
+          >
+            <FastForward className="size-3.5" />
+            {simulateBusy && simulateMode === "matching"
+              ? "Matching…"
+              : "→ matching"}
+          </Button>
+          <Button
+            size="sm"
+            className="h-8 text-xs"
+            disabled={disabled}
+            onClick={() => {
+              setShowAdd((v) => !v);
+              setDeleteConfirmId(null);
+            }}
+          >
+            <Plus className="size-3.5" />
+            Aggiungi
+          </Button>
+        </div>
 
-        <main
-          className={cn(
-            "flex-1 p-3 max-w-5xl mx-auto w-full space-y-3",
-            isFullscreen && "min-h-0 overflow-y-auto p-2 max-w-none",
-          )}
-        >
+        <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-0.5">
           {error ? (
             <p className="text-sm text-destructive rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2">
               {error}
@@ -700,7 +643,7 @@ export function AdminPlayersManager({
             finestra con lo stesso profilo (utile per simulare più dispositivi).
             <ExternalLink className="inline size-3 ml-1 opacity-60" />
           </p>
-        </main>
+        </div>
       </div>
     </>
   );

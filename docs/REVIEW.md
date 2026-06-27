@@ -13,7 +13,7 @@
 3. [x] **Roadmap** M1 core / M2 social / M3 polish
 4. [x] **Tono domande** in [06-question-bank.md](06-question-bank.md) — divertito-ironico, 27 esempi
 5. [x] **Open items** risolti in [09-decisions-workshop.md](09-decisions-workshop.md) §15:
-   - [x] A) Placeholder **`love-roulette.vercel.app`** fino ad acquisto dominio
+   - [x] A) Placeholder **`loveroulette.vercel.app`** fino ad acquisto dominio
    - [x] B) **Solo PIN** animatore v1 (no auth Supabase dashboard)
    - [x] C) **Solo email** pre-reg v1 (telefono/WhatsApp dopo)
    - [x] D) **Solo super-admin** crea eventi v1

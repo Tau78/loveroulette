@@ -37,7 +37,7 @@
 4. **Update parziale** — su evento esistente inviare `game_format` solo se l’utente ha cambiato il campo (RPC già gestisce chiave opzionale in update).
 5. **Condizionale UI** — se `game_format === 'love_roulette'`:
    - mostrare campo **Join code** → scrive `metadata.love_roulette_code` (6 char, uppercase)
-   - opzionale: link preview `https://love-roulette.vercel.app/s/{code}` (placeholder dominio)
+   - opzionale: link preview `https://loveroulette.vercel.app/s/{code}` (placeholder dominio)
    - nascondere o disabilitare controlli Cervellone-only (`publish_cervellone`, enigma, ecc.) se non applicabili
 
 ### Verifica
