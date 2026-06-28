@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Trophy, Users } from "lucide-react";
+import { Trophy } from "lucide-react";
 import {
   isInvalidAnimatorPinError,
   postVotingAction,
@@ -11,7 +11,6 @@ import type { FinalsShowState } from "@/lib/musicpro/finals-show";
 import type { VotingMetadata, VotingSessionState } from "@/lib/musicpro/voting";
 import { CHALLENGE_LABELS, type ChallengeId, type EventState } from "@/lib/types";
 import { AdminChallengeRegia } from "@/components/admin/AdminChallengeRegia";
-import { AdminFinalsAdvanceButton } from "@/components/admin/AdminFinalsAdvanceButton";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -57,7 +56,7 @@ export function AdminFinalsPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { remaining, tickServer } = useFinalsShowSync({
+  const { remaining } = useFinalsShowSync({
     eventSlug: eventCode,
     show: finalsShow,
     enabled: Boolean(finalsShow) && !disabled,
@@ -147,51 +146,29 @@ export function AdminFinalsPanel({
   const completed = new Set(finalsShow?.completedChallenges ?? []);
 
   return (
-    <>
-      <AdminFinalsAdvanceButton
-        finalsShow={finalsShow}
-        remaining={remaining}
-        disabled={disabled}
-        busy={busy}
-        onAdvance={() => {
-          if (
-            finalsShow &&
-            (finalsShow.phase === "voting_prep" ||
-              finalsShow.phase === "voting" ||
-              finalsShow.phase === "winner_spectacle") &&
-            remaining <= 0
-          ) {
-            void tickServer();
-            return;
-          }
-          void runAction("advance");
-        }}
-      />
-
-      <AdminPanelShell
-        variant={variant}
-        title="Finali — prove"
-        cardTitle="Finali — prove e votazioni"
-        subtitle={
-          phase
-            ? `${SHOW_PHASE_LABELS[phase]}${
-                phase === "voting_prep" ||
-                phase === "voting" ||
-                phase === "winner_spectacle"
-                  ? ` · ${remaining}s`
-                  : ""
-              }`
-            : "Caricamento…"
-        }
-        accent
-      >
-        {finalsShow?.phase === "tie_blocked" ? (
-          <p className="text-xs text-amber-500 font-medium rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-2">
-            Parimerito al 1° posto. Scegli una prova già svolta e ripetila per
-            sbloccare il vincitore — i nomi restano nascosti finché non si
-            risolve.
-          </p>
-        ) : null}
+    <AdminPanelShell
+      variant={variant}
+      title="Finali"
+      cardTitle="Finali — prove e votazioni"
+      subtitle={
+        phase
+          ? `${SHOW_PHASE_LABELS[phase]}${
+              phase === "voting_prep" ||
+              phase === "voting" ||
+              phase === "winner_spectacle"
+                ? ` · ${remaining}s`
+                : ""
+            }`
+          : "…"
+      }
+      accent
+      collapsible={false}
+    >
+      {finalsShow?.phase === "tie_blocked" ? (
+        <p className="text-[10px] text-amber-400 font-medium rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1">
+          Parimerito — replica
+        </p>
+      ) : null}
 
         {finalsShow?.challengeId &&
         finalsShow.phase !== "intro" &&
@@ -252,7 +229,7 @@ export function AdminFinalsPanel({
           type="button"
           variant="outline"
           size="sm"
-          className="w-full mt-1"
+          className="w-full mt-1 h-8 text-[10px]"
           disabled={
             disabled ||
             busy ||
@@ -262,32 +239,11 @@ export function AdminFinalsPanel({
           }
           onClick={() => void runAction("proclaim_winner")}
         >
-          <Trophy className="size-3.5" />
-          Proclama vincitore
+          <Trophy className="size-3" />
+          Vincitore
         </Button>
 
-        {error ? <p className="text-xs text-destructive">{error}</p> : null}
-        {voting.current?.status === "open" ? (
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground tabular-nums">
-              Voti in corso · {remaining}s ·{" "}
-              {Object.values(voting.current.counts).reduce((a, b) => a + b, 0)}{" "}
-              voti registrati
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full h-8 text-xs"
-              disabled={disabled || busy}
-              onClick={() => void runAction("simulate_bot_votes")}
-            >
-              <Users className="size-3.5" />
-              Voti bot (audience)
-            </Button>
-          </div>
-        ) : null}
+        {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
       </AdminPanelShell>
-    </>
   );
 }

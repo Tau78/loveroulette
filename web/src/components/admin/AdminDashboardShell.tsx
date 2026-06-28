@@ -2,24 +2,44 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ChevronRight, ExternalLink, Maximize, Minimize } from "lucide-react";
+import {
+  ExternalLink,
+  KeyRound,
+  Maximize,
+  Megaphone,
+  Minimize,
+  Settings,
+  SlidersHorizontal,
+  Users,
+  Wifi,
+} from "lucide-react";
 import type { EventState } from "@/lib/types";
 import type { SessionSyncStatus } from "@/lib/musicpro/session-sync";
 import { SessionSyncIndicator } from "@/components/session/SessionSyncIndicator";
-import { runtimeStateLabel } from "@/lib/events";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useFullscreen } from "@/hooks/useFullscreen";
 
-const PHASES: { id: EventState; label: string }[] = [
-  { id: "lobby", label: "Lobby" },
-  { id: "quiz", label: "Quiz" },
-  { id: "matching", label: "Matching" },
-  { id: "extraction", label: "Estrazione" },
-  { id: "elimination", label: "Sfoltimento" },
-  { id: "finals", label: "Finali" },
-  { id: "winner", label: "Vincitore" },
+const PHASES: { id: EventState; short: string }[] = [
+  { id: "lobby", short: "Lobby" },
+  { id: "quiz", short: "Quiz" },
+  { id: "matching", short: "Match" },
+  { id: "extraction", short: "Estr." },
+  { id: "elimination", short: "Sfol." },
+  { id: "finals", short: "Fin." },
+  { id: "winner", short: "Win" },
+];
+
+export type AdminConsoleTab = "controlli" | "regia" | "impostazioni";
+
+const SIDEBAR_TABS: {
+  id: AdminConsoleTab;
+  label: string;
+  icon: typeof SlidersHorizontal;
+}[] = [
+  { id: "controlli", label: "Deck", icon: SlidersHorizontal },
+  { id: "regia", label: "Regia", icon: Megaphone },
+  { id: "impostazioni", label: "Setup", icon: Settings },
 ];
 
 interface AdminDashboardShellProps {
@@ -29,7 +49,14 @@ interface AdminDashboardShellProps {
   onlineCount: number;
   participantCount: number;
   syncStatus?: SessionSyncStatus;
-  children: ReactNode;
+  activeTab: AdminConsoleTab;
+  onTabChange: (tab: AdminConsoleTab) => void;
+  pinReady?: boolean;
+  pinRequired?: boolean;
+  onChangePin?: () => void;
+  program: ReactNode;
+  deck: ReactNode;
+  transport: ReactNode;
 }
 
 export function AdminDashboardShell({
@@ -39,160 +66,163 @@ export function AdminDashboardShell({
   onlineCount,
   participantCount,
   syncStatus,
-  children,
+  activeTab,
+  onTabChange,
+  pinReady = true,
+  pinRequired = false,
+  onChangePin,
+  program,
+  deck,
+  transport,
 }: AdminDashboardShellProps) {
   const currentPhaseIndex = PHASES.findIndex((phase) => phase.id === runtimeState);
   const displayPath = `/s/${eventCode}/display`;
-  const phaseLabel = runtimeStateLabel(runtimeState);
   const { containerRef, isFullscreen, supported, toggle } = useFullscreen();
 
   return (
     <div
       ref={containerRef}
       data-admin-fullscreen={isFullscreen || undefined}
-      className={cn(
-        "min-h-screen flex flex-col theme-dark-fuchsia bg-background",
-        isFullscreen && "h-screen overflow-hidden",
-      )}
+      className="theme-dark-fuchsia w-screen h-screen overflow-hidden bg-background flex flex-col"
     >
-      <header
-        className={cn(
-          "shrink-0 border-b border-border/40 bg-card/70 backdrop-blur-sm",
-          isFullscreen && "py-1",
-        )}
-      >
-        <div
-          className={cn(
-            "flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2",
-            isFullscreen && "py-1.5 gap-x-3",
-          )}
+      <header className="shrink-0 h-11 border-b border-border/40 bg-card/80 backdrop-blur-sm px-2 flex items-center gap-2">
+        <Link
+          href={`/s/${eventCode}`}
+          className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+          title={eventCode}
         >
-          <Link
-            href={`/s/${eventCode}`}
-            className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors shrink-0"
+          {eventCode}
+        </Link>
+
+        <h1 className="min-w-0 flex-1 truncate text-xs font-bold">{eventTitle}</h1>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <div
+            className="flex items-center gap-1 rounded-md border border-border/40 bg-black/25 px-2 h-7"
+            title="Online"
           >
-            ← {eventCode}
+            <Wifi className="size-3 text-emerald-400" />
+            <span className="text-xs font-bold tabular-nums">{onlineCount}</span>
+          </div>
+
+          <Link
+            href={`/admin/${eventCode}/players`}
+            className="flex items-center gap-1 rounded-md border border-border/40 bg-black/25 px-2 h-7 text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors"
+            title="Giocatori"
+          >
+            <Users className="size-3" />
+            <span className="text-xs font-bold tabular-nums">{participantCount}</span>
           </Link>
 
-          <div className="min-w-0 flex-1">
-            <h1 className="text-sm font-bold leading-tight truncate">{eventTitle}</h1>
-            {!isFullscreen ? (
-              <p className="text-[11px] text-muted-foreground">
-                Pannello animatore
-              </p>
-            ) : null}
-          </div>
+          {syncStatus ? <SessionSyncIndicator status={syncStatus} /> : null}
 
-          <div className="flex items-center gap-3 text-xs tabular-nums shrink-0">
-            <span className="text-muted-foreground">
-              <span className="text-base font-bold text-foreground">{onlineCount}</span>{" "}
-              online
-            </span>
-            <span className="hidden sm:inline text-border">|</span>
-            <Link
-              href={`/admin/${eventCode}/players`}
-              className="text-muted-foreground hover:text-primary transition-colors rounded-md px-1 -mx-1 hover:bg-primary/5"
-              title="Gestione giocatori"
+          {pinRequired && pinReady && onChangePin ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="size-7"
+              onClick={onChangePin}
+              title="Cambia PIN"
             >
-              <span className="font-semibold text-foreground">{participantCount}</span>{" "}
-              iscritti
-            </Link>
-            <Badge
-              variant="outline"
-              className="border-primary/35 text-[11px] px-2 py-0 h-6 font-medium"
-            >
-              {phaseLabel}
-            </Badge>
-            {syncStatus ? (
-              <SessionSyncIndicator status={syncStatus} />
-            ) : null}
-          </div>
+              <KeyRound className="size-3.5" />
+            </Button>
+          ) : null}
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {supported ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                className="size-8 shrink-0"
-                onClick={() => void toggle()}
-                title={
-                  isFullscreen
-                    ? "Esci da schermo intero (Esc)"
-                    : "Schermo intero (F)"
-                }
-                aria-label={
-                  isFullscreen ? "Esci da schermo intero" : "Schermo intero"
-                }
-                aria-pressed={isFullscreen}
-              >
-                {isFullscreen ? (
-                  <Minimize className="size-3.5" />
-                ) : (
-                  <Maximize className="size-3.5" />
-                )}
-              </Button>
-            ) : null}
-            <Link
-              href={displayPath}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "h-8 text-xs shrink-0",
+          {supported ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="size-7"
+              onClick={() => void toggle()}
+              title={isFullscreen ? "Esci fullscreen" : "Fullscreen"}
+              aria-pressed={isFullscreen}
+            >
+              {isFullscreen ? (
+                <Minimize className="size-3.5" />
+              ) : (
+                <Maximize className="size-3.5" />
               )}
-            >
-              Proiettore
-              <ExternalLink className="size-3 opacity-70" />
-            </Link>
-          </div>
+            </Button>
+          ) : null}
+
+          <Link
+            href={displayPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-7 px-2 text-[10px] gap-1")}
+          >
+            PGM
+            <ExternalLink className="size-3 opacity-70" />
+          </Link>
         </div>
-
-        <nav
-          aria-label="Fasi serata"
-          className={cn(
-            "flex items-center gap-0.5 overflow-x-auto px-3 pb-2 scrollbar-thin",
-            isFullscreen && "hidden sm:flex pb-1.5",
-          )}
-        >
-          {PHASES.map((phase, index) => {
-            const isActive = phase.id === runtimeState;
-            const isPast = index < currentPhaseIndex;
-
-            return (
-              <div key={phase.id} className="flex items-center shrink-0">
-                <div
-                  className={cn(
-                    "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors whitespace-nowrap",
-                    isActive &&
-                      "bg-primary/20 text-primary ring-1 ring-primary/30",
-                    !isActive &&
-                      isPast &&
-                      "text-muted-foreground/60 line-through decoration-muted-foreground/40",
-                    !isActive &&
-                      !isPast &&
-                      "text-muted-foreground/90",
-                  )}
-                >
-                  {phase.label}
-                </div>
-                {index < PHASES.length - 1 ? (
-                  <ChevronRight className="size-3 mx-0.5 text-muted-foreground/30 shrink-0" />
-                ) : null}
-              </div>
-            );
-          })}
-        </nav>
       </header>
 
-      <main
-        className={cn(
-          "flex-1 min-h-0 p-3",
-          isFullscreen && "p-2 overflow-hidden",
-        )}
-      >
-        {children}
-      </main>
+      <div className="flex-1 min-h-0 grid grid-cols-[2.75rem_minmax(0,1fr)_min(22rem,28vw)] overflow-hidden">
+        <nav
+          aria-label="Sezioni"
+          className="border-r border-border/40 bg-card/40 flex flex-col items-center py-2 gap-1"
+        >
+          {SIDEBAR_TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onTabChange(id)}
+              className={cn(
+                "flex flex-col items-center justify-center gap-0.5 w-10 h-10 rounded-md transition-colors",
+                activeTab === id
+                  ? "bg-primary/20 text-primary ring-1 ring-primary/35"
+                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+              )}
+              title={label}
+              aria-current={activeTab === id ? "page" : undefined}
+            >
+              <Icon className="size-4" />
+              <span className="text-[8px] font-semibold uppercase tracking-wide leading-none">
+                {label}
+              </span>
+            </button>
+          ))}
+
+          <div className="mt-auto flex flex-col items-center gap-0.5 px-0.5 w-full">
+            {PHASES.map((phase, index) => {
+              const isActive = phase.id === runtimeState;
+              const isPast = index < currentPhaseIndex;
+              return (
+                <div
+                  key={phase.id}
+                  className={cn(
+                    "w-full text-center rounded px-0.5 py-0.5 text-[7px] font-medium leading-tight truncate",
+                    isActive && "bg-primary/25 text-primary",
+                    !isActive && isPast && "text-muted-foreground/40 line-through",
+                    !isActive && !isPast && "text-muted-foreground/60",
+                  )}
+                  title={phase.short}
+                >
+                  {phase.short}
+                </div>
+              );
+            })}
+          </div>
+        </nav>
+
+        <section
+          aria-label="Program monitor"
+          className="min-w-0 min-h-0 p-2 overflow-hidden flex flex-col"
+        >
+          {program}
+        </section>
+
+        <aside
+          aria-label="Control deck"
+          className="min-w-0 min-h-0 border-l border-border/40 bg-card/30 overflow-y-auto overflow-x-hidden p-2 space-y-2"
+        >
+          {deck}
+        </aside>
+      </div>
+
+      {transport}
     </div>
   );
 }

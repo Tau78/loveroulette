@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { Copy } from "lucide-react";
 import { useEventQuestionCount } from "@/hooks/useEventQuestionCount";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
@@ -39,33 +39,6 @@ function StatusDot({ status }: { status: TrafficStatus }) {
       )}
       aria-hidden
     />
-  );
-}
-
-function PreflightRow({
-  status,
-  label,
-  children,
-  hint,
-}: {
-  status: TrafficStatus;
-  label: string;
-  children: ReactNode;
-  hint?: string;
-}) {
-  return (
-    <div className="flex items-start gap-2">
-      <StatusDot status={status} />
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-[11px] font-medium text-foreground/90">{label}</p>
-        {children}
-        {hint ? (
-          <p className="text-[10px] leading-snug text-muted-foreground/75">
-            {hint}
-          </p>
-        ) : null}
-      </div>
-    </div>
   );
 }
 
@@ -128,9 +101,7 @@ export function AdminPreflightPanel({
     audioTraffic === "green" &&
     onlineTraffic === "green";
 
-  const subtitle = allGreen
-    ? "Tutto pronto per aprire la sala"
-    : "Verifica i punti in giallo o rosso prima di iniziare";
+  const subtitle = allGreen ? "Pronto" : "Check";
 
   async function copyProjectorUrl() {
     try {
@@ -150,107 +121,67 @@ export function AdminPreflightPanel({
   return (
     <AdminPanelShell
       variant={variant}
-      title="Checklist pre-serata"
+      title="Preflight"
       subtitle={subtitle}
       cardTitle="Checklist pre-serata"
-      cardDescription="Verifica rapida prima di aprire la sala."
+      collapsible={false}
     >
-      <div className="space-y-2.5">
-        <PreflightRow
-          status={domandeStatus}
-          label="Domande caricate"
-          hint={
-            domandeStatus === "green"
-              ? undefined
-              : `Servono almeno ${MIN_QUESTIONS_READY} domande (bundle completo: ${expectedQuestionCount}).`
-          }
-        >
-          <p className="text-[11px] tabular-nums text-muted-foreground">
-            <span className="font-semibold text-foreground">{domandeLabel}</span>
-            {domandeStatus === "green" && questionCount === expectedQuestionCount ? (
-              <span className="ml-1 text-primary/80">· bundle OK</span>
-            ) : null}
-          </p>
-        </PreflightRow>
-
-        <PreflightRow
-          status={audioTraffic}
-          label="Audio colonna sonora"
-          hint={
-            soundtrackUnlocked === true
-              ? "Colonna sonora sbloccata su questo dispositivo."
-              : soundtrackUnlocked === false
-                ? soundtrackAutoUnlock
-                  ? "Autoplay bloccato dal browser — apri Regia e usa «Avvia colonna sonora»."
-                  : "Apri Regia e premi «Avvia colonna sonora»."
-                : soundtrackAutoUnlock
-                  ? "Si avvia automaticamente in Regia → Audio & proiettore."
-                  : "Sblocca in Regia → Audio & proiettore."
-          }
-        >
-          <p className="text-[11px] text-muted-foreground">
-            {soundtrackUnlocked === true
-              ? "Attiva"
-              : soundtrackUnlocked === false
-                ? soundtrackAutoUnlock
-                  ? "Autoplay bloccato"
-                  : "Non sbloccata"
-                : soundtrackAutoUnlock
-                  ? "Avvio automatico"
-                  : "Da verificare localmente"}
-          </p>
-        </PreflightRow>
-
-        <PreflightRow status="green" label="URL proiettore">
-          <div className="flex gap-1.5">
-            <code className="min-w-0 flex-1 truncate rounded border border-border/40 bg-background/30 px-2 py-1 font-mono text-[10px] text-foreground/85">
-              {projectorPath}
-            </code>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 shrink-0 px-2 text-[10px]"
-              disabled={disabled}
-              onClick={() => void copyProjectorUrl()}
-            >
-              <Copy className="size-3" />
-              {copied ? "OK" : "Copia"}
-            </Button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <div className="flex items-center gap-1.5 rounded border border-border/30 px-2 py-1.5">
+          <StatusDot status={domandeStatus} />
+          <div className="min-w-0">
+            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Domande</p>
+            <p className="text-[11px] font-semibold tabular-nums">{domandeLabel}</p>
           </div>
-        </PreflightRow>
+        </div>
 
-        <PreflightRow
-          status={onlineTraffic}
-          label="Giocatori online"
-          hint={
-            onlineCount === 0
-              ? "Normale prima dell'apertura sala — controlla di nuovo dopo il QR."
-              : undefined
-          }
-        >
-          <p className="text-[11px] tabular-nums text-muted-foreground">
-            <span className="font-semibold text-foreground">{onlineCount}</span>{" "}
-            online
-          </p>
-        </PreflightRow>
+        <div className="flex items-center gap-1.5 rounded border border-border/30 px-2 py-1.5">
+          <StatusDot status={audioTraffic} />
+          <div className="min-w-0">
+            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Audio</p>
+            <p className="text-[11px] font-semibold truncate">
+              {soundtrackUnlocked === true
+                ? "OK"
+                : soundtrackUnlocked === false
+                  ? "Bloccato"
+                  : "—"}
+            </p>
+          </div>
+        </div>
 
-        <PreflightRow
-          status={iscrittiTraffic}
-          label="Iscritti"
-          hint={
-            participantCount === 0
-              ? "Nessun iscritto ancora — condividi il link invito in Regia."
-              : undefined
-          }
+        <div className="flex items-center gap-1.5 rounded border border-border/30 px-2 py-1.5">
+          <StatusDot status={onlineTraffic} />
+          <div className="min-w-0">
+            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Online</p>
+            <p className="text-[11px] font-semibold tabular-nums">{onlineCount}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded border border-border/30 px-2 py-1.5">
+          <StatusDot status={iscrittiTraffic} />
+          <div className="min-w-0">
+            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Iscritti</p>
+            <p className="text-[11px] font-semibold tabular-nums">{participantCount}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-1">
+        <code className="min-w-0 flex-1 truncate rounded border border-border/40 bg-background/30 px-2 py-1 font-mono text-[9px]">
+          {projectorPath}
+        </code>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 shrink-0 px-2"
+          disabled={disabled}
+          onClick={() => void copyProjectorUrl()}
+          title="Copia URL proiettore"
         >
-          <p className="text-[11px] tabular-nums text-muted-foreground">
-            <span className="font-semibold text-foreground">
-              {participantCount}
-            </span>{" "}
-            iscritti
-          </p>
-        </PreflightRow>
+          <Copy className="size-3" />
+          {copied ? "OK" : "Copia"}
+        </Button>
       </div>
     </AdminPanelShell>
   );

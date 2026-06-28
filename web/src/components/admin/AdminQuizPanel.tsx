@@ -36,6 +36,8 @@ interface AdminQuizPanelProps {
   onInvalidPin?: () => void;
   onQuizChange?: (quiz: QuizSessionState | null) => void;
   variant?: "card" | "deck";
+  /** AVANTI gestito dalla transport bar. */
+  hideAdvance?: boolean;
 }
 
 export function AdminQuizPanel({
@@ -48,6 +50,7 @@ export function AdminQuizPanel({
   onInvalidPin,
   onQuizChange,
   variant = "card",
+  hideAdvance = false,
 }: AdminQuizPanelProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -200,60 +203,63 @@ export function AdminQuizPanel({
   return (
     <AdminPanelShell
       variant={variant}
-      title="Quiz — regia"
+      title="Quiz"
       cardTitle="Quiz — regia domande"
       subtitle={`${phaseLabel} · ${remaining}s · ${progressLabel ?? "…"}`}
-      cardDescription={`${progressLabel ?? "Caricamento domande…"} · fase: ${phaseLabel}`}
+      cardDescription={`${progressLabel ?? "…"} · ${phaseLabel}`}
       actions={
         showAnswerCount ? (
           <span
             className={cn(
-              "text-[11px] font-semibold tabular-nums whitespace-nowrap",
+              "text-[10px] font-semibold tabular-nums whitespace-nowrap",
               answerRatio > 0.5 ? "text-primary" : "text-muted-foreground",
             )}
             aria-live="polite"
           >
-            {totalAnswers} / {answerCap} risposte
+            {totalAnswers}/{answerCap}
           </span>
         ) : undefined
       }
       accent
+      collapsible={false}
       className={variant === "card" ? "border-primary/20" : undefined}
     >
       {loading ? (
-        <p className="text-xs text-muted-foreground">Caricamento rullo…</p>
+        <p className="text-[10px] text-muted-foreground">…</p>
       ) : orderedQuestions.length > 0 ? (
         <AdminQuizQuestionReel
           questions={orderedQuestions}
           currentIndex={quizState.currentIndex}
         />
       ) : (
-        <p className="text-xs text-destructive">
-          {questionsError ?? "Domande non trovate."}
+        <p className="text-[10px] text-destructive">
+          {questionsError ?? "Errore"}
         </p>
       )}
 
-      <div className="flex flex-wrap gap-1.5">
-        <Button
-          type="button"
-          size="sm"
-          className="w-full min-w-[120px]"
-          disabled={disabled || busy}
-          onClick={() => void runAction("skipPhase")}
-        >
-          {onLastResults ? (
-            <>
-              <FastForward className="size-3.5" />
-              Termina → matching
-            </>
-          ) : (
-            <>
-              <ChevronRight className="size-3.5" />
-              AVANTI
-            </>
-          )}
-        </Button>
-      </div>
+      {!hideAdvance ? (
+        <div className="flex flex-wrap gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            className="w-full min-w-[120px]"
+            disabled={disabled || busy}
+            onClick={() => void runAction("skipPhase")}
+          >
+            {onLastResults ? (
+              <>
+                <FastForward className="size-3.5" />
+                Matching
+              </>
+            ) : (
+              <>
+                <ChevronRight className="size-3.5" />
+                Avanti
+              </>
+            )}
+          </Button>
+        </div>
+      ) : null}
 
       <AdminQuizSetupFields
         availableQuestionCount={quizState.total}
@@ -266,11 +272,12 @@ export function AdminQuizPanel({
         disabled={disabled || busy}
       />
 
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/40 px-2.5 py-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/40 px-2 py-1.5">
         <Button
           type="button"
           variant={autoplayEnabled ? "default" : "outline"}
           size="sm"
+          className="h-7 text-[10px]"
           disabled={disabled || busy}
           onClick={() =>
             void runAction("setAutoplayEnabled", {
@@ -278,23 +285,23 @@ export function AdminQuizPanel({
             })
           }
         >
-          Autoplay: {autoplayEnabled ? "On" : "Off"}
+          Auto {autoplayEnabled ? "On" : "Off"}
         </Button>
-        <p className="text-xs text-primary ml-auto tabular-nums">{remaining}s</p>
+        <span className="text-[10px] text-primary ml-auto tabular-nums">{remaining}s</span>
       </div>
 
       <Button
         type="button"
         variant="ghost"
         size="sm"
-        className="h-7 text-xs w-full"
+        className="h-7 text-[10px] w-full"
         disabled={disabled || busy}
         onClick={() => void runAction("finish")}
       >
-        Salta al matching
+        Salta matching
       </Button>
 
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
     </AdminPanelShell>
   );
 }

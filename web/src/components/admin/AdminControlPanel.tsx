@@ -15,7 +15,6 @@ import {
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { runtimeStateLabel } from "@/lib/events";
 import type { PairProgress } from "@/lib/musicpro/pair-progress";
 import type { EventStats } from "@/lib/musicpro/session";
 
@@ -30,6 +29,8 @@ interface AdminControlPanelProps {
   variant?: "card" | "deck";
   pairProgress?: PairProgress | null;
   onRefreshProgress?: () => Promise<{ stats: EventStats } | null>;
+  /** Azioni primarie gestite dalla transport bar. */
+  hideTransportActions?: boolean;
 }
 
 export function AdminControlPanel({
@@ -43,6 +44,7 @@ export function AdminControlPanel({
   variant = "card",
   pairProgress = null,
   onRefreshProgress,
+  hideTransportActions = false,
 }: AdminControlPanelProps) {
   const { count: questionCount, loading: questionCountLoading } =
     useEventQuestionCount(eventCode, true, questionsRefreshKey);
@@ -174,73 +176,62 @@ export function AdminControlPanel({
   return (
     <AdminPanelShell
       variant={variant}
-      title="Controlli fase"
+      title="Fase"
       cardTitle="Controlli di fase"
-      subtitle={`In sala: ${runtimeStateLabel(runtimeState)}`}
-      cardDescription={`Ora in sala: ${runtimeStateLabel(runtimeState)}. Le azioni si aggiornano su telefoni e proiettore.`}
+      collapsible={false}
     >
-      <p className="text-[11px] text-muted-foreground tabular-nums">
-        Domande caricate:{" "}
+      <p className="text-[10px] text-muted-foreground tabular-nums">
+        Domande{" "}
         <span className="font-semibold text-foreground">
           {questionCountLoading && questionCount === null
             ? "…"
             : (questionCount ?? "—")}
         </span>
         {questionCount === 27 ? (
-          <span className="ml-1 text-primary/80">· bundle OK</span>
+          <span className="ml-1 text-primary/80">· OK</span>
         ) : null}
       </p>
 
       {pairProgress &&
       (runtimeState === "extraction" || runtimeState === "elimination") ? (
-        <p className="text-[11px] text-muted-foreground tabular-nums">
-          Coppie estratte{" "}
-          <span className="font-semibold text-foreground">
-            {pairProgress.shownCount}/{pairProgress.maxExtractions}
-          </span>
-          {runtimeState === "elimination" ? (
+        <p className="text-[10px] text-muted-foreground tabular-nums">
+          {runtimeState === "extraction" ? (
             <>
-              {" "}
-              · in gara{" "}
+              Estratte{" "}
+              <span className="font-semibold text-foreground">
+                {pairProgress.shownCount}/{pairProgress.maxExtractions}
+              </span>
+            </>
+          ) : (
+            <>
+              In gara{" "}
               <span className="font-semibold text-foreground">
                 {pairProgress.activePairCount}
               </span>
             </>
-          ) : null}
+          )}
         </p>
       ) : null}
 
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
 
-      {runtimeState === "lobby" && (
-        <p className="text-xs text-muted-foreground">
-          Imposta numero domande e secondi nel pannello Quiz — regia, poi avvia.
-        </p>
-      )}
-
-      {runtimeState === "quiz" && (
-        <p className="text-xs text-muted-foreground">
-          Usa i controlli quiz sotto per avanzare domanda per domanda.
-        </p>
-      )}
-
-      {runtimeState === "matching" && (
+      {!hideTransportActions && runtimeState === "matching" && (
         <Button
           size={compact ? "sm" : "lg"}
           className={compact ? "w-full" : undefined}
           disabled={disabled || busy}
           onClick={() => void goTo("extraction")}
         >
-          Inizia estrazione coppie
+          Estrazione
         </Button>
       )}
 
-      {runtimeState === "extraction" && (
+      {!hideTransportActions && runtimeState === "extraction" && (
         <div className={compact ? "space-y-2" : "space-y-4 max-w-md"}>
           {pairProgress?.canExtractMore !== false ? (
             <div className="space-y-1.5">
-              <Label htmlFor="extraction-mode" className="text-xs">
-                Modalità estrazione
+              <Label htmlFor="extraction-mode" className="text-[10px]">
+                Modalità
               </Label>
               <select
                 id="extraction-mode"
@@ -250,9 +241,9 @@ export function AdminControlPanel({
                 }
                 className="block w-full rounded-md border border-input bg-input/30 px-2.5 py-1.5 text-xs"
               >
-                <option value="random">A sorte</option>
-                <option value="ranked">Classifica (basso → alto)</option>
-                <option value="hybrid">Mix casuale + classifica</option>
+                <option value="random">Sorte</option>
+                <option value="ranked">Classifica</option>
+                <option value="hybrid">Mix</option>
               </select>
             </div>
           ) : null}
@@ -263,14 +254,12 @@ export function AdminControlPanel({
             variant={extractionComplete ? "secondary" : "default"}
             onClick={() => void handleExtractionPrimaryAction()}
           >
-            {extractionComplete
-              ? "Fase eliminazione"
-              : "Estrai prossima coppia"}
+            {extractionComplete ? "Sfoltimento" : "Estrai"}
           </Button>
         </div>
       )}
 
-      {runtimeState === "elimination" && (
+      {!hideTransportActions && runtimeState === "elimination" && (
         <div className={compact ? "space-y-2" : "space-y-3 max-w-md"}>
           <Button
             size={compact ? "sm" : "lg"}
@@ -279,9 +268,7 @@ export function AdminControlPanel({
             variant={eliminationComplete ? "secondary" : "default"}
             onClick={() => void handleEliminationPrimaryAction()}
           >
-            {eliminationComplete
-              ? "Fase prove finali"
-              : "Elimina prossima coppia"}
+            {eliminationComplete ? "Finali" : "Elimina"}
           </Button>
           {pairProgress?.canEliminateMore ? (
             <Button
@@ -291,33 +278,21 @@ export function AdminControlPanel({
               disabled={disabled || busy}
               onClick={() => void eliminatePair("auto_to_finalists")}
             >
-              Auto → Top 3
+              Top 3
             </Button>
           ) : null}
         </div>
       )}
 
-      {runtimeState === "finals" && (
-        <p className="text-xs text-muted-foreground">
-          Usa AVANTI in alto per avanzare; prove e regia nel pannello «Finali».
-        </p>
-      )}
-
-      {runtimeState === "winner" && (
+      {!hideTransportActions && runtimeState === "winner" && (
         <Button
           size={compact ? "sm" : "lg"}
           className={compact ? "w-full" : undefined}
           disabled={disabled || busy}
           onClick={() => void goTo("closed")}
         >
-          Chiudi serata
+          Chiudi
         </Button>
-      )}
-
-      {runtimeState === "closed" && (
-        <p className="text-xs text-muted-foreground">
-          Serata conclusa — schermo di chiusura attivo.
-        </p>
       )}
     </AdminPanelShell>
   );

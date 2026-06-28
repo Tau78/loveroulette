@@ -87,32 +87,26 @@ export function AdminNewGamePanel({
   return (
     <AdminPanelShell
       variant={variant}
-      title="Nuova partita"
+      title="Reset"
       cardTitle="Nuova partita"
-      subtitle="Reset lobby · cancella quiz, coppie e reveal"
-      cardDescription="Riporta la serata in lobby e cancella quiz, coppie e reveal. Utile per ripetere la demo senza SQL manuale."
+      collapsible={false}
     >
-      <label className="flex items-start gap-2 cursor-pointer">
+      <label className="flex items-center gap-2 cursor-pointer">
         <input
           type="checkbox"
-          className="mt-0.5 size-3.5 rounded border-input accent-primary"
+          className="size-3.5 rounded border-input accent-primary"
           checked={clearParticipants}
           disabled={disabled || busy}
           onChange={(event) => setClearParticipants(event.target.checked)}
         />
-        <span className="space-y-0.5">
-          <Label className="cursor-pointer text-xs font-medium">
-            Rimuovi anche i giocatori iscritti
-          </Label>
-          <span className="block text-[10px] text-muted-foreground leading-snug">
-            Disattivato: restano in lista ma offline (consigliato per test).
-          </span>
-        </span>
+        <Label className="cursor-pointer text-[10px] font-medium">
+          Cancella iscritti
+        </Label>
       </label>
 
       {confirming ? (
-        <p className="text-xs text-amber-200/90 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5">
-          Confermi? Verranno cancellati quiz, risposte, coppie e overlay.
+        <p className="text-[10px] text-amber-200/90 rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1">
+          Confermi reset?
         </p>
       ) : null}
 

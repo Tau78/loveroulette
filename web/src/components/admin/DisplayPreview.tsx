@@ -32,6 +32,8 @@ interface DisplayPreviewProps {
   className?: string;
   /** Layout broadcast: program monitor senza Card wrapper. */
   embedded?: boolean;
+  /** Riempie l'area program mantenendo 16:9. */
+  fill?: boolean;
 }
 
 interface PreviewLayout {
@@ -162,6 +164,7 @@ export function DisplayPreview({
   eventCode,
   className,
   embedded = false,
+  fill = false,
 }: DisplayPreviewProps) {
   const [layout, setLayout] = useState<PreviewLayout>({
     detached: false,
@@ -406,15 +409,23 @@ export function DisplayPreview({
     ) : (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/50 bg-black/60",
-          embedded && "rounded-b-lg rounded-t-none border-t-0",
+          "relative overflow-hidden bg-black/60",
+          fill
+            ? "flex-1 min-h-0 w-full h-full flex items-center justify-center"
+            : "rounded-lg border border-border/50",
+          embedded && !fill && "rounded-b-lg rounded-t-none border-t-0",
         )}
-        style={{ aspectRatio: "16 / 9" }}
       >
-        <PreviewIframe
-          eventCode={eventCode}
-          className="absolute inset-0 size-full"
-        />
+        <div
+          className={cn(
+            fill ? "h-full max-h-full w-auto max-w-full aspect-video" : "absolute inset-0 size-full",
+          )}
+        >
+          <PreviewIframe
+            eventCode={eventCode}
+            className={fill ? "block size-full" : "absolute inset-0 size-full"}
+          />
+        </div>
       </div>
     );
 
@@ -423,19 +434,15 @@ export function DisplayPreview({
       <>
         <section
           className={cn(
-            "flex flex-col min-h-0 rounded-lg border border-border/40 bg-card/40 overflow-hidden",
+            "flex flex-col min-h-0 overflow-hidden",
+            fill ? "h-full border border-border/40 bg-black/40 rounded-md" : "rounded-lg border border-border/40 bg-card/40",
             className,
           )}
         >
-          <header className="flex items-center justify-between gap-2 border-b border-border/30 bg-black/30 px-2.5 py-1.5 shrink-0">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/90">
-                Program
-              </p>
-              <p className="text-[10px] text-muted-foreground truncate">
-                Live — stesso schermo in sala
-              </p>
-            </div>
+          <header className="flex items-center justify-between gap-2 border-b border-border/30 bg-black/30 px-2 py-1 shrink-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/90">
+              PGM
+            </p>
             {!layout.detached ? (
               <PreviewToolbar
                 detached={false}
@@ -443,10 +450,13 @@ export function DisplayPreview({
                 onAttach={handleAttach}
                 onOpenWindow={handleOpenWindow}
                 onOpenFullscreen={handleOpenFullscreen}
+                className="scale-90 origin-right"
               />
             ) : null}
           </header>
-          <div className="min-h-0 flex-1">{previewBody}</div>
+          <div className={cn("min-h-0 flex-1 flex flex-col", fill && "overflow-hidden")}>
+            {previewBody}
+          </div>
         </section>
         {floatingPreview}
       </>

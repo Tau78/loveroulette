@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Play } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import {
   isInvalidAnimatorPinError,
   postQuizAction,
@@ -24,6 +23,7 @@ interface AdminQuizPrepPanelProps {
   questionsRefreshKey?: number;
   onInvalidPin?: () => void;
   onQuizChange?: (quiz: QuizSessionState | null) => void;
+  onTransportReady?: (payload: { start: () => void; canStart: boolean }) => void;
   variant?: "card" | "deck";
 }
 
@@ -35,6 +35,7 @@ export function AdminQuizPrepPanel({
   questionsRefreshKey = 0,
   onInvalidPin,
   onQuizChange,
+  onTransportReady,
   variant = "card",
 }: AdminQuizPrepPanelProps) {
   const { count: availableCount, loading: countLoading } = useEventQuestionCount(
@@ -64,7 +65,7 @@ export function AdminQuizPrepPanel({
     setQuestionSeconds(quizSetup.questionSeconds);
   }, [quizSetup.questionSeconds]);
 
-  async function startQuiz() {
+  const startQuiz = useCallback(async () => {
     if (disabled || busy || availableCount == null || availableCount <= 0) return;
 
     setBusy(true);
@@ -105,18 +106,41 @@ export function AdminQuizPrepPanel({
     } finally {
       setBusy(false);
     }
-  }
+  }, [
+    animatorPin,
+    availableCount,
+    busy,
+    disabled,
+    eventCode,
+    onInvalidPin,
+    onQuizChange,
+    questionCount,
+    questionSeconds,
+  ]);
 
   const canStart = availableCount != null && availableCount > 0;
+
+  useEffect(() => {
+    onTransportReady?.({
+      start: () => void startQuiz(),
+      canStart: canStart && !disabled && !busy && !countLoading,
+    });
+  }, [
+    busy,
+    canStart,
+    countLoading,
+    disabled,
+    onTransportReady,
+    startQuiz,
+  ]);
 
   return (
     <AdminPanelShell
       variant={variant}
-      title="Quiz — regia"
+      title="Quiz setup"
       cardTitle="Quiz — regia domande"
-      subtitle="Imposta partita e avvia"
-      cardDescription="Scegli quante domande giocare e i secondi per rispondere, poi avvia."
       accent
+      collapsible={false}
       className={variant === "card" ? "border-primary/20" : undefined}
     >
       <AdminQuizSetupFields
@@ -131,24 +155,11 @@ export function AdminQuizPrepPanel({
         disabled={disabled || busy || countLoading || !canStart}
       />
 
-      <Button
-        type="button"
-        size="sm"
-        className="w-full min-h-9 font-semibold"
-        disabled={disabled || busy || countLoading || !canStart}
-        onClick={() => void startQuiz()}
-      >
-        <Play className="size-3.5" />
-        Avvia quiz
-      </Button>
-
       {!canStart && !countLoading ? (
-        <p className="text-xs text-destructive">
-          Nessuna domanda caricata — importa il bundle prima di avviare.
-        </p>
+        <p className="text-[10px] text-destructive">0 domande</p>
       ) : null}
 
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
     </AdminPanelShell>
   );
 }
