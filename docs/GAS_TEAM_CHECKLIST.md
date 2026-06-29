@@ -16,6 +16,7 @@
 | Realtime session | RLS anon da valutare | ✅ polling fallback |
 | Admin dropdown `game_format` | ⏳ task 5 | — |
 | Temi `graphic_themes` | ⏳ task 6 | metadata fallback |
+| **Dedup eventi Cervellone + GCal** | ✅ doc + SQL | ⏳ **task 11 P0** | Vedi 23-event-sync-dedup-incident.md |
 
 ---
 
@@ -129,6 +130,29 @@ ALTER TABLE love_roulette_answers
 ```
 
 Fino ad allora: seed domande per-evento su evento DEMO01 **oppure** migration sopra.
+
+---
+
+## Task 11 — Fix duplicazione eventi Cervellone (P0 — incidente 2026-06-29)
+
+**Sintomo:** stesso locale/data compare due volte su ilcervellone.it e su Google Calendar (coppie tipo “Da Assegnare” + nome animatore).
+
+**Root cause:** vedi [23-event-sync-dedup-incident.md](23-event-sync-dedup-incident.md).
+
+### Cosa fare
+
+1. **Diagnostic** — eseguire query §1 in [`web/scripts/dedupe-cervellone-events.sql`](../web/scripts/dedupe-cervellone-events.sql) su Pro.
+2. **Cleanup** — decommentare §2 dopo review; soft-cancel duplicati.
+3. **Migration** — UNIQUE `(venue_id, event_date)` per `cervellone` attivi + opz. colonna `google_calendar_event_id`.
+4. **`admin_upsert_event`** — UPDATE by `id` only; `legacy_event_id` immutabile; spostamento data = UPDATE non INSERT.
+5. **Google Calendar sync** — persistere `google_calendar_event_id`; update by ID, **mai** lookup per titolo.
+6. **`publish_cervellone`** — upsert by `events.id`; non ripubblicare su ogni cambio animatore.
+7. **Test** — tabella regressione §E in doc incidente.
+
+### Verifica
+
+- Luglio 2026: nessun duplicato su ilcervellone.it per stessa data+locale.
+- GCal: un solo evento per serata; cambio animatore aggiorna titolo senza nuova entry.
 
 ---
 
