@@ -162,6 +162,21 @@ Vedi [14-visual-quality-roadmap.md](14-visual-quality-roadmap.md).
 | Quiz API questions/answers | ✅ | — | OK (pool blocker task 9) |
 | Seed DEMO01 + doc setup | ✅ | — | OK |
 | GAS checklist | ✅ | ⏳ task 5–10 | Vedi GAS_TEAM_CHECKLIST.md |
+| **Fix duplicazione eventi Cervellone** | ✅ analisi + SQL | ⏳ **task 11** | Vedi [23-event-sync-dedup-incident.md](23-event-sync-dedup-incident.md) |
+
+### ⚠️ Incidente aperto — duplicazione eventi (2026-06-29)
+
+Eventi `game_format = 'cervellone'` duplicati su **ilcervellone.it** e **Google Calendar**.
+
+**Causa:** sync GCal per titolo (non per `google_calendar_event_id`); `admin_upsert_event` / spostamento data che INSERT invece di UPDATE; `publish_cervellone` che ripubblica su ogni UPDATE.
+
+**Azioni GAS (priorità alta):**
+
+1. Leggere [23-event-sync-dedup-incident.md](23-event-sync-dedup-incident.md)
+2. Eseguire diagnostic + cleanup: [`web/scripts/dedupe-cervellone-events.sql`](../web/scripts/dedupe-cervellone-events.sql)
+3. Migration UNIQUE `(venue_id, event_date)` per cervellone attivi
+4. Fix sync Calendar + RPC + publish (dettaglio nel doc incidente)
+5. Test regressione §E del doc incidente
 
 ---
 
@@ -170,4 +185,5 @@ Vedi [14-visual-quality-roadmap.md](14-visual-quality-roadmap.md).
 - Love Game master: [00-master-spec-v2.md](00-master-spec-v2.md)
 - Adaptive engine: [10-adaptive-questions-mobile.md](10-adaptive-questions-mobile.md)
 - DB adaptive: [11-db-schema-adaptive.md](11-db-schema-adaptive.md)
+- **Incidente sync eventi:** [23-event-sync-dedup-incident.md](23-event-sync-dedup-incident.md)
 - GAS schema: `../APP Eventi da GAS/musicpro-eventi-app/docs/SCHEMA_SOURCE_OF_TRUTH.md`
