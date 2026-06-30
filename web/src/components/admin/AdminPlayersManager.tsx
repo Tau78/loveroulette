@@ -25,6 +25,7 @@ import {
   updateParticipant,
 } from "@/lib/admin/animator-api";
 import type { AdminParticipantRow } from "@/lib/musicpro/participant-admin";
+import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
 import { AdminPinModal } from "@/components/admin/AdminPinModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,7 +70,13 @@ export function AdminPlayersManager({
   const [newNick, setNewNick] = useState("");
   const [newBadge, setNewBadge] = useState("");
   const [newGender, setNewGender] = useState<"male" | "female">("male");
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [pendingDeletePlayer, setPendingDeletePlayer] = useState<{
+    id: string;
+    nickname: string;
+  } | null>(null);
+  const [pendingSimulate, setPendingSimulate] = useState<
+    "couples" | "matching" | null
+  >(null);
   const [simulateBusy, setSimulateBusy] = useState(false);
   const [simulateMode, setSimulateMode] = useState<"couples" | "matching" | null>(
     null,
@@ -168,7 +175,7 @@ export function AdminPlayersManager({
     setEditNick(player.nickname);
     setEditBadge(player.badge_code ?? "");
     setEditGender(player.gender);
-    setDeleteConfirmId(null);
+    setPendingDeletePlayer(null);
   }
 
   async function saveEdit(playerId: string) {
@@ -213,7 +220,7 @@ export function AdminPlayersManager({
         } | null;
         throw new Error(data?.error ?? "Eliminazione non riuscita.");
       }
-      setDeleteConfirmId(null);
+      setPendingDeletePlayer(null);
       setEditingId(null);
       await load();
     } catch (err) {
@@ -223,15 +230,8 @@ export function AdminPlayersManager({
     }
   }
 
-  async function handleSimulateCouples(goToMatching: boolean) {
+  async function runSimulateCouples(goToMatching: boolean) {
     if (disabled || simulateBusy) return;
-
-    const confirmed = window.confirm(
-      goToMatching
-        ? "Creare 10 coppie test, compilare il quiz e passare subito al matching? I bot precedenti verranno sostituiti."
-        : "Creare 10 coppie di test (Bot U01–U10 / Bot D01–D10) con risposte quiz già compilate? I bot precedenti verranno sostituiti.",
-    );
-    if (!confirmed) return;
 
     setSimulateBusy(true);
     setSimulateMode(goToMatching ? "matching" : "couples");
@@ -311,6 +311,49 @@ export function AdminPlayersManager({
         onSubmit={submitPin}
       />
 
+      <AdminConfirmDialog
+        open={pendingDeletePlayer !== null}
+        title="Elimina giocatore"
+        description={
+          pendingDeletePlayer
+            ? `Rimuovere ${pendingDeletePlayer.nickname} dalla serata? L'azione non è reversibile.`
+            : ""
+        }
+        confirmLabel="Elimina"
+        variant="destructive"
+        busy={busyId === pendingDeletePlayer?.id}
+        onCancel={() => setPendingDeletePlayer(null)}
+        onConfirm={() => {
+          if (pendingDeletePlayer) {
+            void handleDelete(pendingDeletePlayer.id);
+          }
+        }}
+      />
+
+      <AdminConfirmDialog
+        open={pendingSimulate !== null}
+        title={
+          pendingSimulate === "matching"
+            ? "Simula fino al matching"
+            : "Simula 10 coppie test"
+        }
+        description={
+          pendingSimulate === "matching"
+            ? "Creare 10 coppie test, compilare il quiz e passare subito al matching? I bot precedenti verranno sostituiti."
+            : "Creare 10 coppie di test (Bot U01–U10 / Bot D01–D10) con risposte quiz già compilate? I bot precedenti verranno sostituiti."
+        }
+        confirmLabel="Procedi"
+        variant="warning"
+        busy={simulateBusy}
+        onCancel={() => setPendingSimulate(null)}
+        onConfirm={() => {
+          if (!pendingSimulate) return;
+          const mode = pendingSimulate;
+          setPendingSimulate(null);
+          void runSimulateCouples(mode === "matching");
+        }}
+      />
+
       <div
         ref={containerRef}
         data-admin-fullscreen={isFullscreen || undefined}
@@ -365,7 +408,7 @@ export function AdminPlayersManager({
               variant="outline"
               className="h-8 text-xs"
               disabled={disabled || simulateBusy}
-              onClick={() => void handleSimulateCouples(false)}
+              onClick={() => setPendingSimulate("couples")}
             >
               <Users className="size-3.5" />
               {simulateBusy && simulateMode === "couples"
@@ -377,7 +420,7 @@ export function AdminPlayersManager({
               variant="outline"
               className="h-8 text-xs border-primary/35 text-primary"
               disabled={disabled || simulateBusy}
-              onClick={() => void handleSimulateCouples(true)}
+              onClick={() => setPendingSimulate("matching")}
             >
               <FastForward className="size-3.5" />
               {simulateBusy && simulateMode === "matching"
@@ -390,7 +433,7 @@ export function AdminPlayersManager({
               disabled={disabled}
               onClick={() => {
                 setShowAdd((v) => !v);
-                setDeleteConfirmId(null);
+                setPendingDeletePlayer(null);
               }}
             >
               <Plus className="size-3.5" />
@@ -641,40 +684,21 @@ export function AdminPlayersManager({
                                 </Button>
                               ) : null}
 
-                              {deleteConfirmId === player.id ? (
-                                <>
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="xs"
-                                    disabled={disabled || isBusy}
-                                    onClick={() => void handleDelete(player.id)}
-                                  >
-                                    Conferma
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="xs"
-                                    onClick={() => setDeleteConfirmId(null)}
-                                  >
-                                    No
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="xs"
-                                  disabled={disabled || isBusy}
-                                  onClick={() => {
-                                    setDeleteConfirmId(player.id);
-                                    setEditingId(null);
-                                  }}
-                                >
-                                  <Trash2 className="size-3 text-destructive" />
-                                </Button>
-                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="xs"
+                                disabled={disabled || isBusy}
+                                onClick={() => {
+                                  setPendingDeletePlayer({
+                                    id: player.id,
+                                    nickname: player.nickname,
+                                  });
+                                  setEditingId(null);
+                                }}
+                              >
+                                <Trash2 className="size-3 text-destructive" />
+                              </Button>
                             </div>
                           </td>
                         </tr>

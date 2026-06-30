@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,14 +27,31 @@ export function AdminPinModal({
   onSubmit,
 }: AdminPinModalProps) {
   const [value, setValue] = useState("");
+  const titleId = useId();
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open) return;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-sm border-primary/20 bg-card/95 shadow-2xl shadow-primary/10">
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
+  if (!open || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center">
+      <Card
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="w-full max-w-sm border-primary/20 bg-card/95 shadow-2xl shadow-primary/10"
+      >
         <CardHeader>
-          <CardTitle>Accesso animatore</CardTitle>
+          <CardTitle id={titleId}>Accesso animatore</CardTitle>
           <CardDescription>
             Inserisci il PIN della serata per gestire fasi e proiettore.
           </CardDescription>
@@ -71,6 +89,7 @@ export function AdminPinModal({
           </form>
         </CardContent>
       </Card>
-    </div>
+    </div>,
+    document.body,
   );
 }
