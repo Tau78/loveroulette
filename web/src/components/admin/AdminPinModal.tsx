@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,9 +28,9 @@ export function AdminPinModal({
 }: AdminPinModalProps) {
   const [value, setValue] = useState("");
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <Card className="w-full max-w-sm border-primary/20 bg-card/95 shadow-2xl shadow-primary/10">
         <CardHeader>
@@ -71,6 +72,7 @@ export function AdminPinModal({
           </form>
         </CardContent>
       </Card>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -155,6 +155,25 @@ Valutare sicurezza con product owner prima del deploy.
 
 ---
 
+## Task 12 — Admin mobile modals + pulizia locali test (P1)
+
+**Handoff:** [24-admin-mobile-modals-handoff.md](24-admin-mobile-modals-handoff.md)
+
+### Cosa fare (apps/admin)
+
+1. `AdminConfirmDialog` / `AdminAlertDialog` con `createPortal(document.body)` + `fixed inset-0 z-[300]`
+2. Delete locale in Impostazioni/Locali: confirm custom + errori RPC in alert custom (no `window.alert`)
+3. Audit: `rg "window\\.(confirm|alert)" apps/admin` → zero risultati
+4. Test Safari mobile: dialog visibile a metà lista lunga
+
+### Pulizia DB
+
+Eseguire su Supabase (`fvxdghqpavdcohczrvsc`):
+
+[`Love Game/web/scripts/cleanup-test-venues.sql`](../web/scripts/cleanup-test-venues.sql) — dry-run poi apply.
+
+---
+
 ## Cosa Love Game chiede al team GAS
 
 | Richiesta | Perché |
@@ -193,4 +212,5 @@ Non toccare Love Game/web — repo separato.
 
 - Handoff: [13-platform-convergence-handoff.md](13-platform-convergence-handoff.md)
 - Test setup: [15-test-event-setup.md](15-test-event-setup.md)
+- Admin modals mobile: [24-admin-mobile-modals-handoff.md](24-admin-mobile-modals-handoff.md)
 - Schema: `musicpro-eventi-app/docs/SCHEMA_SOURCE_OF_TRUTH.md` § Modulo Love Roulette

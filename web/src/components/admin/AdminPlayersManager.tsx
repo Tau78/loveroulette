@@ -25,6 +25,7 @@ import {
   updateParticipant,
 } from "@/lib/admin/animator-api";
 import type { AdminParticipantRow } from "@/lib/musicpro/participant-admin";
+import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
 import { AdminPinModal } from "@/components/admin/AdminPinModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,9 @@ export function AdminPlayersManager({
     null,
   );
   const [simulateSuccess, setSimulateSuccess] = useState<string | null>(null);
+  const [simulateConfirm, setSimulateConfirm] = useState<
+    "couples" | "matching" | null
+  >(null);
 
   const {
     pin,
@@ -226,13 +230,6 @@ export function AdminPlayersManager({
   async function handleSimulateCouples(goToMatching: boolean) {
     if (disabled || simulateBusy) return;
 
-    const confirmed = window.confirm(
-      goToMatching
-        ? "Creare 10 coppie test, compilare il quiz e passare subito al matching? I bot precedenti verranno sostituiti."
-        : "Creare 10 coppie di test (Bot U01–U10 / Bot D01–D10) con risposte quiz già compilate? I bot precedenti verranno sostituiti.",
-    );
-    if (!confirmed) return;
-
     setSimulateBusy(true);
     setSimulateMode(goToMatching ? "matching" : "couples");
     setError(null);
@@ -311,6 +308,27 @@ export function AdminPlayersManager({
         onSubmit={submitPin}
       />
 
+      <AdminConfirmDialog
+        open={simulateConfirm !== null}
+        title="Simulazione giocatori test"
+        description={
+          simulateConfirm === "matching"
+            ? "Creare 10 coppie test, compilare il quiz e passare subito al matching? I bot precedenti verranno sostituiti."
+            : "Creare 10 coppie di test (Bot U01–U10 / Bot D01–D10) con risposte quiz già compilate? I bot precedenti verranno sostituiti."
+        }
+        confirmLabel="Procedi"
+        busy={simulateBusy}
+        onCancel={() => {
+          if (!simulateBusy) setSimulateConfirm(null);
+        }}
+        onConfirm={async () => {
+          if (simulateConfirm === null) return;
+          const goToMatching = simulateConfirm === "matching";
+          setSimulateConfirm(null);
+          await handleSimulateCouples(goToMatching);
+        }}
+      />
+
       <div
         ref={containerRef}
         data-admin-fullscreen={isFullscreen || undefined}
@@ -365,7 +383,7 @@ export function AdminPlayersManager({
               variant="outline"
               className="h-8 text-xs"
               disabled={disabled || simulateBusy}
-              onClick={() => void handleSimulateCouples(false)}
+              onClick={() => setSimulateConfirm("couples")}
             >
               <Users className="size-3.5" />
               {simulateBusy && simulateMode === "couples"
@@ -377,7 +395,7 @@ export function AdminPlayersManager({
               variant="outline"
               className="h-8 text-xs border-primary/35 text-primary"
               disabled={disabled || simulateBusy}
-              onClick={() => void handleSimulateCouples(true)}
+              onClick={() => setSimulateConfirm("matching")}
             >
               <FastForward className="size-3.5" />
               {simulateBusy && simulateMode === "matching"
