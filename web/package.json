@@ -15,6 +15,7 @@
     "check:audio": "node scripts/check-audio-assets.mjs",
     "check:day": "npm run check:audio && npx tsc --noEmit && npm run test",
     "reset:demo": "node --import tsx scripts/reset-demo.mjs",
+    "cleanup:test-venues": "node --import tsx scripts/cleanup-test-venues.mjs",
     "sync:audio": "node ../scripts/sync-audio.mjs"
   },
   "dependencies": {
