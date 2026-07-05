@@ -13,6 +13,7 @@ import { PlayerStageTransition } from "@/components/player/PlayerStageTransition
 import { QuizPlayer } from "@/components/player/QuizPlayer";
 import { VotingPlayer } from "@/components/player/VotingPlayer";
 import { FinalistCheerPlayer } from "@/components/player/FinalistCheerPlayer";
+import { FragmentExchangePlayer } from "@/components/player/FragmentExchangePlayer";
 import { FINALS_COPY } from "@/lib/game/late-game-copy";
 import { CoupleTakeover } from "@/components/player/CoupleTakeover";
 import type { WaveMode } from "@/components/player/ColorWave";
@@ -30,6 +31,7 @@ import {
 } from "@/lib/player/participant-storage";
 import { SessionSyncIndicator } from "@/components/session/SessionSyncIndicator";
 import { useLoveRouletteSession } from "@/hooks/useLoveRouletteSession";
+import { useFragmentExchange } from "@/hooks/useFragmentExchange";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { usePlayerEventInfo } from "@/hooks/usePlayerEventInfo";
 import { isEventUuid, normalizeEventSlug } from "@/lib/musicpro/slug";
@@ -207,6 +209,27 @@ export default function PlayerPlayPage() {
     finalsVotingOpen &&
     isFinalist;
   const showQuizCard = Boolean(participantId) && runtimeState === "quiz";
+
+  const fragmentExchangeEnabled =
+    joined &&
+    Boolean(participantId) &&
+    runtimeState !== "closed" &&
+    runtimeState !== "lobby";
+
+  const {
+    view: fragmentView,
+    targets: fragmentTargets,
+    refresh: refreshFragments,
+  } = useFragmentExchange({
+    eventSlug,
+    participantId,
+    enabled: fragmentExchangeEnabled,
+  });
+
+  const showFragmentExchange =
+    fragmentExchangeEnabled &&
+    fragmentView?.enabled === true &&
+    fragmentView.total > 0;
 
   const presenceSubtitle = playerPresenceSubtitle(runtimeState, {
     quizPhase: quizDisplayPhase ?? null,
@@ -567,6 +590,16 @@ export default function PlayerPlayPage() {
                     participantId={participantId}
                     quizState={quizState}
                     runtimeState={runtimeState}
+                  />
+                ) : null}
+
+                {showFragmentExchange && participantId && fragmentView ? (
+                  <FragmentExchangePlayer
+                    eventSlug={eventSlug}
+                    participantId={participantId}
+                    view={fragmentView}
+                    targets={fragmentTargets}
+                    onDonated={refreshFragments}
                   />
                 ) : null}
               </PlayerStageTransition>

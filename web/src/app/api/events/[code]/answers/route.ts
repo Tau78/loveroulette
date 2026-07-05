@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { submitAnswer } from "@/lib/musicpro/questions";
+import { grantFragmentForAnswer } from "@/lib/musicpro/fragment-exchange";
 import { getLoveRouletteEvent } from "@/lib/musicpro/resolve-event";
 import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
@@ -54,6 +55,16 @@ export async function POST(
       participantId: body.participantId,
       questionId: body.questionId,
       optionId: body.optionId,
+    });
+
+    await grantFragmentForAnswer(
+      supabase,
+      event.id,
+      body.participantId,
+      body.questionId,
+      event.quizState?.questionIds ?? [],
+    ).catch(() => {
+      // Fragment exchange is optional — never block answer submission.
     });
 
     return NextResponse.json({ answer, eventSlug: event.slug });

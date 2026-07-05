@@ -82,6 +82,7 @@ export async function resetLoveRouletteEvent(
   delete nextMetadata.love_roulette_display;
   delete nextMetadata.love_roulette_last_reveal;
   delete nextMetadata.love_roulette_voting;
+  delete nextMetadata.love_roulette_fragments;
 
   const { error: metadataError } = await supabase
     .from("events")

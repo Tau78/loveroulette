@@ -28,6 +28,8 @@ function demoMetadata(): Record<string, unknown> {
       question_mode: "dynamic",
       generatore_auto_import: true,
       generatore_default_bundle: "DEMO01-manche-full-v1",
+      fragment_exchange_enabled: true,
+      fragment_final_code: "CUORE01",
     },
   };
 }

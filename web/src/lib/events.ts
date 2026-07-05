@@ -31,6 +31,8 @@ export function mergeEventConfig(
     question_mode: "fixed",
     data_retention_days: 30,
     badge_required: false,
+    fragment_exchange_enabled: true,
+    fragment_final_code: null,
   };
 
   if (!partial) return base;

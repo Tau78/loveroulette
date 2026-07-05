@@ -40,6 +40,10 @@ export interface EventConfig {
   data_retention_days: number;
   /** Se true, il giocatore deve inserire il codice badge al join. */
   badge_required: boolean;
+  /** Scambio frammenti enigma tra giocatori. */
+  fragment_exchange_enabled: boolean;
+  /** Codice finale svelato a chi completa tutti i frammenti. */
+  fragment_final_code: string | null;
 }
 
 export const DEFAULT_EVENT_CONFIG: EventConfig = {
@@ -63,6 +67,8 @@ export const DEFAULT_EVENT_CONFIG: EventConfig = {
   question_mode: "fixed",
   data_retention_days: 30,
   badge_required: false,
+  fragment_exchange_enabled: true,
+  fragment_final_code: null,
 };
 
 /** @deprecated Standalone schema — use LoveRouletteEvent from @/lib/musicpro/types */

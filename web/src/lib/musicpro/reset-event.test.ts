@@ -47,6 +47,7 @@ function createMockSupabase() {
                   love_roulette_display: { type: "custom" },
                   love_roulette_last_reveal: { pairId: "p1" },
                   love_roulette_voting: { round: 1 },
+                  love_roulette_fragments: { fragmentIds: ["q1"], finalCode: "X" },
                   other_key: "keep",
                 },
               },
@@ -105,6 +106,7 @@ describe("resetLoveRouletteEvent", () => {
     expect(metadata).not.toHaveProperty("love_roulette_display");
     expect(metadata).not.toHaveProperty("love_roulette_last_reveal");
     expect(metadata).not.toHaveProperty("love_roulette_voting");
+    expect(metadata).not.toHaveProperty("love_roulette_fragments");
   });
 
   it("can clear participants when requested", async () => {
