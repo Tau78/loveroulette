@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronRight, ExternalLink, Maximize, Minimize } from "lucide-react";
 import type { EventState } from "@/lib/types";
 import type { SessionSyncStatus } from "@/lib/musicpro/session-sync";
@@ -41,6 +42,8 @@ export function AdminDashboardShell({
   syncStatus,
   children,
 }: AdminDashboardShellProps) {
+  const pathname = usePathname();
+  const onPlayersPage = pathname?.endsWith("/players") ?? false;
   const currentPhaseIndex = PHASES.findIndex((phase) => phase.id === runtimeState);
   const displayPath = `/s/${eventCode}/display`;
   const phaseLabel = runtimeStateLabel(runtimeState);
@@ -91,10 +94,23 @@ export function AdminDashboardShell({
             <span className="hidden sm:inline text-border">|</span>
             <Link
               href={`/admin/${eventCode}/players`}
-              className="text-muted-foreground hover:text-primary transition-colors rounded-md px-1 -mx-1 hover:bg-primary/5"
+              className={cn(
+                "transition-colors rounded-md px-1.5 py-0.5 -mx-1",
+                onPlayersPage
+                  ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/5",
+              )}
               title="Gestione giocatori"
+              aria-current={onPlayersPage ? "page" : undefined}
             >
-              <span className="font-semibold text-foreground">{participantCount}</span>{" "}
+              <span
+                className={cn(
+                  "font-semibold",
+                  onPlayersPage ? "text-primary" : "text-foreground",
+                )}
+              >
+                {participantCount}
+              </span>{" "}
               iscritti
             </Link>
             <Badge
