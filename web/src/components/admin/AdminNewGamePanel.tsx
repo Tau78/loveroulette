@@ -6,6 +6,7 @@ import {
   isInvalidAnimatorPinError,
   postResetEvent,
 } from "@/lib/admin/animator-api";
+import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -31,17 +32,10 @@ export function AdminNewGamePanel({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [clearParticipants, setClearParticipants] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function handleReset() {
     if (disabled || busy) return;
-
-    if (!confirming) {
-      setConfirming(true);
-      setError(null);
-      setSuccess(null);
-      return;
-    }
 
     setBusy(true);
     setError(null);
@@ -65,7 +59,7 @@ export function AdminNewGamePanel({
         throw new Error(message);
       }
 
-      setConfirming(false);
+      setConfirmOpen(false);
       setSuccess(
         clearParticipants
           ? "Lobby — iscrizioni azzerate."
@@ -77,11 +71,6 @@ export function AdminNewGamePanel({
     } finally {
       setBusy(false);
     }
-  }
-
-  function handleCancel() {
-    setConfirming(false);
-    setError(null);
   }
 
   return (
@@ -104,39 +93,37 @@ export function AdminNewGamePanel({
         </Label>
       </label>
 
-      {confirming ? (
-        <p className="text-[10px] text-amber-200/90 rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1">
-          Confermi reset?
-        </p>
-      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled || busy}
+        onClick={() => {
+          setError(null);
+          setSuccess(null);
+          setConfirmOpen(true);
+        }}
+      >
+        <RotateCcw className="size-3.5" />
+        Nuova partita
+      </Button>
 
-      <div className="flex flex-wrap gap-1.5">
-        <Button
-          type="button"
-          variant={confirming ? "default" : "outline"}
-          size="sm"
-          disabled={disabled || busy}
-          onClick={() => void handleReset()}
-        >
-          <RotateCcw className="size-3.5" />
-          {busy
-            ? "Reset…"
-            : confirming
-              ? "Conferma"
-              : "Nuova partita"}
-        </Button>
-        {confirming ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={busy}
-            onClick={handleCancel}
-          >
-            Annulla
-          </Button>
-        ) : null}
-      </div>
+      <AdminConfirmDialog
+        open={confirmOpen}
+        title="Confermi reset?"
+        description={
+          clearParticipants
+            ? "La serata torna in lobby e tutti gli iscritti verranno rimossi."
+            : "La serata torna in lobby. I giocatori restano in lista ma segnati offline."
+        }
+        confirmLabel="Reset"
+        variant="warning"
+        busy={busy}
+        onCancel={() => {
+          if (!busy) setConfirmOpen(false);
+        }}
+        onConfirm={() => void handleReset()}
+      />
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
       {success ? <p className="text-xs text-primary">{success}</p> : null}
