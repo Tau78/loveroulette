@@ -35,7 +35,9 @@ export default function RootLayout({
       lang="it"
       className={`dark theme-dark-fuchsia ${geist.variable} ${playfair.variable} h-full`}
     >
-      <body className="min-h-full antialiased font-sans">{children}</body>
+      <body className={`${geist.className} min-h-full antialiased font-sans`}>
+        {children}
+      </body>
     </html>
   );
 }
