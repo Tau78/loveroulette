@@ -205,8 +205,7 @@ export function AdminQuizPanel({
       variant={variant}
       title="Quiz"
       cardTitle="Quiz — regia domande"
-      subtitle={`${phaseLabel} · ${remaining}s · ${progressLabel ?? "…"}`}
-      cardDescription={`${progressLabel ?? "…"} · ${phaseLabel}`}
+      cardDescription={`${progressLabel ?? "…"} · ${phaseLabel} · ${remaining}s`}
       actions={
         showAnswerCount ? (
           <span

@@ -128,13 +128,10 @@ export function AdminRegiaPanel({
       variant={variant}
       title="Regia"
       cardTitle="Regia"
-      subtitle="Invito · QR · media locale · messaggi sul proiettore"
-      cardDescription="Condividi il link, mostra video o immagini da cartella locale, oppure invia un messaggio overlay."
+      cardDescription="Condividi link join, QR sul proiettore, media locale e messaggi overlay."
     >
-      <div className="space-y-4">
-        <section className="space-y-2">
-          <p className={ADMIN_UI.section}>Invito giocatori</p>
-
+      <div className="space-y-3">
+        <section className="space-y-2" title="Link join e QR code per invitare i giocatori">
           <div className="flex gap-1.5">
             <Input
               readOnly
@@ -154,7 +151,10 @@ export function AdminRegiaPanel({
             </AdminButton>
           </div>
 
-          <div className="flex items-center gap-4 rounded-md border border-border/40 bg-background/30 p-3">
+          <div
+            className="flex items-center justify-center rounded-md border border-border/40 bg-background/30 p-3"
+            title="Anteprima QR — i giocatori scansionano dal telefono"
+          >
             <QRCodeSVG
               value={resolvedJoinUrl}
               size={variant === "deck" ? 96 : 180}
@@ -162,9 +162,6 @@ export function AdminRegiaPanel({
               fgColor="currentColor"
               className="shrink-0 text-primary"
             />
-            <p className={cn("flex-1 leading-snug", ADMIN_UI.caption)}>
-              Anteprima del codice che i giocatori scansionano dal telefono.
-            </p>
           </div>
 
           <AdminButton
@@ -189,9 +186,7 @@ export function AdminRegiaPanel({
 
         <div className="border-t border-border/30" aria-hidden />
 
-        <section className="space-y-2">
-          <p className={ADMIN_UI.section}>Messaggio overlay</p>
-
+        <section className="space-y-2" title="Messaggio testuale overlay sul proiettore">
           <div className="space-y-1">
             <Label htmlFor="regia-title" className={ADMIN_UI.label}>
               Titolo

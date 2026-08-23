@@ -32,13 +32,11 @@ function SettingsSwitch({
   description: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          {description}
-        </p>
-      </div>
+    <div
+      className="flex items-center justify-between gap-3"
+      title={description}
+    >
+      <p className="text-sm font-medium text-white">{label}</p>
       <button
         type="button"
         role="switch"
@@ -112,10 +110,8 @@ export function AdminSettingsPanel({
   return (
     <AdminPanelShell
       variant={variant}
-      title="Impostazioni serata"
-      subtitle="Preferenze visibili ai giocatori in tempo reale"
-      cardTitle="Impostazioni"
-      cardDescription="Configura obblighi e opzioni della serata."
+      title="Impostazioni"
+      cardDescription="Preferenze serata visibili ai giocatori in tempo reale."
       panelId="impostazioni-serata"
     >
       <SettingsSwitch

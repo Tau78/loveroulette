@@ -40,17 +40,13 @@ export function AdminChallengeRegia({
   if (!challengeId) return null;
 
   return (
-    <section className={cn("space-y-2 rounded-md border border-border/50 bg-muted/20 p-2.5", className)}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/90">
-        Regia prova
-      </p>
-
+    <section
+      className={cn("space-y-2 rounded-md border border-border/50 bg-muted/20 p-2.5", className)}
+      title="Controlli audio e video per la prova finale in corso"
+    >
       {challengeId === "dance" ? (
         <div className="space-y-2">
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            Avvia un brano da ballo o il mix automatico (3–4 tracce in sequenza).
-          </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5" title="Brano da ballo o mix automatico 3–4 tracce">
             {danceOptions.map((track) => (
               <AdminButton
                 key={track.id}
@@ -79,14 +75,11 @@ export function AdminChallengeRegia({
 
       {challengeId === "declaration" ? (
         <div className="space-y-2">
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            Sottofondo romantico + mazzo fiori Love Roulette a tutto schermo sul
-            proiettore.
-          </p>
           <AdminButton
             type="button"
             size="xs"
             disabled={disabled || !manifestReady}
+            title="Sottofondo romantico + mazzo fiori Love Roulette a tutto schermo"
             onClick={() => void playRomanticBed()}
           >
             <Music2 className="size-3" />
@@ -97,14 +90,11 @@ export function AdminChallengeRegia({
 
       {challengeId === "kiss" ? (
         <div className="space-y-2">
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            Riproduci i baci famosi sul proiettore. Metti i file MP4 in{" "}
-            <code className="font-mono text-[9px]">public/finals/kiss/</code>.
-          </p>
           <AdminButton
             type="button"
             size="xs"
             disabled={disabled}
+            title="Baci famosi sul proiettore — MP4 in public/finals/kiss/"
             onClick={() => {
               setChallengeRegiaBedActive(eventCode, true);
               playPresetMediaPlaylist(
@@ -123,14 +113,11 @@ export function AdminChallengeRegia({
 
       {challengeId === "kamasutra" ? (
         <div className="space-y-2">
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            Slideshow posizioni sul proiettore. Immagini in{" "}
-            <code className="font-mono text-[9px]">public/finals/kamasutra/</code>.
-          </p>
           <AdminButton
             type="button"
             size="xs"
             disabled={disabled}
+            title="Slideshow posizioni — immagini in public/finals/kamasutra/"
             onClick={() => {
               setChallengeRegiaBedActive(eventCode, true);
               playPresetMediaPlaylist(
