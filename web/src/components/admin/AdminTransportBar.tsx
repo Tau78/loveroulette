@@ -25,6 +25,7 @@ import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import type { PairProgress } from "@/lib/musicpro/pair-progress";
 import type { VotingMetadata } from "@/lib/musicpro/voting";
 import type { EventState, ExtractionMode } from "@/lib/types";
+import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,8 @@ interface AdminTransportBarProps {
   onRefreshProgress?: () => Promise<unknown>;
   onStartQuiz?: () => void;
   startQuizDisabled?: boolean;
+  /** `panel` = inline deck block; `footer` = legacy bottom bar (deprecated). */
+  variant?: "panel" | "footer";
   className?: string;
 }
 
@@ -83,6 +86,7 @@ export function AdminTransportBar({
   onRefreshProgress,
   onStartQuiz,
   startQuizDisabled = false,
+  variant = "panel",
   className,
 }: AdminTransportBarProps) {
   const [busy, setBusy] = useState(false);
@@ -287,158 +291,189 @@ export function AdminTransportBar({
     primaryDisabled = disabled || busy;
   }
 
-  return (
-    <footer
-      className={cn(
-        "shrink-0 border-t border-border/50 bg-card/90 backdrop-blur-md",
-        "grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 h-[4.25rem]",
-        className,
-      )}
-      aria-label="Transport"
-    >
-      <div className="flex items-center gap-2 min-w-0">
-        <Badge
-          variant="outline"
-          className={cn("h-7 px-2.5 text-[11px] font-semibold uppercase tracking-wide", phaseBadge.className)}
-        >
-          {phaseBadge.label}
-        </Badge>
-        {runtimeState === "quiz" && quizState ? (
-          <span className="text-[11px] tabular-nums text-muted-foreground hidden sm:inline">
-            {quizState.currentIndex + 1}/{quizState.total} · {quizRemaining}s
-          </span>
-        ) : null}
-        {(runtimeState === "finals" || runtimeState === "winner") &&
-        finalsShow &&
-        (finalsShow.phase === "voting_prep" ||
-          finalsShow.phase === "voting" ||
-          finalsShow.phase === "winner_spectacle") ? (
-          <span className="text-[11px] tabular-nums text-muted-foreground hidden sm:inline">
-            {finalsRemaining}s
-          </span>
-        ) : null}
-        {pairProgress && runtimeState === "extraction" ? (
-          <span className="text-[11px] tabular-nums text-muted-foreground hidden md:inline">
-            {pairProgress.shownCount}/{pairProgress.maxExtractions}
-          </span>
-        ) : null}
-        {pairProgress && runtimeState === "elimination" ? (
-          <span className="text-[11px] tabular-nums text-muted-foreground hidden md:inline">
-            {pairProgress.activePairCount} coppie
-          </span>
-        ) : null}
-      </div>
-
-      <div className="flex justify-center min-w-0">
-        {primaryAction ? (
-          <Button
-            type="button"
-            size="lg"
-            disabled={primaryDisabled}
-            className={cn(
-              "h-12 min-w-[10rem] max-w-full px-8 font-bold uppercase tracking-[0.14em]",
-              "shadow-[0_0_24px_rgba(236,72,153,0.28)]",
-              primaryDisabled && "opacity-50 shadow-none",
-            )}
-            onClick={primaryAction}
-          >
-            <PrimaryIcon className="size-5 stroke-[2.5]" />
-            {primaryLabel}
-          </Button>
-        ) : (
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
-            Serata chiusa
-          </span>
+  const statusLine = (
+    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+      <Badge
+        variant="outline"
+        className={cn(
+          "h-6 px-2 text-[10px] font-semibold uppercase tracking-wide",
+          phaseBadge.className,
         )}
-      </div>
+      >
+        {phaseBadge.label}
+      </Badge>
+      {runtimeState === "quiz" && quizState ? (
+        <span className="text-[10px] tabular-nums text-muted-foreground">
+          {quizState.currentIndex + 1}/{quizState.total} · {quizRemaining}s
+        </span>
+      ) : null}
+      {(runtimeState === "finals" || runtimeState === "winner") &&
+      finalsShow &&
+      (finalsShow.phase === "voting_prep" ||
+        finalsShow.phase === "voting" ||
+        finalsShow.phase === "winner_spectacle") ? (
+        <span className="text-[10px] tabular-nums text-muted-foreground">
+          {finalsRemaining}s
+        </span>
+      ) : null}
+      {pairProgress && runtimeState === "extraction" ? (
+        <span className="text-[10px] tabular-nums text-muted-foreground">
+          {pairProgress.shownCount}/{pairProgress.maxExtractions}
+        </span>
+      ) : null}
+      {pairProgress && runtimeState === "elimination" ? (
+        <span className="text-[10px] tabular-nums text-muted-foreground">
+          {pairProgress.activePairCount} coppie
+        </span>
+      ) : null}
+    </div>
+  );
 
-      <div className="flex items-center justify-end gap-1.5 min-w-0">
-        {runtimeState === "extraction" && pairProgress?.canExtractMore !== false ? (
-          <select
-            value={extractionMode}
-            onChange={(e) => onExtractionModeChange(e.target.value as ExtractionMode)}
-            className="h-8 max-w-[7rem] rounded-md border border-input/50 bg-input/20 px-1.5 text-[10px] truncate"
-            aria-label="Modalità"
-          >
-            <option value="random">Sorte</option>
-            <option value="ranked">Classifica</option>
-            <option value="hybrid">Mix</option>
-          </select>
-        ) : null}
+  const secondaryActions = (
+    <div className="flex flex-wrap items-center gap-1 min-w-0">
+      {runtimeState === "extraction" && pairProgress?.canExtractMore !== false ? (
+        <select
+          value={extractionMode}
+          onChange={(e) => onExtractionModeChange(e.target.value as ExtractionMode)}
+          className="h-7 max-w-[6.5rem] rounded-md border border-input/50 bg-input/20 px-1.5 text-[10px] truncate"
+          aria-label="Modalità"
+        >
+          <option value="random">Sorte</option>
+          <option value="ranked">Classifica</option>
+          <option value="hybrid">Mix</option>
+        </select>
+      ) : null}
 
-        {runtimeState === "elimination" && pairProgress?.canEliminateMore ? (
+      {runtimeState === "elimination" && pairProgress?.canEliminateMore ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-[10px] px-2"
+          disabled={disabled || busy}
+          onClick={() => void eliminatePair("auto_to_finalists")}
+        >
+          Top 3
+        </Button>
+      ) : null}
+
+      {votingOpen ? (
+        <>
+          <Badge variant="outline" className="h-6 border-red-500/40 bg-red-500/10 text-red-200 text-[9px]">
+            <Vote className="size-3" />
+            Voto
+          </Badge>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 text-[11px] px-2"
+            className="h-7 text-[10px] px-2 gap-1"
             disabled={disabled || busy}
-            onClick={() => void eliminatePair("auto_to_finalists")}
+            onClick={() => void simulateBotVotes()}
           >
-            Top 3
+            <Users className="size-3" />
+            Bot
           </Button>
-        ) : null}
+        </>
+      ) : null}
 
-        {votingOpen ? (
-          <>
-            <Badge variant="outline" className="h-7 border-red-500/40 bg-red-500/10 text-red-200 text-[10px]">
-              <Vote className="size-3" />
-              Voto
-            </Badge>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 text-[11px] px-2 gap-1"
-              disabled={disabled || busy}
-              onClick={() => void simulateBotVotes()}
-            >
-              <Users className="size-3" />
-              Bot
-            </Button>
-          </>
-        ) : null}
+      {runtimeState === "finals" || runtimeState === "winner" ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-[10px] px-2 gap-1"
+          disabled={
+            disabled ||
+            busy ||
+            finalsShow?.phase === "voting_prep" ||
+            finalsShow?.phase === "voting" ||
+            finalsShow?.phase === "winner_spectacle"
+          }
+          onClick={() =>
+            void runWithBusy(async () => {
+              const response = await postVotingAction(
+                eventCode,
+                { action: "proclaim_winner" },
+                animatorPin,
+              );
+              if (!response.ok) throw new Error("Proclamazione fallita.");
+              const data = (await response.json()) as {
+                show?: FinalsShowState | null;
+                runtimeState?: EventState;
+              };
+              onFinalsChange?.({ show: data.show, runtimeState: data.runtimeState });
+            })
+          }
+        >
+          <Trophy className="size-3" />
+          Vincitore
+        </Button>
+      ) : null}
+    </div>
+  );
 
-        {runtimeState === "finals" || runtimeState === "winner" ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 text-[11px] px-2 gap-1"
-            disabled={
-              disabled ||
-              busy ||
-              finalsShow?.phase === "voting_prep" ||
-              finalsShow?.phase === "voting" ||
-              finalsShow?.phase === "winner_spectacle"
-            }
-            onClick={() =>
-              void runWithBusy(async () => {
-                const response = await postVotingAction(
-                  eventCode,
-                  { action: "proclaim_winner" },
-                  animatorPin,
-                );
-                if (!response.ok) throw new Error("Proclamazione fallita.");
-                const data = (await response.json()) as {
-                  show?: FinalsShowState | null;
-                  runtimeState?: EventState;
-                };
-                onFinalsChange?.({ show: data.show, runtimeState: data.runtimeState });
-              })
-            }
-          >
-            <Trophy className="size-3" />
-            Vincitore
-          </Button>
-        ) : null}
+  const primaryButton = primaryAction ? (
+    <Button
+      type="button"
+      size="sm"
+      disabled={primaryDisabled}
+      className={cn(
+        "w-full h-10 font-bold uppercase tracking-[0.12em]",
+        "shadow-[0_0_20px_rgba(236,72,153,0.22)]",
+        primaryDisabled && "opacity-50 shadow-none",
+      )}
+      onClick={primaryAction}
+    >
+      <PrimaryIcon className="size-4 stroke-[2.5]" />
+      {primaryLabel}
+    </Button>
+  ) : (
+    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+      Serata chiusa
+    </span>
+  );
 
-        {error ? (
-          <span className="text-[10px] text-destructive truncate max-w-[8rem]" title={error}>
-            {error}
-          </span>
-        ) : null}
-      </div>
-    </footer>
+  if (variant === "footer") {
+    return (
+      <footer
+        className={cn(
+          "shrink-0 border-t border-border/50 bg-card/90 backdrop-blur-md",
+          "grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 h-[4.25rem]",
+          className,
+        )}
+        aria-label="Transport"
+      >
+        {statusLine}
+        <div className="flex justify-center min-w-0">{primaryButton}</div>
+        <div className="flex items-center justify-end gap-1.5 min-w-0">
+          {secondaryActions}
+          {error ? (
+            <span className="text-[10px] text-destructive truncate max-w-[8rem]" title={error}>
+              {error}
+            </span>
+          ) : null}
+        </div>
+      </footer>
+    );
+  }
+
+  return (
+    <AdminPanelShell
+      variant="deck"
+      title="Azioni fase"
+      accent
+      collapsible={false}
+      className={className}
+    >
+      {statusLine}
+      {primaryButton}
+      {secondaryActions}
+      {error ? (
+        <p className="text-[10px] text-destructive truncate" title={error}>
+          {error}
+        </p>
+      ) : null}
+    </AdminPanelShell>
   );
 }

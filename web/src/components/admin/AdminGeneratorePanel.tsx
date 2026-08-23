@@ -122,6 +122,7 @@ export function AdminGeneratorePanel({
       subtitle="Import / export JSON · API POST /generatore"
       cardTitle="Generatore manche"
       cardDescription="Scambia le manche con l'editor esterno. Il Generatore comanda via API."
+      defaultOpen={false}
     >
       <p className="text-[10px] text-muted-foreground font-mono break-all">
         GET/POST /api/events/{eventCode}/generatore

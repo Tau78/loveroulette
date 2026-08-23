@@ -231,6 +231,29 @@ export default function AdminDashboardPage() {
 
   const deckControlli = (
     <>
+      <AdminTransportBar
+        eventCode={eventCode}
+        runtimeState={runtimeState}
+        animatorPin={pin}
+        disabled={controlsDisabled}
+        quizState={quizState}
+        finalsShow={finalsShow}
+        voting={voting}
+        pairProgress={stats.pairProgress}
+        extractionMode={extractionMode}
+        onExtractionModeChange={setExtractionMode}
+        onInvalidPin={handleInvalidPin}
+        onQuizChange={handleQuizChange}
+        onFinalsChange={handleFinalsChange}
+        onRefreshProgress={refreshSessionStats}
+        onStartQuiz={
+          runtimeState === "lobby" && quizTransport
+            ? quizTransport.start
+            : undefined
+        }
+        startQuizDisabled={!quizTransport?.canStart}
+        variant="panel"
+      />
       {(runtimeState === "finals" || runtimeState === "winner") && (
         <AdminFinalsPanel
           variant="deck"
@@ -414,30 +437,6 @@ export default function AdminDashboardPage() {
           />
         }
         deck={deck}
-        transport={
-          <AdminTransportBar
-            eventCode={eventCode}
-            runtimeState={runtimeState}
-            animatorPin={pin}
-            disabled={controlsDisabled}
-            quizState={quizState}
-            finalsShow={finalsShow}
-            voting={voting}
-            pairProgress={stats.pairProgress}
-            extractionMode={extractionMode}
-            onExtractionModeChange={setExtractionMode}
-            onInvalidPin={handleInvalidPin}
-            onQuizChange={handleQuizChange}
-            onFinalsChange={handleFinalsChange}
-            onRefreshProgress={refreshSessionStats}
-            onStartQuiz={
-              runtimeState === "lobby" && quizTransport
-                ? quizTransport.start
-                : undefined
-            }
-            startQuizDisabled={!quizTransport?.canStart}
-          />
-        }
       />
     </>
   );

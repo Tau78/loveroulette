@@ -89,7 +89,8 @@ export function AdminNewGamePanel({
       variant={variant}
       title="Reset"
       cardTitle="Nuova partita"
-      collapsible={false}
+      collapsible={variant === "deck"}
+      defaultOpen={false}
     >
       <label className="flex items-center gap-2 cursor-pointer">
         <input

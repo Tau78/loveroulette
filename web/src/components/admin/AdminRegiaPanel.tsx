@@ -35,6 +35,7 @@ export function AdminRegiaPanel({
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [qrOnDisplay, setQrOnDisplay] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -85,8 +86,14 @@ export function AdminRegiaPanel({
     }
   }
 
-  async function showQrOnDisplay() {
+  async function toggleQrOnDisplay() {
+    if (qrOnDisplay) {
+      await runDisplayCommand({ type: "clear" }, "QR nascosto dal proiettore.");
+      setQrOnDisplay(false);
+      return;
+    }
     await runDisplayCommand({ type: "show_qr" }, "QR inviato al proiettore.");
+    setQrOnDisplay(true);
   }
 
   async function sendCustomMessage() {
@@ -111,6 +118,7 @@ export function AdminRegiaPanel({
       { type: "clear" },
       "Schermata del proiettore ripristinata.",
     );
+    setQrOnDisplay(false);
   }
 
   return (
@@ -161,12 +169,14 @@ export function AdminRegiaPanel({
 
           <Button
             size="sm"
+            variant={qrOnDisplay ? "secondary" : "default"}
             className="w-full"
             disabled={disabled || busy}
-            onClick={() => void showQrOnDisplay()}
+            aria-pressed={qrOnDisplay}
+            onClick={() => void toggleQrOnDisplay()}
           >
             <Monitor className="size-3.5" />
-            Mostra QR sul proiettore
+            {qrOnDisplay ? "Nascondi QR sul proiettore" : "Mostra QR sul proiettore"}
           </Button>
         </section>
 

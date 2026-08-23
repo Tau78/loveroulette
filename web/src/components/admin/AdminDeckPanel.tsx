@@ -155,7 +155,7 @@ export function AdminDeckPanel({
       {(!collapsible || open) ? (
         <div
           id={`admin-deck-panel-body-${resolvedPanelId}`}
-          className="p-3 space-y-2.5"
+          className="p-2 space-y-2"
         >
           {children}
         </div>

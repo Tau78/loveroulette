@@ -16,8 +16,9 @@ test.describe("DEMO01 smoke", () => {
 
     await expect(
       page
-        .getByRole("button", { name: "Controlli" })
-        .or(page.getByText("Pannello animatore")),
+        .getByRole("button", { name: "Deck" })
+        .or(page.getByText("Pannello animatore"))
+        .or(page.getByText("Azioni fase")),
     ).toBeVisible({ timeout: 30_000 });
   });
 
