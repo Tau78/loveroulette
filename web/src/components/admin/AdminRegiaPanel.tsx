@@ -14,6 +14,7 @@ import { AdminButton } from "@/components/admin/AdminButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
+import { cn } from "@/lib/utils";
 
 interface AdminRegiaPanelProps {
   eventCode: string;
