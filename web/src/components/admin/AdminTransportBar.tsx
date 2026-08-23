@@ -292,39 +292,36 @@ export function AdminTransportBar({
     primaryDisabled = disabled || busy;
   }
 
-  const statusLine = (
-    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-      <Badge
-        variant="outline"
-        className={cn(
-          "h-9 px-2.5 text-xs font-semibold",
-          phaseBadge.className,
-        )}
-      >
-        {phaseBadge.label}
-      </Badge>
-      {runtimeState === "quiz" && quizState ? (
-        <span className={ADMIN_UI.stat}>
-          {quizState.currentIndex + 1}/{quizState.total} · {quizRemaining}s
-        </span>
-      ) : null}
-      {(runtimeState === "finals" || runtimeState === "winner") &&
+  const phaseBadgeAction = (
+    <Badge
+      variant="outline"
+      className={cn(
+        "h-7 px-2 text-xs font-semibold",
+        phaseBadge.className,
+      )}
+    >
+      {phaseBadge.label}
+    </Badge>
+  );
+
+  const statusLine =
+    runtimeState === "quiz" && quizState ? (
+      <span className={ADMIN_UI.stat}>
+        {quizState.currentIndex + 1}/{quizState.total} · {quizRemaining}s
+      </span>
+    ) : (runtimeState === "finals" || runtimeState === "winner") &&
       finalsShow &&
       (finalsShow.phase === "voting_prep" ||
         finalsShow.phase === "voting" ||
         finalsShow.phase === "winner_spectacle") ? (
-        <span className={ADMIN_UI.stat}>{finalsRemaining}s</span>
-      ) : null}
-      {pairProgress && runtimeState === "extraction" ? (
-        <span className={ADMIN_UI.stat}>
-          {pairProgress.shownCount}/{pairProgress.maxExtractions}
-        </span>
-      ) : null}
-      {pairProgress && runtimeState === "elimination" ? (
-        <span className={ADMIN_UI.stat}>{pairProgress.activePairCount} coppie</span>
-      ) : null}
-    </div>
-  );
+      <span className={ADMIN_UI.stat}>{finalsRemaining}s</span>
+    ) : pairProgress && runtimeState === "extraction" ? (
+      <span className={ADMIN_UI.stat}>
+        {pairProgress.shownCount}/{pairProgress.maxExtractions}
+      </span>
+    ) : pairProgress && runtimeState === "elimination" ? (
+      <span className={ADMIN_UI.stat}>{pairProgress.activePairCount} coppie</span>
+    ) : null;
 
   const secondaryActions = (
     <div className="flex flex-wrap items-center gap-1 min-w-0">
@@ -429,7 +426,10 @@ export function AdminTransportBar({
         )}
         aria-label="Transport"
       >
-        {statusLine}
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+          {phaseBadgeAction}
+          {statusLine}
+        </div>
         <div className="flex justify-center min-w-0">{primaryButton}</div>
         <div className="flex items-center justify-end gap-1.5 min-w-0">
           {secondaryActions}
@@ -450,6 +450,7 @@ export function AdminTransportBar({
       accent
       collapsible={false}
       className={className}
+      actions={phaseBadgeAction}
     >
       {statusLine}
       {primaryButton}

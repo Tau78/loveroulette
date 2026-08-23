@@ -16,7 +16,6 @@ import { AdminDeckPanel } from "@/components/admin/AdminDeckPanel";
 import { AdminGeneratorePanel } from "@/components/admin/AdminGeneratorePanel";
 import { AdminPinModal } from "@/components/admin/AdminPinModal";
 import { AdminNewGamePanel } from "@/components/admin/AdminNewGamePanel";
-import { AdminQuizPrepPanel } from "@/components/admin/AdminQuizPrepPanel";
 import { AdminFinalsPanel } from "@/components/admin/AdminFinalsPanel";
 import { AdminQuizPanel } from "@/components/admin/AdminQuizPanel";
 import { AdminRegiaPanel } from "@/components/admin/AdminRegiaPanel";
@@ -176,6 +175,12 @@ export default function AdminDashboardPage() {
     };
   }, [event, loadSessionStats, runtimeState]);
 
+  useEffect(() => {
+    if (runtimeState !== "lobby") {
+      setQuizTransport(null);
+    }
+  }, [runtimeState]);
+
   const controlsDisabled = !pinReady || loading || pinVerifying;
 
   const handleQuizChange = useCallback(
@@ -274,31 +279,26 @@ export default function AdminDashboardPage() {
         questionsRefreshKey={questionsRefreshKey}
         soundtrackUnlocked={soundtrackUnlocked}
         soundtrackAutoUnlock={ADMIN_SOUNDTRACK_AUTO_UNLOCK}
-      />
-      <AdminControlPanel
-        variant="deck"
-        eventCode={eventCode}
-        runtimeState={runtimeState}
+        quizSetup={runtimeState === "lobby" ? event.quizSetup : undefined}
         animatorPin={pin}
-        initialExtractionMode={event.config.extraction_mode}
         disabled={controlsDisabled}
         onInvalidPin={handleInvalidPin}
-        questionsRefreshKey={questionsRefreshKey}
-        pairProgress={stats.pairProgress}
-        onRefreshProgress={refreshSessionStats}
-        hideTransportActions
+        onQuizChange={handleQuizChange}
+        onTransportReady={runtimeState === "lobby" ? setQuizTransport : undefined}
       />
-      {runtimeState === "lobby" ? (
-        <AdminQuizPrepPanel
+      {runtimeState !== "lobby" ? (
+        <AdminControlPanel
           variant="deck"
           eventCode={eventCode}
+          runtimeState={runtimeState}
           animatorPin={pin}
-          quizSetup={event.quizSetup}
+          initialExtractionMode={event.config.extraction_mode}
           disabled={controlsDisabled}
-          questionsRefreshKey={questionsRefreshKey}
           onInvalidPin={handleInvalidPin}
-          onQuizChange={handleQuizChange}
-          onTransportReady={setQuizTransport}
+          questionsRefreshKey={questionsRefreshKey}
+          pairProgress={stats.pairProgress}
+          onRefreshProgress={refreshSessionStats}
+          hideTransportActions
         />
       ) : null}
       {runtimeState === "quiz" && quizState ? (
