@@ -232,6 +232,41 @@
   color: var(--muted-foreground);
 }
 
+/* ── Pannello animatore: tipografia e controlli fissi, alto contrasto ── */
+.admin-console {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --muted-foreground: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
+}
+
+.admin-console .text-muted-foreground,
+.admin-console [class*="text-muted-foreground"] {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.admin-console [data-slot="button"]:not([class*="admin-skip-button-normalize"]) {
+  min-height: 2.25rem;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.admin-console input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.admin-console select,
+.admin-console textarea {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.admin-console label {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

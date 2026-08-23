@@ -22,7 +22,7 @@ import {
   MAX_QUESTION_SECONDS,
   MIN_QUESTION_SECONDS,
 } from "@/components/admin/AdminQuizSetupFields";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 
 const QUIZ_STATS_POLL_MS = 1500;
 
@@ -239,7 +239,7 @@ export function AdminQuizPanel({
 
       {!hideAdvance ? (
         <div className="flex flex-wrap gap-1.5">
-          <Button
+          <AdminButton
             type="button"
             size="sm"
             className="w-full min-w-[120px]"
@@ -257,7 +257,7 @@ export function AdminQuizPanel({
                 Avanti
               </>
             )}
-          </Button>
+          </AdminButton>
         </div>
       ) : null}
 
@@ -273,7 +273,7 @@ export function AdminQuizPanel({
       />
 
       <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/40 px-2 py-1.5">
-        <Button
+        <AdminButton
           type="button"
           variant={autoplayEnabled ? "default" : "outline"}
           size="sm"
@@ -286,11 +286,11 @@ export function AdminQuizPanel({
           }
         >
           Auto {autoplayEnabled ? "On" : "Off"}
-        </Button>
+        </AdminButton>
         <span className="text-[10px] text-primary ml-auto tabular-nums">{remaining}s</span>
       </div>
 
-      <Button
+      <AdminButton
         type="button"
         variant="ghost"
         size="sm"
@@ -299,7 +299,7 @@ export function AdminQuizPanel({
         onClick={() => void runAction("finish")}
       >
         Salta matching
-      </Button>
+      </AdminButton>
 
       {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
     </AdminPanelShell>

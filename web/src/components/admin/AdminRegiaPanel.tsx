@@ -10,9 +10,11 @@ import {
 } from "@/lib/admin/animator-api";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { AdminRegiaLocalMediaSection } from "@/components/admin/AdminRegiaLocalMediaSection";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
+import { cn } from "@/lib/utils";
 
 interface AdminRegiaPanelProps {
   eventCode: string;
@@ -35,6 +37,7 @@ export function AdminRegiaPanel({
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [qrOnDisplay, setQrOnDisplay] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -85,8 +88,14 @@ export function AdminRegiaPanel({
     }
   }
 
-  async function showQrOnDisplay() {
+  async function toggleQrOnDisplay() {
+    if (qrOnDisplay) {
+      await runDisplayCommand({ type: "clear" }, "QR nascosto dal proiettore.");
+      setQrOnDisplay(false);
+      return;
+    }
     await runDisplayCommand({ type: "show_qr" }, "QR inviato al proiettore.");
+    setQrOnDisplay(true);
   }
 
   async function sendCustomMessage() {
@@ -111,6 +120,7 @@ export function AdminRegiaPanel({
       { type: "clear" },
       "Schermata del proiettore ripristinata.",
     );
+    setQrOnDisplay(false);
   }
 
   return (
@@ -123,17 +133,15 @@ export function AdminRegiaPanel({
     >
       <div className="space-y-4">
         <section className="space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/90">
-            Invito giocatori
-          </p>
+          <p className={ADMIN_UI.section}>Invito giocatori</p>
 
           <div className="flex gap-1.5">
             <Input
               readOnly
               value={resolvedJoinUrl}
-              className="h-8 font-mono text-[10px]"
+              className={cn(ADMIN_UI.input, "font-mono flex-1")}
             />
-            <Button
+            <AdminButton
               type="button"
               variant="outline"
               size="sm"
@@ -143,7 +151,7 @@ export function AdminRegiaPanel({
             >
               <Copy className="size-3.5" />
               {copied ? "OK" : "Copia"}
-            </Button>
+            </AdminButton>
           </div>
 
           <div className="flex items-center gap-4 rounded-md border border-border/40 bg-background/30 p-3">
@@ -154,20 +162,22 @@ export function AdminRegiaPanel({
               fgColor="currentColor"
               className="shrink-0 text-primary"
             />
-            <p className="flex-1 text-[10px] leading-snug text-muted-foreground">
+            <p className={cn("flex-1 leading-snug", ADMIN_UI.caption)}>
               Anteprima del codice che i giocatori scansionano dal telefono.
             </p>
           </div>
 
-          <Button
+          <AdminButton
             size="sm"
+            variant={qrOnDisplay ? "secondary" : "default"}
             className="w-full"
             disabled={disabled || busy}
-            onClick={() => void showQrOnDisplay()}
+            aria-pressed={qrOnDisplay}
+            onClick={() => void toggleQrOnDisplay()}
           >
             <Monitor className="size-3.5" />
-            Mostra QR sul proiettore
-          </Button>
+            {qrOnDisplay ? "Nascondi QR sul proiettore" : "Mostra QR sul proiettore"}
+          </AdminButton>
         </section>
 
         <div className="border-t border-border/30" aria-hidden />
@@ -180,12 +190,10 @@ export function AdminRegiaPanel({
         <div className="border-t border-border/30" aria-hidden />
 
         <section className="space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/90">
-            Messaggio overlay
-          </p>
+          <p className={ADMIN_UI.section}>Messaggio overlay</p>
 
           <div className="space-y-1">
-            <Label htmlFor="regia-title" className="text-xs">
+            <Label htmlFor="regia-title" className={ADMIN_UI.label}>
               Titolo
             </Label>
             <Input
@@ -195,12 +203,12 @@ export function AdminRegiaPanel({
               onChange={(event) => setTitle(event.target.value)}
               maxLength={120}
               disabled={disabled || busy}
-              className="h-8 text-sm"
+              className={ADMIN_UI.input}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="regia-body" className="text-xs">
+            <Label htmlFor="regia-body" className={ADMIN_UI.label}>
               Testo (facoltativo)
             </Label>
             <Input
@@ -210,20 +218,20 @@ export function AdminRegiaPanel({
               onChange={(event) => setBody(event.target.value)}
               maxLength={280}
               disabled={disabled || busy}
-              className="h-8 text-sm"
+              className={ADMIN_UI.input}
             />
           </div>
 
           <div className="flex flex-wrap gap-1.5">
-            <Button
+            <AdminButton
               size="sm"
               disabled={disabled || busy}
               onClick={() => void sendCustomMessage()}
             >
               <Megaphone className="size-3.5" />
               Invia al proiettore
-            </Button>
-            <Button
+            </AdminButton>
+            <AdminButton
               variant="outline"
               size="sm"
               disabled={disabled || busy}
@@ -231,13 +239,13 @@ export function AdminRegiaPanel({
             >
               <XCircle className="size-3.5" />
               Cancella overlay
-            </Button>
+            </AdminButton>
           </div>
         </section>
       </div>
 
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
-      {success ? <p className="text-xs text-primary">{success}</p> : null}
+      {error ? <p className={ADMIN_UI.error}>{error}</p> : null}
+      {success ? <p className={ADMIN_UI.success}>{success}</p> : null}
     </AdminPanelShell>
   );
 }

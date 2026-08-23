@@ -13,7 +13,7 @@ import {
   postEliminatePair,
 } from "@/lib/admin/animator-api";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { Label } from "@/components/ui/label";
 import type { PairProgress } from "@/lib/musicpro/pair-progress";
 import type { EventStats } from "@/lib/musicpro/session";
@@ -216,14 +216,14 @@ export function AdminControlPanel({
       {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
 
       {!hideTransportActions && runtimeState === "matching" && (
-        <Button
+        <AdminButton
           size={compact ? "sm" : "lg"}
           className={compact ? "w-full" : undefined}
           disabled={disabled || busy}
           onClick={() => void goTo("extraction")}
         >
           Estrazione
-        </Button>
+        </AdminButton>
       )}
 
       {!hideTransportActions && runtimeState === "extraction" && (
@@ -247,7 +247,7 @@ export function AdminControlPanel({
               </select>
             </div>
           ) : null}
-          <Button
+          <AdminButton
             size={compact ? "sm" : "lg"}
             className="w-full"
             disabled={disabled || busy}
@@ -255,13 +255,13 @@ export function AdminControlPanel({
             onClick={() => void handleExtractionPrimaryAction()}
           >
             {extractionComplete ? "Sfoltimento" : "Estrai"}
-          </Button>
+          </AdminButton>
         </div>
       )}
 
       {!hideTransportActions && runtimeState === "elimination" && (
         <div className={compact ? "space-y-2" : "space-y-3 max-w-md"}>
-          <Button
+          <AdminButton
             size={compact ? "sm" : "lg"}
             className="w-full"
             disabled={disabled || busy}
@@ -269,9 +269,9 @@ export function AdminControlPanel({
             onClick={() => void handleEliminationPrimaryAction()}
           >
             {eliminationComplete ? "Finali" : "Elimina"}
-          </Button>
+          </AdminButton>
           {pairProgress?.canEliminateMore ? (
-            <Button
+            <AdminButton
               variant="outline"
               size={compact ? "sm" : "lg"}
               className="w-full"
@@ -279,20 +279,20 @@ export function AdminControlPanel({
               onClick={() => void eliminatePair("auto_to_finalists")}
             >
               Top 3
-            </Button>
+            </AdminButton>
           ) : null}
         </div>
       )}
 
       {!hideTransportActions && runtimeState === "winner" && (
-        <Button
+        <AdminButton
           size={compact ? "sm" : "lg"}
           className={compact ? "w-full" : undefined}
           disabled={disabled || busy}
           onClick={() => void goTo("closed")}
         >
           Chiudi
-        </Button>
+        </AdminButton>
       )}
     </AdminPanelShell>
   );

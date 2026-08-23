@@ -8,10 +8,10 @@ export default function AdminEventLayout({ children }: { children: ReactNode }) 
     const html = document.documentElement;
     const body = document.body;
     html.classList.add("admin-console-root");
-    body.classList.add("overflow-hidden");
+    body.classList.add("overflow-hidden", "admin-console");
     return () => {
       html.classList.remove("admin-console-root");
-      body.classList.remove("overflow-hidden");
+      body.classList.remove("overflow-hidden", "admin-console");
     };
   }, []);
 

@@ -10,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { useRegiaLocalMediaController } from "@/hooks/useRegiaLocalMediaController";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 
 interface AdminRegiaLocalMediaSectionProps {
   eventCode: string;
@@ -82,7 +82,7 @@ export function AdminRegiaLocalMediaSection({
       />
 
       <div className="flex flex-wrap gap-1.5">
-        <Button
+        <AdminButton
           type="button"
           size="sm"
           variant="outline"
@@ -91,12 +91,12 @@ export function AdminRegiaLocalMediaSection({
         >
           <FolderOpen className="size-3.5" />
           Apri cartella
-        </Button>
+        </AdminButton>
 
         {folderName ? (
           <>
             {!playing ? (
-              <Button
+              <AdminButton
                 type="button"
                 size="sm"
                 disabled={disabled || itemCount === 0}
@@ -104,9 +104,9 @@ export function AdminRegiaLocalMediaSection({
               >
                 <Play className="size-3.5" />
                 Play
-              </Button>
+              </AdminButton>
             ) : (
-              <Button
+              <AdminButton
                 type="button"
                 size="sm"
                 variant="outline"
@@ -115,10 +115,10 @@ export function AdminRegiaLocalMediaSection({
               >
                 <Pause className="size-3.5" />
                 Stop
-              </Button>
+              </AdminButton>
             )}
 
-            <Button
+            <AdminButton
               type="button"
               size="sm"
               variant={muted ? "secondary" : "outline"}
@@ -136,9 +136,9 @@ export function AdminRegiaLocalMediaSection({
                 <Volume2 className="size-3.5" />
               )}
               {muted ? "Muto" : "Audio on"}
-            </Button>
+            </AdminButton>
 
-            <Button
+            <AdminButton
               type="button"
               size="sm"
               variant="ghost"
@@ -147,7 +147,7 @@ export function AdminRegiaLocalMediaSection({
             >
               <X className="size-3.5" />
               Chiudi
-            </Button>
+            </AdminButton>
           </>
         ) : null}
       </div>

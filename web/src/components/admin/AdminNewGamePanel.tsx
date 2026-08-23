@@ -7,7 +7,7 @@ import {
   postResetEvent,
 } from "@/lib/admin/animator-api";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { Label } from "@/components/ui/label";
 
 interface AdminNewGamePanelProps {
@@ -89,7 +89,8 @@ export function AdminNewGamePanel({
       variant={variant}
       title="Reset"
       cardTitle="Nuova partita"
-      collapsible={false}
+      collapsible={variant === "deck"}
+      defaultOpen={false}
     >
       <label className="flex items-center gap-2 cursor-pointer">
         <input
@@ -111,7 +112,7 @@ export function AdminNewGamePanel({
       ) : null}
 
       <div className="flex flex-wrap gap-1.5">
-        <Button
+        <AdminButton
           type="button"
           variant={confirming ? "default" : "outline"}
           size="sm"
@@ -124,9 +125,9 @@ export function AdminNewGamePanel({
             : confirming
               ? "Conferma"
               : "Nuova partita"}
-        </Button>
+        </AdminButton>
         {confirming ? (
-          <Button
+          <AdminButton
             type="button"
             variant="ghost"
             size="sm"
@@ -134,7 +135,7 @@ export function AdminNewGamePanel({
             onClick={handleCancel}
           >
             Annulla
-          </Button>
+          </AdminButton>
         ) : null}
       </div>
 
