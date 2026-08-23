@@ -297,7 +297,7 @@ export function AdminTransportBar({
       <Badge
         variant="outline"
         className={cn(
-          "h-9 px-2.5 text-xs font-bold uppercase tracking-wide",
+          "h-9 px-2.5 text-xs font-semibold",
           phaseBadge.className,
         )}
       >
@@ -416,7 +416,7 @@ export function AdminTransportBar({
       {primaryLabel}
     </AdminButton>
   ) : (
-    <span className={cn(ADMIN_UI.caption, "uppercase font-bold")}>Serata chiusa</span>
+    <span className={cn(ADMIN_UI.caption, "font-medium")}>Serata chiusa</span>
   );
 
   if (variant === "footer") {

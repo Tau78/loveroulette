@@ -193,7 +193,7 @@ export function AdminDashboardShell({
               >
                 <Icon className="size-4" />
                 {!sidebarOpen ? (
-                  <span className={cn(ADMIN_UI.caption, "text-[10px] leading-none font-bold uppercase")}>
+                  <span className={cn(ADMIN_UI.caption, "text-[10px] leading-none font-semibold")}>
                     {label}
                   </span>
                 ) : (
@@ -225,7 +225,7 @@ export function AdminDashboardShell({
               {participantCount > 99 ? "99+" : participantCount}
             </span>
             {!sidebarOpen ? (
-              <span className={cn(ADMIN_UI.caption, "text-[10px] leading-none font-bold uppercase")}>
+              <span className={cn(ADMIN_UI.caption, "text-[10px] leading-none font-semibold")}>
                 Gioc.
               </span>
             ) : (
@@ -274,7 +274,7 @@ export function AdminDashboardShell({
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
-                className={cn(ADMIN_UI.caption, "font-bold uppercase hover:text-primary transition-colors")}
+                className={cn(ADMIN_UI.caption, "font-semibold hover:text-primary transition-colors")}
               >
                 Chiudi
               </button>
