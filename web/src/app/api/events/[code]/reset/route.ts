@@ -7,6 +7,7 @@ import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
 const bodySchema = z.object({
   clearParticipants: z.boolean().optional(),
+  keepPlayersOnline: z.boolean().optional(),
 });
 
 export async function POST(
@@ -62,6 +63,7 @@ export async function POST(
 
     const result = await resetLoveRouletteEvent(supabase, event.id, {
       clearParticipants: body.clearParticipants,
+      keepPlayersOnline: body.keepPlayersOnline,
     });
 
     return NextResponse.json({

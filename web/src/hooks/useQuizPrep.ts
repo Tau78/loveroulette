@@ -19,7 +19,7 @@ interface UseQuizPrepOptions {
   disabled?: boolean;
   questionsRefreshKey?: number;
   onInvalidPin?: () => void;
-  onQuizChange?: (quiz: QuizSessionState | null) => void;
+  onQuizChange?: (quiz: QuizSessionState | null, runtimeState?: "quiz") => void;
   onTransportReady?: (payload: { start: () => void; canStart: boolean }) => void;
   enabled?: boolean;
 }
@@ -102,7 +102,7 @@ export function useQuizPrep({
       }
 
       const data = (await response.json()) as { quiz: QuizSessionState | null };
-      onQuizChange?.(data.quiz ?? null);
+      onQuizChange?.(data.quiz ?? null, "quiz");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore di rete.");
     } finally {

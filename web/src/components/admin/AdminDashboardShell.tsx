@@ -22,16 +22,6 @@ import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
 import { cn } from "@/lib/utils";
 import { useFullscreen } from "@/hooks/useFullscreen";
 
-const PHASES: { id: EventState; short: string }[] = [
-  { id: "lobby", short: "Lobby" },
-  { id: "quiz", short: "Quiz" },
-  { id: "matching", short: "Match" },
-  { id: "extraction", short: "Estr." },
-  { id: "elimination", short: "Sfol." },
-  { id: "finals", short: "Fin." },
-  { id: "winner", short: "Win" },
-];
-
 export type AdminConsoleTab = "controlli" | "regia" | "impostazioni";
 
 const SIDEBAR_TABS: {
@@ -75,7 +65,6 @@ export function AdminDashboardShell({
   program,
   deck,
 }: AdminDashboardShellProps) {
-  const currentPhaseIndex = PHASES.findIndex((phase) => phase.id === runtimeState);
   const displayPath = `/s/${eventCode}/display`;
   const { containerRef, isFullscreen, supported, toggle } = useFullscreen();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -100,6 +89,7 @@ export function AdminDashboardShell({
         ADMIN_UI.font,
         "admin-console theme-dark-fuchsia w-screen h-screen overflow-hidden bg-background flex flex-col",
       )}
+      aria-label={`Console animatore · ${runtimeState}`}
     >
       <header className="shrink-0 h-11 border-b border-white/15 bg-card/80 backdrop-blur-sm px-2 flex items-center gap-2">
         <Link
@@ -233,26 +223,6 @@ export function AdminDashboardShell({
             )}
           </Link>
 
-          <div className="mt-auto flex flex-col items-center gap-0.5 px-0.5 w-full pb-1">
-            {PHASES.map((phase, index) => {
-              const isActive = phase.id === runtimeState;
-              const isPast = index < currentPhaseIndex;
-              return (
-                <div
-                  key={phase.id}
-                  className={cn(
-                    "w-full text-center rounded px-0.5 py-0.5 text-xs font-semibold leading-tight truncate",
-                    isActive && "bg-primary/30 text-white",
-                    !isActive && isPast && "text-white/45 line-through",
-                    !isActive && !isPast && "text-white/80",
-                  )}
-                  title={phase.short}
-                >
-                  {phase.short}
-                </div>
-              );
-            })}
-          </div>
         </nav>
 
         <aside
@@ -262,11 +232,11 @@ export function AdminDashboardShell({
             "shrink-0 min-h-0 overflow-hidden border-r border-white/15 bg-card/30",
             "transition-[width,opacity] duration-200 ease-out",
             sidebarOpen
-              ? "w-[min(19rem,30vw)] opacity-100"
+              ? "w-[min(20.5rem,32vw)] opacity-100"
               : "w-0 opacity-0 border-r-0 pointer-events-none",
           )}
         >
-          <div className="h-full w-[min(19rem,30vw)] overflow-hidden flex flex-col p-1.5 gap-1">
+          <div className="h-full w-[min(20.5rem,32vw)] overflow-hidden flex flex-col p-1.5 gap-1">
             <div className="shrink-0 flex items-center justify-between gap-2 px-1 py-0.5">
               <p className={ADMIN_UI.section}>
                 {SIDEBAR_TABS.find((tab) => tab.id === activeTab)?.label}

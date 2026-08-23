@@ -23,6 +23,7 @@ import {
   MIN_QUESTION_SECONDS,
 } from "@/components/admin/AdminQuizSetupFields";
 import { AdminButton } from "@/components/admin/AdminButton";
+import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
 
 const QUIZ_STATS_POLL_MS = 1500;
 
@@ -206,6 +207,7 @@ export function AdminQuizPanel({
       title="Quiz"
       cardTitle="Quiz — regia domande"
       cardDescription={`${progressLabel ?? "…"} · ${phaseLabel} · ${remaining}s`}
+      subtitle={`${progressLabel ?? "…"} · ${remaining}s`}
       actions={
         showAnswerCount ? (
           <span
@@ -260,23 +262,10 @@ export function AdminQuizPanel({
         </div>
       ) : null}
 
-      <AdminQuizSetupFields
-        availableQuestionCount={quizState.total}
-        questionCount={quizState.total}
-        questionSeconds={secondsDraft}
-        onQuestionCountChange={() => {}}
-        onQuestionSecondsChange={setSecondsDraft}
-        onQuestionSecondsBlur={commitQuestionSeconds}
-        questionCountReadOnly
-        disabled={disabled || busy}
-      />
-
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/40 px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <AdminButton
           type="button"
           variant={autoplayEnabled ? "default" : "outline"}
-          size="sm"
-          className="h-7 text-[10px]"
           disabled={disabled || busy}
           onClick={() =>
             void runAction("setAutoplayEnabled", {
@@ -286,19 +275,33 @@ export function AdminQuizPanel({
         >
           Auto {autoplayEnabled ? "On" : "Off"}
         </AdminButton>
-        <span className="text-[10px] text-primary ml-auto tabular-nums">{remaining}s</span>
+        <AdminButton
+          type="button"
+          variant="ghost"
+          disabled={disabled || busy}
+          onClick={() => void runAction("finish")}
+        >
+          Salta matching
+        </AdminButton>
       </div>
 
-      <AdminButton
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-7 text-[10px] w-full"
-        disabled={disabled || busy}
-        onClick={() => void runAction("finish")}
-      >
-        Salta matching
-      </AdminButton>
+      <details className="rounded-md border border-border/40 px-2 py-1.5">
+        <summary className={cn(ADMIN_UI.caption, "cursor-pointer select-none")}>
+          {questionSeconds}s per domanda
+        </summary>
+        <div className="pt-2">
+          <AdminQuizSetupFields
+            availableQuestionCount={quizState.total}
+            questionCount={quizState.total}
+            questionSeconds={secondsDraft}
+            onQuestionCountChange={() => {}}
+            onQuestionSecondsChange={setSecondsDraft}
+            onQuestionSecondsBlur={commitQuestionSeconds}
+            questionCountReadOnly
+            disabled={disabled || busy}
+          />
+        </div>
+      </details>
 
       {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
     </AdminPanelShell>

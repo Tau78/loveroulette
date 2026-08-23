@@ -33,7 +33,7 @@ interface AdminPanelShellProps {
   children: ReactNode;
   className?: string;
   accent?: boolean;
-  variant?: "card" | "deck";
+  variant?: "card" | "deck" | "plain";
   cardTitle?: string;
   cardDescription?: string;
   /** Solo variant deck — sezione collassabile (default true). */
@@ -187,6 +187,10 @@ export function AdminPanelShell({
   defaultOpen,
   panelId,
 }: AdminPanelShellProps) {
+  if (variant === "plain") {
+    return <div className={cn("space-y-2", className)}>{children}</div>;
+  }
+
   if (variant === "deck") {
     return (
       <AdminDeckPanel

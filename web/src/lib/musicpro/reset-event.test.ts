@@ -107,6 +107,59 @@ describe("resetLoveRouletteEvent", () => {
     expect(metadata).not.toHaveProperty("love_roulette_voting");
   });
 
+  it("keeps players online on stop manche", async () => {
+    const participantUpdates: Array<Record<string, unknown>> = [];
+    const supabase = {
+      from: vi.fn((table: string) => {
+        const chain = {
+          select: vi.fn(() => chain),
+          eq: vi.fn(() => chain),
+          in: vi.fn(() => chain),
+          delete: vi.fn(() => ({
+            in: vi.fn(() => Promise.resolve({ error: null })),
+            eq: vi.fn(() => Promise.resolve({ error: null })),
+          })),
+          update: vi.fn((payload: Record<string, unknown>) => {
+            if (table === "love_roulette_participants") {
+              participantUpdates.push(payload);
+            }
+            return {
+              eq: vi.fn(() => Promise.resolve({ error: null })),
+            };
+          }),
+          maybeSingle: vi.fn(() =>
+            Promise.resolve({
+              data: { metadata: { love_roulette_quiz: { phase: "question" } } },
+              error: null,
+            }),
+          ),
+        };
+
+        if (table === "love_roulette_participants") {
+          return {
+            ...chain,
+            select: vi.fn(() => ({
+              eq: vi.fn(() =>
+                Promise.resolve({
+                  data: [{ id: "participant-1" }],
+                  error: null,
+                }),
+              ),
+            })),
+          };
+        }
+
+        return chain;
+      }),
+    };
+
+    await resetLoveRouletteEvent(supabase as unknown as SupabaseClient, "event-1", {
+      keepPlayersOnline: true,
+    });
+
+    expect(participantUpdates).toEqual([]);
+  });
+
   it("can clear participants when requested", async () => {
     const { supabase, deletedTables } = createMockSupabase();
 

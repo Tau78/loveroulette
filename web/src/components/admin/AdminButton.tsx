@@ -32,8 +32,10 @@ const adminButtonVariants = cva(
       size: {
         default: ADMIN_UI.button,
         lg: ADMIN_UI.buttonPrimary,
+        transport: "h-12 min-h-12 px-3 text-base font-semibold leading-none",
         icon: "size-9 min-h-9 min-w-9 p-0",
         "icon-sm": "size-9 min-h-9 min-w-9 p-0",
+        "icon-lg": "size-12 min-h-12 min-w-12 p-0",
       },
     },
     defaultVariants: {
@@ -46,7 +48,7 @@ const adminButtonVariants = cva(
 type AdminButtonProps = ButtonPrimitive.Props &
   Omit<VariantProps<typeof adminButtonVariants>, "size"> & {
     /** Legacy shadcn sizes normalizzati alla dimensione fissa admin. */
-    size?: "default" | "lg" | "icon" | "icon-sm" | "sm" | "xs";
+    size?: "default" | "lg" | "transport" | "icon" | "icon-sm" | "icon-lg" | "sm" | "xs";
   };
 
 function AdminButton({

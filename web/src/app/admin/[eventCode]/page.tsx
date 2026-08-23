@@ -29,8 +29,9 @@ import type { EventStats } from "@/lib/musicpro/session";
 import type { LoveRouletteEvent } from "@/lib/musicpro/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import { normalizeEventSlug } from "@/lib/musicpro/slug";
-import { postQuizAction } from "@/lib/admin/animator-api";
-import type { ExtractionMode } from "@/lib/types";
+import { postQuizAction, postResetEvent } from "@/lib/admin/animator-api";
+import { useQuizPrep } from "@/hooks/useQuizPrep";
+import type { ExtractionMode, EventState } from "@/lib/types";
 
 interface SessionPayload {
   runtimeState: LoveRouletteEvent["runtimeState"];
@@ -56,10 +57,8 @@ export default function AdminDashboardPage() {
     null,
   );
   const [extractionMode, setExtractionMode] = useState<ExtractionMode>("random");
-  const [quizTransport, setQuizTransport] = useState<{
-    start: () => void;
-    canStart: boolean;
-  } | null>(null);
+  const [mancheEditing, setMancheEditing] = useState(true);
+  const [stopBusy, setStopBusy] = useState(false);
 
   const {
     pin,
@@ -175,17 +174,11 @@ export default function AdminDashboardPage() {
     };
   }, [event, loadSessionStats, runtimeState]);
 
-  useEffect(() => {
-    if (runtimeState !== "lobby") {
-      setQuizTransport(null);
-    }
-  }, [runtimeState]);
-
   const controlsDisabled = !pinReady || loading || pinVerifying;
 
   const handleQuizChange = useCallback(
-    (quiz: QuizSessionState | null) => {
-      applyQuizUpdate(quiz);
+    (quiz: QuizSessionState | null, nextRuntimeState?: EventState) => {
+      applyQuizUpdate(quiz, nextRuntimeState);
     },
     [applyQuizUpdate],
   );
@@ -198,7 +191,7 @@ export default function AdminDashboardPage() {
   );
 
   const handleResetComplete = useCallback(async () => {
-    applyQuizUpdate(null);
+    applyQuizUpdate(null, "lobby");
     setQuestionsRefreshKey((key) => key + 1);
     const sessionPayload = await loadSessionStats();
     if (sessionPayload) {
@@ -213,6 +206,61 @@ export default function AdminDashboardPage() {
   const handleInvalidPin = useCallback(() => {
     rejectPin("PIN non valido.");
   }, [rejectPin]);
+
+  const quizPrep = useQuizPrep({
+    eventCode,
+    animatorPin: pin,
+    quizSetup: event?.quizSetup ?? { questionCount: null, questionSeconds: 15 },
+    disabled: controlsDisabled,
+    questionsRefreshKey,
+    onInvalidPin: handleInvalidPin,
+    onQuizChange: handleQuizChange,
+    enabled: Boolean(event) && runtimeState === "lobby",
+  });
+
+  const handleStartQuiz = useCallback(() => {
+    void quizPrep.startQuiz();
+  }, [quizPrep]);
+
+  useEffect(() => {
+    if (runtimeState !== "lobby") {
+      setMancheEditing(false);
+    }
+  }, [runtimeState]);
+
+  const handleStopManche = useCallback(async () => {
+    if (stopBusy || controlsDisabled) return;
+    setStopBusy(true);
+    try {
+      const response = await postResetEvent(
+        eventCode,
+        { keepPlayersOnline: true },
+        pin,
+      );
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error ?? "Stop non riuscito.");
+      }
+      applyQuizUpdate(null, "lobby");
+      applyFinalsUpdate({ show: null, runtimeState: "lobby" });
+      setMancheEditing(true);
+      await handleResetComplete();
+    } catch {
+      /* TransportBar already surfaces busy/disabled; reset errors stay in Altro. */
+    } finally {
+      setStopBusy(false);
+    }
+  }, [
+    applyFinalsUpdate,
+    applyQuizUpdate,
+    controlsDisabled,
+    eventCode,
+    handleResetComplete,
+    pin,
+    stopBusy,
+  ]);
 
   if (loading) {
     return (
@@ -251,12 +299,23 @@ export default function AdminDashboardPage() {
         onQuizChange={handleQuizChange}
         onFinalsChange={handleFinalsChange}
         onRefreshProgress={refreshSessionStats}
-        onStartQuiz={
-          runtimeState === "lobby" && quizTransport
-            ? quizTransport.start
-            : undefined
+        onStartQuiz={runtimeState === "lobby" ? handleStartQuiz : undefined}
+        startQuizDisabled={!quizPrep.canStart || quizPrep.busy || quizPrep.countLoading}
+        onStopManche={() => void handleStopManche()}
+        stopDisabled={stopBusy}
+        manche={
+          runtimeState === "lobby"
+            ? {
+                availableQuestionCount: quizPrep.availableCount ?? 0,
+                questionCount: quizPrep.questionCount,
+                questionSeconds: quizPrep.questionSeconds,
+                onQuestionCountChange: quizPrep.setQuestionCount,
+                onQuestionSecondsChange: quizPrep.setQuestionSeconds,
+                editing: mancheEditing,
+                onToggleEdit: () => setMancheEditing((open) => !open),
+              }
+            : null
         }
-        startQuizDisabled={!quizTransport?.canStart}
         variant="panel"
       />
       {(runtimeState === "finals" || runtimeState === "winner") && (
@@ -271,36 +330,6 @@ export default function AdminDashboardPage() {
           onFinalsChange={handleFinalsChange}
         />
       )}
-      <AdminPreflightPanel
-        variant="deck"
-        eventCode={eventCode}
-        onlineCount={stats.onlineCount}
-        participantCount={stats.participantCount}
-        questionsRefreshKey={questionsRefreshKey}
-        soundtrackUnlocked={soundtrackUnlocked}
-        soundtrackAutoUnlock={ADMIN_SOUNDTRACK_AUTO_UNLOCK}
-        quizSetup={runtimeState === "lobby" ? event.quizSetup : undefined}
-        animatorPin={pin}
-        disabled={controlsDisabled}
-        onInvalidPin={handleInvalidPin}
-        onQuizChange={handleQuizChange}
-        onTransportReady={runtimeState === "lobby" ? setQuizTransport : undefined}
-      />
-      {runtimeState !== "lobby" ? (
-        <AdminControlPanel
-          variant="deck"
-          eventCode={eventCode}
-          runtimeState={runtimeState}
-          animatorPin={pin}
-          initialExtractionMode={event.config.extraction_mode}
-          disabled={controlsDisabled}
-          onInvalidPin={handleInvalidPin}
-          questionsRefreshKey={questionsRefreshKey}
-          pairProgress={stats.pairProgress}
-          onRefreshProgress={refreshSessionStats}
-          hideTransportActions
-        />
-      ) : null}
       {runtimeState === "quiz" && quizState ? (
         <AdminQuizPanel
           variant="deck"
@@ -326,8 +355,9 @@ export default function AdminDashboardPage() {
                   if (!res.ok) return;
                   const data = (await res.json()) as {
                     quiz: QuizSessionState | null;
+                    runtimeState?: EventState;
                   };
-                  handleQuizChange(data.quiz ?? null);
+                  handleQuizChange(data.quiz ?? null, data.runtimeState);
                 },
               )
             }
@@ -336,14 +366,44 @@ export default function AdminDashboardPage() {
           </AdminButton>
         </AdminDeckPanel>
       ) : null}
-      <AdminNewGamePanel
-        variant="deck"
-        eventCode={eventCode}
-        animatorPin={pin}
-        disabled={controlsDisabled}
-        onInvalidPin={handleInvalidPin}
-        onReset={() => void handleResetComplete()}
-      />
+      <AdminDeckPanel title="Altro" defaultOpen={false} panelId="altro">
+        <AdminPreflightPanel
+          variant="plain"
+          eventCode={eventCode}
+          onlineCount={stats.onlineCount}
+          participantCount={stats.participantCount}
+          questionsRefreshKey={questionsRefreshKey}
+          soundtrackUnlocked={soundtrackUnlocked}
+          soundtrackAutoUnlock={ADMIN_SOUNDTRACK_AUTO_UNLOCK}
+          disabled={controlsDisabled}
+        />
+        {runtimeState !== "lobby" ? (
+          <AdminControlPanel
+            variant="plain"
+            eventCode={eventCode}
+            runtimeState={runtimeState}
+            animatorPin={pin}
+            initialExtractionMode={event.config.extraction_mode}
+            disabled={controlsDisabled}
+            onInvalidPin={handleInvalidPin}
+            questionsRefreshKey={questionsRefreshKey}
+            pairProgress={stats.pairProgress}
+            onRefreshProgress={refreshSessionStats}
+            hideTransportActions
+          />
+        ) : null}
+        {quizPrep.error ? (
+          <p className="text-[0.8125rem] font-medium text-destructive">{quizPrep.error}</p>
+        ) : null}
+        <AdminNewGamePanel
+          variant="plain"
+          eventCode={eventCode}
+          animatorPin={pin}
+          disabled={controlsDisabled}
+          onInvalidPin={handleInvalidPin}
+          onReset={() => void handleResetComplete()}
+        />
+      </AdminDeckPanel>
     </>
   );
 

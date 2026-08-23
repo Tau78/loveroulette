@@ -5,6 +5,8 @@ import { updateSessionRuntimeState } from "./session";
 export interface ResetEventOptions {
   /** Rimuove anche i giocatori iscritti (default: false — restano in lista). */
   clearParticipants?: boolean;
+  /** STOP manche: torna in lobby senza segnare i giocatori offline. */
+  keepPlayersOnline?: boolean;
 }
 
 export interface ResetEventResult {
@@ -55,7 +57,7 @@ export async function resetLoveRouletteEvent(
     if (participantsError) {
       throw new Error(participantsError.message);
     }
-  } else if (participantIds.length > 0) {
+  } else if (participantIds.length > 0 && options.keepPlayersOnline !== true) {
     const { error: offlineError } = await supabase
       .from("love_roulette_participants")
       .update({ is_online: false })

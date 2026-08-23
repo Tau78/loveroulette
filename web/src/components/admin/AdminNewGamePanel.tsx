@@ -16,7 +16,7 @@ interface AdminNewGamePanelProps {
   disabled?: boolean;
   onReset?: () => void;
   onInvalidPin?: () => void;
-  variant?: "card" | "deck";
+  variant?: "card" | "deck" | "plain";
 }
 
 export function AdminNewGamePanel({
@@ -84,14 +84,8 @@ export function AdminNewGamePanel({
     setError(null);
   }
 
-  return (
-    <AdminPanelShell
-      variant={variant}
-      title="Reset"
-      cardTitle="Nuova partita"
-      collapsible={variant === "deck"}
-      defaultOpen={false}
-    >
+  const body = (
+    <>
       <label className="flex items-center gap-2 cursor-pointer">
         <input
           type="checkbox"
@@ -141,6 +135,27 @@ export function AdminNewGamePanel({
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
       {success ? <p className="text-xs text-primary">{success}</p> : null}
+    </>
+  );
+
+  if (variant === "plain") {
+    return (
+      <div className="space-y-2">
+        <p className="text-[0.8125rem] font-medium text-white">Reset</p>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <AdminPanelShell
+      variant={variant}
+      title="Reset"
+      cardTitle="Nuova partita"
+      collapsible={variant === "deck"}
+      defaultOpen={false}
+    >
+      {body}
     </AdminPanelShell>
   );
 }

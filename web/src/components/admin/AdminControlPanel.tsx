@@ -26,7 +26,7 @@ interface AdminControlPanelProps {
   disabled?: boolean;
   onInvalidPin?: () => void;
   questionsRefreshKey?: number;
-  variant?: "card" | "deck";
+  variant?: "card" | "deck" | "plain";
   pairProgress?: PairProgress | null;
   onRefreshProgress?: () => Promise<{ stats: EventStats } | null>;
   /** Azioni primarie gestite dalla transport bar. */
@@ -173,13 +173,8 @@ export function AdminControlPanel({
     pairProgress?.readyForFinals === true &&
     pairProgress.canEliminateMore === false;
 
-  return (
-    <AdminPanelShell
-      variant={variant}
-      title="Fase"
-      cardTitle="Controlli di fase"
-      collapsible={false}
-    >
+  const body = (
+    <>
       <p className="text-[10px] text-muted-foreground tabular-nums">
         Domande{" "}
         <span className="font-semibold text-foreground">
@@ -294,6 +289,27 @@ export function AdminControlPanel({
           Chiudi
         </AdminButton>
       )}
+    </>
+  );
+
+  if (variant === "plain") {
+    return (
+      <div className="space-y-2">
+        <p className="text-[0.8125rem] font-medium text-white">Fase</p>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <AdminPanelShell
+      variant={variant}
+      title="Fase"
+      cardTitle="Controlli di fase"
+      collapsible={variant === "deck"}
+      defaultOpen={false}
+    >
+      {body}
     </AdminPanelShell>
   );
 }

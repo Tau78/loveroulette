@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ChevronRight,
   FastForward,
   Play,
+  Square,
   Trophy,
   Users,
   Vote,
 } from "lucide-react";
+import { AdminMancheSetup } from "@/components/admin/AdminMancheSetup";
 import {
   isInvalidAnimatorPinError,
   patchSessionRuntimeState,
@@ -65,6 +67,17 @@ interface AdminTransportBarProps {
   onRefreshProgress?: () => Promise<unknown>;
   onStartQuiz?: () => void;
   startQuizDisabled?: boolean;
+  onStopManche?: () => void;
+  stopDisabled?: boolean;
+  manche?: {
+    availableQuestionCount: number;
+    questionCount: number;
+    questionSeconds: number;
+    onQuestionCountChange: (value: number) => void;
+    onQuestionSecondsChange: (value: number) => void;
+    editing: boolean;
+    onToggleEdit: () => void;
+  } | null;
   /** `panel` = inline deck block; `footer` = legacy bottom bar (deprecated). */
   variant?: "panel" | "footer";
   className?: string;
@@ -87,11 +100,25 @@ export function AdminTransportBar({
   onRefreshProgress,
   onStartQuiz,
   startQuizDisabled = false,
+  onStopManche,
+  stopDisabled = false,
+  manche = null,
   variant = "panel",
   className,
 }: AdminTransportBarProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stopArmed, setStopArmed] = useState(false);
+
+  useEffect(() => {
+    if (!stopArmed) return;
+    const timer = window.setTimeout(() => setStopArmed(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [stopArmed]);
+
+  useEffect(() => {
+    setStopArmed(false);
+  }, [runtimeState]);
 
   const autoplayEnabled = quizState?.autoplayEnabled === true;
 
@@ -323,6 +350,13 @@ export function AdminTransportBar({
       <span className={ADMIN_UI.stat}>{pairProgress.activePairCount} coppie</span>
     ) : null;
 
+  const hasSecondary =
+    (runtimeState === "extraction" && pairProgress?.canExtractMore !== false) ||
+    (runtimeState === "elimination" && Boolean(pairProgress?.canEliminateMore)) ||
+    votingOpen ||
+    runtimeState === "finals" ||
+    runtimeState === "winner";
+
   const secondaryActions = (
     <div className="flex flex-wrap items-center gap-1 min-w-0">
       {runtimeState === "extraction" && pairProgress?.canExtractMore !== false ? (
@@ -401,19 +435,57 @@ export function AdminTransportBar({
     </div>
   );
 
+  const canStop =
+    runtimeState !== "lobby" && runtimeState !== "closed" && Boolean(onStopManche);
+
+  const handleStopClick = () => {
+    if (!canStop || disabled || busy || stopDisabled) return;
+    if (!stopArmed) {
+      setStopArmed(true);
+      return;
+    }
+    setStopArmed(false);
+    onStopManche?.();
+  };
+
   const primaryButton = primaryAction ? (
     <AdminButton
       type="button"
-      size="lg"
+      size="transport"
       disabled={primaryDisabled}
-      className={cn(primaryDisabled && "opacity-40 shadow-none")}
+      className={cn("w-full", primaryDisabled && "opacity-40 shadow-none")}
       onClick={primaryAction}
     >
-      <PrimaryIcon className="size-4 stroke-[2.5]" />
+      <PrimaryIcon className="size-5 stroke-[2.5]" />
       {primaryLabel}
     </AdminButton>
   ) : (
-    <span className={cn(ADMIN_UI.caption, "font-medium")}>Serata chiusa</span>
+    <span className={cn(ADMIN_UI.caption, "font-medium self-center")}>Serata chiusa</span>
+  );
+
+  const stopButton = (
+    <AdminButton
+      type="button"
+      size="icon-lg"
+      variant={stopArmed ? "destructive" : "outline"}
+      disabled={!canStop || disabled || busy || stopDisabled}
+      className={cn(
+        "shrink-0",
+        stopArmed && "border-destructive",
+        !canStop && "opacity-30",
+      )}
+      title={
+        !canStop
+          ? "Già in lobby"
+          : stopArmed
+            ? "Conferma: torna all'inizio della manche"
+            : "Stop — torna all'inizio della manche"
+      }
+      aria-label={stopArmed ? "Conferma stop" : "Stop manche"}
+      onClick={handleStopClick}
+    >
+      <Square className="size-4 fill-current" />
+    </AdminButton>
   );
 
   if (variant === "footer") {
@@ -444,22 +516,50 @@ export function AdminTransportBar({
   }
 
   return (
-    <AdminPanelShell
-      variant="deck"
-      title="Azioni fase"
-      accent
-      collapsible={false}
-      className={className}
-      actions={phaseBadgeAction}
+    <section
+      aria-label="Transport"
+      className={cn(
+        "shrink-0 rounded-lg border border-primary/30 bg-primary/[0.05] flex flex-col",
+        className,
+      )}
     >
-      {statusLine}
-      {primaryButton}
-      {secondaryActions}
-      {error ? (
-        <p className={ADMIN_UI.error} title={error}>
-          {error}
-        </p>
-      ) : null}
-    </AdminPanelShell>
+      <header className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10">
+        {phaseBadgeAction}
+        {statusLine}
+      </header>
+
+      <div className="p-2 space-y-2">
+        {runtimeState === "lobby" && manche ? (
+          <AdminMancheSetup
+            availableQuestionCount={manche.availableQuestionCount}
+            questionCount={manche.questionCount}
+            questionSeconds={manche.questionSeconds}
+            onQuestionCountChange={manche.onQuestionCountChange}
+            onQuestionSecondsChange={manche.onQuestionSecondsChange}
+            editing={manche.editing}
+            onToggleEdit={manche.onToggleEdit}
+            disabled={disabled || busy}
+          />
+        ) : null}
+
+        <div className="grid grid-cols-[3rem_1fr] gap-1.5 items-stretch">
+          {stopButton}
+          {primaryButton}
+        </div>
+
+        {stopArmed ? (
+          <p className={cn(ADMIN_UI.caption, "text-amber-200")}>
+            Di nuovo su Stop per tornare in lobby e rivedere la manche.
+          </p>
+        ) : null}
+
+        {hasSecondary ? secondaryActions : null}
+        {error ? (
+          <p className={ADMIN_UI.error} title={error}>
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </section>
   );
 }

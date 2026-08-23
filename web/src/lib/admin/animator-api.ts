@@ -144,7 +144,7 @@ export async function postDisplayCommand(
 
 export async function postResetEvent(
   eventCode: string,
-  body: { clearParticipants?: boolean },
+  body: { clearParticipants?: boolean; keepPlayersOnline?: boolean },
   pin: string | null,
 ): Promise<Response> {
   return fetch(`/api/events/${encodeURIComponent(eventCode)}/reset`, {
