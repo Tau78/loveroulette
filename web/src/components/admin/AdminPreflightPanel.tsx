@@ -102,8 +102,6 @@ export function AdminPreflightPanel({
     audioTraffic === "green" &&
     onlineTraffic === "green";
 
-  const subtitle = allGreen ? "Pronto" : "Check";
-
   async function copyProjectorUrl() {
     try {
       await navigator.clipboard.writeText(projectorFullUrl);
@@ -123,9 +121,13 @@ export function AdminPreflightPanel({
     <AdminPanelShell
       variant={variant}
       title="Preflight"
-      subtitle={subtitle}
       cardTitle="Checklist pre-serata"
-      collapsible={false}
+      cardDescription={
+        allGreen
+          ? "Tutti i check verdi — pronto per iniziare"
+          : "Verifica domande caricate, audio sbloccato e presenze online"
+      }
+      defaultOpen={false}
     >
       <div className="grid grid-cols-2 gap-1.5">
         <div className="flex items-center gap-1.5 rounded border border-border/30 px-2 py-1.5">

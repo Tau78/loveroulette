@@ -17,6 +17,7 @@ import type { EventState } from "@/lib/types";
 import type { SessionSyncStatus } from "@/lib/musicpro/session-sync";
 import { SessionSyncIndicator } from "@/components/session/SessionSyncIndicator";
 import { AdminButton, adminButtonVariants } from "@/components/admin/AdminButton";
+import { AdminDeckAccordionProvider } from "@/components/admin/AdminDeckAccordion";
 import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
 import { cn } from "@/lib/utils";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -116,24 +117,11 @@ export function AdminDashboardShell({
         <div className="flex items-center gap-2 shrink-0">
           <div
             className="flex items-center gap-1.5 rounded-lg border-2 border-white/25 bg-white/10 px-2.5 h-9"
-            title="Online"
+            title={`${onlineCount} giocatori online`}
           >
             <Wifi className="size-4 text-emerald-300" />
             <span className={ADMIN_UI.stat}>{onlineCount}</span>
           </div>
-
-          <Link
-            href={`/admin/${eventCode}/players`}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg border-2 border-white/25 bg-white/10 px-2.5 h-9",
-              ADMIN_UI.link,
-              "hover:border-primary/50 hover:bg-white/15",
-            )}
-            title="Giocatori"
-          >
-            <Users className="size-4" />
-            <span className={ADMIN_UI.stat}>{participantCount}</span>
-          </Link>
 
           {syncStatus ? <SessionSyncIndicator status={syncStatus} /> : null}
 
@@ -195,7 +183,7 @@ export function AdminDashboardShell({
                 onClick={() => handleTabClick(id)}
                 className={cn(
                   ADMIN_UI.font,
-                  "flex flex-col items-center justify-center rounded-lg transition-colors",
+                  "relative flex flex-col items-center justify-center rounded-lg transition-colors",
                   sidebarOpen ? "w-10 h-10 gap-0" : "w-12 h-12 gap-0.5",
                   isActive ? ADMIN_UI.navActive : ADMIN_UI.navIdle,
                 )}
@@ -214,6 +202,36 @@ export function AdminDashboardShell({
               </button>
             );
           })}
+
+          <Link
+            href={`/admin/${eventCode}/players`}
+            className={cn(
+              ADMIN_UI.font,
+              "relative flex flex-col items-center justify-center rounded-lg transition-colors",
+              sidebarOpen ? "w-10 h-10" : "w-12 h-12 gap-0.5",
+              ADMIN_UI.navIdle,
+              "hover:border-primary/50",
+            )}
+            title={`Giocatori — ${participantCount} iscritti`}
+          >
+            <Users className="size-4" />
+            <span
+              className={cn(
+                "absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full",
+                "bg-primary text-[9px] font-bold leading-[14px] text-center text-white",
+              )}
+              aria-hidden
+            >
+              {participantCount > 99 ? "99+" : participantCount}
+            </span>
+            {!sidebarOpen ? (
+              <span className={cn(ADMIN_UI.caption, "text-[10px] leading-none font-bold uppercase")}>
+                Gioc.
+              </span>
+            ) : (
+              <span className="sr-only">Giocatori</span>
+            )}
+          </Link>
 
           <div className="mt-auto flex flex-col items-center gap-0.5 px-0.5 w-full pb-1">
             {PHASES.map((phase, index) => {
@@ -261,9 +279,11 @@ export function AdminDashboardShell({
                 Chiudi
               </button>
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-1">
-              {deck}
-            </div>
+            <AdminDeckAccordionProvider>
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col gap-1">
+                {deck}
+              </div>
+            </AdminDeckAccordionProvider>
           </div>
         </aside>
 

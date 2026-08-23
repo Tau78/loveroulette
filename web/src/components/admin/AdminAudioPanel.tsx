@@ -59,7 +59,6 @@ export function AdminAudioPanel({
   const {
     unlocked,
     muted,
-    currentTrackId,
     loadError,
     missingFilesWarning,
     unlock,
@@ -161,8 +160,7 @@ export function AdminAudioPanel({
       variant={variant}
       title="Audio & proiettore"
       cardTitle="Audio & proiettore"
-      subtitle="Audio da questo dispositivo · proiettore solo grafica"
-      cardDescription="La colonna sonora esce da questo dispositivo (PC/tablet animatore). Il proiettore mostra solo la grafica."
+      cardDescription="Colonna sonora da questo dispositivo. Il proiettore mostra solo grafica."
     >
       <div className="flex flex-wrap gap-1.5">
         {!unlocked ? (
@@ -196,6 +194,7 @@ export function AdminAudioPanel({
           variant="outline"
           size="sm"
           disabled={disabled}
+          title={projectorUrl}
           onClick={openDisplayWindow}
         >
           <Monitor className="size-3.5" />
@@ -212,19 +211,6 @@ export function AdminAudioPanel({
           Schermo pieno
         </AdminButton>
       </div>
-
-      {unlocked ? (
-        <p className="text-[11px] text-muted-foreground">
-          Track:{" "}
-          <span className="font-mono text-foreground/80">
-            {currentTrackId ?? "—"}
-          </span>
-        </p>
-      ) : null}
-
-      <p className="text-[10px] text-muted-foreground font-mono break-all leading-relaxed">
-        {projectorUrl}
-      </p>
 
       {missingFilesWarning ? (
         <p className="text-xs text-amber-600 dark:text-amber-500">

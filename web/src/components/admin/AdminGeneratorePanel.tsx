@@ -5,6 +5,7 @@ import { Download, Upload } from "lucide-react";
 import { animatorAuthHeaders } from "@/lib/admin/animator-api";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { AdminButton } from "@/components/admin/AdminButton";
+import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
 import type { GeneratoreMancheDocument } from "@/lib/generatore/types";
 import { GENERATORE_FORMAT_ID } from "@/lib/generatore/types";
 
@@ -119,15 +120,9 @@ export function AdminGeneratorePanel({
     <AdminPanelShell
       variant={variant}
       title="Generatore manche"
-      subtitle="Import / export JSON · API POST /generatore"
-      cardTitle="Generatore manche"
-      cardDescription="Scambia le manche con l'editor esterno. Il Generatore comanda via API."
+      cardDescription="Import ed export JSON manche via API /generatore."
       defaultOpen={false}
     >
-      <p className="text-[10px] text-muted-foreground font-mono break-all">
-        GET/POST /api/events/{eventCode}/generatore
-      </p>
-
       <div className="flex flex-wrap gap-1.5">
         <AdminButton
           type="button"
@@ -162,20 +157,8 @@ export function AdminGeneratorePanel({
         />
       </div>
 
-      <p className="text-[10px] text-muted-foreground leading-snug">
-        Import automatico del bundle default all&apos;apertura admin (DEMO01 →
-        27 domande). Usa <strong>Importa manche</strong> solo per sovrascrivere
-        manualmente. Disabilita con metadata{" "}
-        <code className="font-mono">generatore_auto_import: false</code>.
-      </p>
-
-      <p className="text-[10px] text-muted-foreground leading-snug">
-        Comandi API: import_manche, export_manche, start_quiz, tick, advance,
-        skip_phase, get_quiz_state. Header opzionale: X-Generatore-Key.
-      </p>
-
-      {message ? <p className="text-xs text-primary">{message}</p> : null}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {message ? <p className={ADMIN_UI.success}>{message}</p> : null}
+      {error ? <p className={ADMIN_UI.error}>{error}</p> : null}
     </AdminPanelShell>
   );
 }
