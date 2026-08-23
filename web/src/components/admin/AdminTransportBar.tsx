@@ -26,9 +26,10 @@ import type { PairProgress } from "@/lib/musicpro/pair-progress";
 import type { VotingMetadata } from "@/lib/musicpro/voting";
 import type { EventState, ExtractionMode } from "@/lib/types";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
 
 const PHASE_BADGE: Record<
   EventState,
@@ -41,7 +42,7 @@ const PHASE_BADGE: Record<
   elimination: { label: "Sfoltimento", className: "border-orange-500/40 bg-orange-500/15 text-orange-100" },
   finals: { label: "Finali", className: "border-primary/40 bg-primary/15 text-primary" },
   winner: { label: "Vincitore", className: "border-yellow-500/40 bg-yellow-500/15 text-yellow-100" },
-  closed: { label: "Chiuso", className: "border-muted-foreground/30 bg-muted/20 text-muted-foreground" },
+  closed: { label: "Chiuso", className: "border-white/30 bg-white/10 text-white" },
 };
 
 interface AdminTransportBarProps {
@@ -296,14 +297,14 @@ export function AdminTransportBar({
       <Badge
         variant="outline"
         className={cn(
-          "h-6 px-2 text-[10px] font-semibold uppercase tracking-wide",
+          "h-9 px-2.5 text-xs font-bold uppercase tracking-wide",
           phaseBadge.className,
         )}
       >
         {phaseBadge.label}
       </Badge>
       {runtimeState === "quiz" && quizState ? (
-        <span className="text-[10px] tabular-nums text-muted-foreground">
+        <span className={ADMIN_UI.stat}>
           {quizState.currentIndex + 1}/{quizState.total} · {quizRemaining}s
         </span>
       ) : null}
@@ -312,19 +313,15 @@ export function AdminTransportBar({
       (finalsShow.phase === "voting_prep" ||
         finalsShow.phase === "voting" ||
         finalsShow.phase === "winner_spectacle") ? (
-        <span className="text-[10px] tabular-nums text-muted-foreground">
-          {finalsRemaining}s
-        </span>
+        <span className={ADMIN_UI.stat}>{finalsRemaining}s</span>
       ) : null}
       {pairProgress && runtimeState === "extraction" ? (
-        <span className="text-[10px] tabular-nums text-muted-foreground">
+        <span className={ADMIN_UI.stat}>
           {pairProgress.shownCount}/{pairProgress.maxExtractions}
         </span>
       ) : null}
       {pairProgress && runtimeState === "elimination" ? (
-        <span className="text-[10px] tabular-nums text-muted-foreground">
-          {pairProgress.activePairCount} coppie
-        </span>
+        <span className={ADMIN_UI.stat}>{pairProgress.activePairCount} coppie</span>
       ) : null}
     </div>
   );
@@ -335,7 +332,7 @@ export function AdminTransportBar({
         <select
           value={extractionMode}
           onChange={(e) => onExtractionModeChange(e.target.value as ExtractionMode)}
-          className="h-7 max-w-[6.5rem] rounded-md border border-input/50 bg-input/20 px-1.5 text-[10px] truncate"
+          className={cn(ADMIN_UI.select, "max-w-[7rem] truncate")}
           aria-label="Modalità"
         >
           <option value="random">Sorte</option>
@@ -345,44 +342,38 @@ export function AdminTransportBar({
       ) : null}
 
       {runtimeState === "elimination" && pairProgress?.canEliminateMore ? (
-        <Button
+        <AdminButton
           type="button"
           variant="outline"
-          size="sm"
-          className="h-7 text-[10px] px-2"
           disabled={disabled || busy}
           onClick={() => void eliminatePair("auto_to_finalists")}
         >
           Top 3
-        </Button>
+        </AdminButton>
       ) : null}
 
       {votingOpen ? (
         <>
-          <Badge variant="outline" className="h-6 border-red-500/40 bg-red-500/10 text-red-200 text-[9px]">
-            <Vote className="size-3" />
+          <Badge variant="outline" className="h-9 border-red-400/50 bg-red-500/20 text-white text-xs font-bold">
+            <Vote className="size-4" />
             Voto
           </Badge>
-          <Button
+          <AdminButton
             type="button"
             variant="outline"
-            size="sm"
-            className="h-7 text-[10px] px-2 gap-1"
             disabled={disabled || busy}
             onClick={() => void simulateBotVotes()}
           >
-            <Users className="size-3" />
+            <Users className="size-4" />
             Bot
-          </Button>
+          </AdminButton>
         </>
       ) : null}
 
       {runtimeState === "finals" || runtimeState === "winner" ? (
-        <Button
+        <AdminButton
           type="button"
           variant="outline"
-          size="sm"
-          className="h-7 text-[10px] px-2 gap-1"
           disabled={
             disabled ||
             busy ||
@@ -406,32 +397,26 @@ export function AdminTransportBar({
             })
           }
         >
-          <Trophy className="size-3" />
+          <Trophy className="size-4" />
           Vincitore
-        </Button>
+        </AdminButton>
       ) : null}
     </div>
   );
 
   const primaryButton = primaryAction ? (
-    <Button
+    <AdminButton
       type="button"
-      size="sm"
+      size="lg"
       disabled={primaryDisabled}
-      className={cn(
-        "w-full h-10 font-bold uppercase tracking-[0.12em]",
-        "shadow-[0_0_20px_rgba(236,72,153,0.22)]",
-        primaryDisabled && "opacity-50 shadow-none",
-      )}
+      className={cn(primaryDisabled && "opacity-40 shadow-none")}
       onClick={primaryAction}
     >
       <PrimaryIcon className="size-4 stroke-[2.5]" />
       {primaryLabel}
-    </Button>
+    </AdminButton>
   ) : (
-    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-      Serata chiusa
-    </span>
+    <span className={cn(ADMIN_UI.caption, "uppercase font-bold")}>Serata chiusa</span>
   );
 
   if (variant === "footer") {
@@ -470,7 +455,7 @@ export function AdminTransportBar({
       {primaryButton}
       {secondaryActions}
       {error ? (
-        <p className="text-[10px] text-destructive truncate" title={error}>
+        <p className={ADMIN_UI.error} title={error}>
           {error}
         </p>
       ) : null}

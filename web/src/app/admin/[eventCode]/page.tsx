@@ -23,7 +23,7 @@ import { AdminRegiaPanel } from "@/components/admin/AdminRegiaPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminTransportBar } from "@/components/admin/AdminTransportBar";
 import { DisplayPreview } from "@/components/admin/DisplayPreview";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { useAnimatorPin } from "@/hooks/useAnimatorPin";
 import { useLoveRouletteSession } from "@/hooks/useLoveRouletteSession";
 import type { EventStats } from "@/lib/musicpro/session";
@@ -317,7 +317,7 @@ export default function AdminDashboardPage() {
       ) : null}
       {runtimeState === "quiz" && !quizState ? (
         <AdminDeckPanel title="Quiz vuoto" collapsible={false}>
-          <Button
+          <AdminButton
             size="sm"
             disabled={controlsDisabled}
             onClick={() =>
@@ -333,7 +333,7 @@ export default function AdminDashboardPage() {
             }
           >
             Carica
-          </Button>
+          </AdminButton>
         </AdminDeckPanel>
       ) : null}
       <AdminNewGamePanel

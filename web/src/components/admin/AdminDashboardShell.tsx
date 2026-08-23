@@ -16,7 +16,8 @@ import {
 import type { EventState } from "@/lib/types";
 import type { SessionSyncStatus } from "@/lib/musicpro/session-sync";
 import { SessionSyncIndicator } from "@/components/session/SessionSyncIndicator";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { AdminButton, adminButtonVariants } from "@/components/admin/AdminButton";
+import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
 import { cn } from "@/lib/utils";
 import { useFullscreen } from "@/hooks/useFullscreen";
 
@@ -94,78 +95,85 @@ export function AdminDashboardShell({
     <div
       ref={containerRef}
       data-admin-fullscreen={isFullscreen || undefined}
-      className="theme-dark-fuchsia w-screen h-screen overflow-hidden bg-background flex flex-col"
+      className={cn(
+        ADMIN_UI.font,
+        "admin-console theme-dark-fuchsia w-screen h-screen overflow-hidden bg-background flex flex-col",
+      )}
     >
-      <header className="shrink-0 h-11 border-b border-border/40 bg-card/80 backdrop-blur-sm px-2 flex items-center gap-2">
+      <header className="shrink-0 h-11 border-b border-white/15 bg-card/80 backdrop-blur-sm px-2 flex items-center gap-2">
         <Link
           href={`/s/${eventCode}`}
-          className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+          className={cn(ADMIN_UI.mono, ADMIN_UI.link, "shrink-0 rounded px-2 py-1 hover:bg-white/10")}
           title={eventCode}
         >
           {eventCode}
         </Link>
 
-        <h1 className="min-w-0 flex-1 truncate text-xs font-bold">{eventTitle}</h1>
+        <h1 className={cn("min-w-0 flex-1 truncate", ADMIN_UI.body, "font-bold")}>
+          {eventTitle}
+        </h1>
 
         <div className="flex items-center gap-2 shrink-0">
           <div
-            className="flex items-center gap-1 rounded-md border border-border/40 bg-black/25 px-2 h-7"
+            className="flex items-center gap-1.5 rounded-lg border-2 border-white/25 bg-white/10 px-2.5 h-9"
             title="Online"
           >
-            <Wifi className="size-3 text-emerald-400" />
-            <span className="text-xs font-bold tabular-nums">{onlineCount}</span>
+            <Wifi className="size-4 text-emerald-300" />
+            <span className={ADMIN_UI.stat}>{onlineCount}</span>
           </div>
 
           <Link
             href={`/admin/${eventCode}/players`}
-            className="flex items-center gap-1 rounded-md border border-border/40 bg-black/25 px-2 h-7 text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors"
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border-2 border-white/25 bg-white/10 px-2.5 h-9",
+              ADMIN_UI.link,
+              "hover:border-primary/50 hover:bg-white/15",
+            )}
             title="Giocatori"
           >
-            <Users className="size-3" />
-            <span className="text-xs font-bold tabular-nums">{participantCount}</span>
+            <Users className="size-4" />
+            <span className={ADMIN_UI.stat}>{participantCount}</span>
           </Link>
 
           {syncStatus ? <SessionSyncIndicator status={syncStatus} /> : null}
 
           {pinRequired && pinReady && onChangePin ? (
-            <Button
+            <AdminButton
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="size-7"
               onClick={onChangePin}
               title="Cambia PIN"
             >
-              <KeyRound className="size-3.5" />
-            </Button>
+              <KeyRound className="size-4" />
+            </AdminButton>
           ) : null}
 
           {supported ? (
-            <Button
+            <AdminButton
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="size-7"
               onClick={() => void toggle()}
               title={isFullscreen ? "Esci fullscreen" : "Fullscreen"}
               aria-pressed={isFullscreen}
             >
               {isFullscreen ? (
-                <Minimize className="size-3.5" />
+                <Minimize className="size-4" />
               ) : (
-                <Maximize className="size-3.5" />
+                <Maximize className="size-4" />
               )}
-            </Button>
+            </AdminButton>
           ) : null}
 
           <Link
             href={displayPath}
             target="_blank"
             rel="noopener noreferrer"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-7 px-2 text-[10px] gap-1")}
+            className={cn(adminButtonVariants({ variant: "outline", size: "default" }), "gap-1.5")}
           >
             PGM
-            <ExternalLink className="size-3 opacity-70" />
+            <ExternalLink className="size-4 opacity-90" />
           </Link>
         </div>
       </header>
@@ -174,8 +182,8 @@ export function AdminDashboardShell({
         <nav
           aria-label="Sezioni"
           className={cn(
-            "shrink-0 border-r border-border/40 bg-card/40 flex flex-col items-center py-1.5 gap-0.5 transition-[width] duration-200",
-            sidebarOpen ? "w-11" : "w-14",
+            "shrink-0 border-r border-white/15 bg-card/40 flex flex-col items-center py-2 gap-1 transition-[width] duration-200",
+            sidebarOpen ? "w-12" : "w-16",
           )}
         >
           {SIDEBAR_TABS.map(({ id, label, icon: Icon }) => {
@@ -186,19 +194,18 @@ export function AdminDashboardShell({
                 type="button"
                 onClick={() => handleTabClick(id)}
                 className={cn(
-                  "flex flex-col items-center justify-center rounded-md transition-colors",
-                  sidebarOpen ? "w-9 h-9 gap-0" : "w-11 h-11 gap-0.5",
-                  isActive
-                    ? "bg-primary/20 text-primary ring-1 ring-primary/35"
-                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                  ADMIN_UI.font,
+                  "flex flex-col items-center justify-center rounded-lg transition-colors",
+                  sidebarOpen ? "w-10 h-10 gap-0" : "w-12 h-12 gap-0.5",
+                  isActive ? ADMIN_UI.navActive : ADMIN_UI.navIdle,
                 )}
                 title={label}
                 aria-current={isActive ? "page" : undefined}
                 aria-expanded={isActive}
               >
-                <Icon className={sidebarOpen ? "size-3.5" : "size-4"} />
+                <Icon className="size-4" />
                 {!sidebarOpen ? (
-                  <span className="text-[7px] font-semibold uppercase tracking-wide leading-none">
+                  <span className={cn(ADMIN_UI.caption, "text-[10px] leading-none font-bold uppercase")}>
                     {label}
                   </span>
                 ) : (
@@ -216,11 +223,10 @@ export function AdminDashboardShell({
                 <div
                   key={phase.id}
                   className={cn(
-                    "w-full text-center rounded px-0.5 py-0.5 font-medium leading-tight truncate",
-                    sidebarOpen ? "text-[6px]" : "text-[7px]",
-                    isActive && "bg-primary/25 text-primary",
-                    !isActive && isPast && "text-muted-foreground/40 line-through",
-                    !isActive && !isPast && "text-muted-foreground/60",
+                    "w-full text-center rounded px-0.5 py-0.5 text-xs font-semibold leading-tight truncate",
+                    isActive && "bg-primary/30 text-white",
+                    !isActive && isPast && "text-white/45 line-through",
+                    !isActive && !isPast && "text-white/80",
                   )}
                   title={phase.short}
                 >
@@ -235,7 +241,7 @@ export function AdminDashboardShell({
           aria-label="Control deck"
           aria-hidden={!sidebarOpen}
           className={cn(
-            "shrink-0 min-h-0 overflow-hidden border-r border-border/40 bg-card/30",
+            "shrink-0 min-h-0 overflow-hidden border-r border-white/15 bg-card/30",
             "transition-[width,opacity] duration-200 ease-out",
             sidebarOpen
               ? "w-[min(19rem,30vw)] opacity-100"
@@ -244,13 +250,13 @@ export function AdminDashboardShell({
         >
           <div className="h-full w-[min(19rem,30vw)] overflow-hidden flex flex-col p-1.5 gap-1">
             <div className="shrink-0 flex items-center justify-between gap-2 px-1 py-0.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/90">
+              <p className={ADMIN_UI.section}>
                 {SIDEBAR_TABS.find((tab) => tab.id === activeTab)?.label}
               </p>
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
-                className="text-[9px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+                className={cn(ADMIN_UI.caption, "font-bold uppercase hover:text-primary transition-colors")}
               >
                 Chiudi
               </button>

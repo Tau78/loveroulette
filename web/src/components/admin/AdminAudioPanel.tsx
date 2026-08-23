@@ -11,7 +11,7 @@ import { useQuizGongAtCountdownEnd } from "@/hooks/useQuizGongAtCountdownEnd";
 import { useCurrentQuizQuestion } from "@/hooks/useQuizQuestions";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { displayUrl, openProjectorWindow } from "@/lib/display/embed";
 
 /** Admin dashboard avvia la colonna sonora al mount (autoplay policy browser). */
@@ -166,7 +166,7 @@ export function AdminAudioPanel({
     >
       <div className="flex flex-wrap gap-1.5">
         {!unlocked ? (
-          <Button
+          <AdminButton
             type="button"
             size="sm"
             disabled={disabled}
@@ -174,9 +174,9 @@ export function AdminAudioPanel({
           >
             <Volume2 className="size-3.5" />
             Avvia colonna sonora
-          </Button>
+          </AdminButton>
         ) : (
-          <Button
+          <AdminButton
             type="button"
             size="sm"
             variant="outline"
@@ -189,9 +189,9 @@ export function AdminAudioPanel({
               <Volume2 className="size-3.5" />
             )}
             {muted ? "Riattiva" : "Silenzia"}
-          </Button>
+          </AdminButton>
         )}
-        <Button
+        <AdminButton
           type="button"
           variant="outline"
           size="sm"
@@ -200,8 +200,8 @@ export function AdminAudioPanel({
         >
           <Monitor className="size-3.5" />
           Apri proiettore
-        </Button>
-        <Button
+        </AdminButton>
+        <AdminButton
           type="button"
           variant="outline"
           size="sm"
@@ -210,7 +210,7 @@ export function AdminAudioPanel({
         >
           <Maximize className="size-3.5" />
           Schermo pieno
-        </Button>
+        </AdminButton>
       </div>
 
       {unlocked ? (

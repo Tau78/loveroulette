@@ -12,7 +12,7 @@ import {
 } from "@/lib/admin/regia-local-media";
 import { setChallengeRegiaBedActive } from "@/lib/admin/challenge-regia-bed";
 import { useChallengeRegiaAudio } from "@/hooks/useChallengeRegiaAudio";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { cn } from "@/lib/utils";
 
 interface AdminChallengeRegiaProps {
@@ -52,7 +52,7 @@ export function AdminChallengeRegia({
           </p>
           <div className="flex flex-wrap gap-1.5">
             {danceOptions.map((track) => (
-              <Button
+              <AdminButton
                 key={track.id}
                 type="button"
                 size="xs"
@@ -62,9 +62,9 @@ export function AdminChallengeRegia({
               >
                 <Music2 className="size-3" />
                 {track.label}
-              </Button>
+              </AdminButton>
             ))}
-            <Button
+            <AdminButton
               type="button"
               size="xs"
               disabled={disabled || !manifestReady}
@@ -72,7 +72,7 @@ export function AdminChallengeRegia({
             >
               <Sparkles className="size-3" />
               Mix 3/4 balli
-            </Button>
+            </AdminButton>
           </div>
         </div>
       ) : null}
@@ -83,7 +83,7 @@ export function AdminChallengeRegia({
             Sottofondo romantico + mazzo fiori Love Roulette a tutto schermo sul
             proiettore.
           </p>
-          <Button
+          <AdminButton
             type="button"
             size="xs"
             disabled={disabled || !manifestReady}
@@ -91,7 +91,7 @@ export function AdminChallengeRegia({
           >
             <Music2 className="size-3" />
             Avvia sottofondo romantico
-          </Button>
+          </AdminButton>
         </div>
       ) : null}
 
@@ -101,7 +101,7 @@ export function AdminChallengeRegia({
             Riproduci i baci famosi sul proiettore. Metti i file MP4 in{" "}
             <code className="font-mono text-[9px]">public/finals/kiss/</code>.
           </p>
-          <Button
+          <AdminButton
             type="button"
             size="xs"
             disabled={disabled}
@@ -117,7 +117,7 @@ export function AdminChallengeRegia({
           >
             <Video className="size-3" />
             Mostra baci famosi
-          </Button>
+          </AdminButton>
         </div>
       ) : null}
 
@@ -127,7 +127,7 @@ export function AdminChallengeRegia({
             Slideshow posizioni sul proiettore. Immagini in{" "}
             <code className="font-mono text-[9px]">public/finals/kamasutra/</code>.
           </p>
-          <Button
+          <AdminButton
             type="button"
             size="xs"
             disabled={disabled}
@@ -142,11 +142,11 @@ export function AdminChallengeRegia({
           >
             <Video className="size-3" />
             Mostra immagini
-          </Button>
+          </AdminButton>
         </div>
       ) : null}
 
-      <Button
+      <AdminButton
         type="button"
         size="xs"
         variant="ghost"
@@ -160,7 +160,7 @@ export function AdminChallengeRegia({
       >
         <StopCircle className="size-3" />
         Stop audio / video prova
-      </Button>
+      </AdminButton>
     </section>
   );
 }

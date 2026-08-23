@@ -12,7 +12,7 @@ import type { VotingMetadata, VotingSessionState } from "@/lib/musicpro/voting";
 import { CHALLENGE_LABELS, type ChallengeId, type EventState } from "@/lib/types";
 import { AdminChallengeRegia } from "@/components/admin/AdminChallengeRegia";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { cn } from "@/lib/utils";
 
 const SHOW_PHASE_LABELS: Record<FinalsShowState["phase"], string> = {
@@ -204,7 +204,7 @@ export function AdminFinalsPanel({
                   {CHALLENGE_LABELS[id]}
                   {done ? " ✓" : ""}
                 </span>
-                <Button
+                <AdminButton
                   variant={active ? "default" : done ? "secondary" : "outline"}
                   size="xs"
                   disabled={
@@ -219,13 +219,13 @@ export function AdminFinalsPanel({
                   onClick={() => void runAction("start_challenge", id)}
                 >
                   {done ? "Replica" : "Avvia"}
-                </Button>
+                </AdminButton>
               </div>
             );
           })}
         </div>
 
-        <Button
+        <AdminButton
           type="button"
           variant="outline"
           size="sm"
@@ -241,7 +241,7 @@ export function AdminFinalsPanel({
         >
           <Trophy className="size-3" />
           Vincitore
-        </Button>
+        </AdminButton>
 
         {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
       </AdminPanelShell>

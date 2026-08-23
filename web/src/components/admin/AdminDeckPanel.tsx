@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
 
 function slugPanelId(title: string): string {
   return title
@@ -115,18 +116,14 @@ export function AdminDeckPanel({
             aria-controls={`admin-deck-panel-body-${resolvedPanelId}`}
           >
             <div className="min-w-0 flex-1">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {title}
-              </h3>
+              <h3 className={ADMIN_UI.section}>{title}</h3>
               {subtitle ? (
-                <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground/75 line-clamp-2">
-                  {subtitle}
-                </p>
+                <p className={cn("mt-0.5 line-clamp-2", ADMIN_UI.caption)}>{subtitle}</p>
               ) : null}
             </div>
             <ChevronDown
               className={cn(
-                "mt-0.5 size-4 shrink-0 text-muted-foreground/70 transition-transform duration-200",
+                "mt-0.5 size-4 shrink-0 text-white/80 transition-transform duration-200",
                 open && "rotate-180",
               )}
               aria-hidden
@@ -134,13 +131,9 @@ export function AdminDeckPanel({
           </button>
         ) : (
           <div className="min-w-0 flex-1">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              {title}
-            </h3>
+            <h3 className={ADMIN_UI.section}>{title}</h3>
             {subtitle ? (
-              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground/75 line-clamp-2">
-                {subtitle}
-              </p>
+              <p className={cn("mt-0.5 line-clamp-2", ADMIN_UI.caption)}>{subtitle}</p>
             ) : null}
           </div>
         )}

@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
 import { animatorAuthHeaders } from "@/lib/admin/animator-api";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import type { GeneratoreMancheDocument } from "@/lib/generatore/types";
 import { GENERATORE_FORMAT_ID } from "@/lib/generatore/types";
 
@@ -129,7 +129,7 @@ export function AdminGeneratorePanel({
       </p>
 
       <div className="flex flex-wrap gap-1.5">
-        <Button
+        <AdminButton
           type="button"
           size="sm"
           variant="outline"
@@ -138,8 +138,8 @@ export function AdminGeneratorePanel({
         >
           <Download className="size-3.5" />
           Esporta manche
-        </Button>
-        <Button
+        </AdminButton>
+        <AdminButton
           type="button"
           size="sm"
           variant="outline"
@@ -148,7 +148,7 @@ export function AdminGeneratorePanel({
         >
           <Upload className="size-3.5" />
           Importa manche
-        </Button>
+        </AdminButton>
         <input
           ref={fileRef}
           type="file"
