@@ -169,7 +169,7 @@ export default function PlayerPlayPage() {
     enabled: joined,
   });
   usePlayerActionQueueFlush(eventSlug, joined);
-  const showResumeOverlay = usePlayerResumeOverlay(syncStatus);
+  const showResumeOverlay = usePlayerResumeOverlay(syncStatus, joined);
 
   const isFinalist = useMemo(() => {
     const pool = finalsShow?.finalists?.length

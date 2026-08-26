@@ -6,13 +6,22 @@ import { shouldHoldResumeOverlay } from "@/lib/player/player-resume-sync";
 
 const TICK_MS = 50;
 
-export function usePlayerResumeOverlay(syncStatus: SessionSyncStatus): boolean {
+export function usePlayerResumeOverlay(
+  syncStatus: SessionSyncStatus,
+  enabled = true,
+): boolean {
   const [visible, setVisible] = useState(false);
   const hiddenAtRef = useRef<number | null>(null);
   const shownAtRef = useRef<number | null>(null);
   const hiddenDurationRef = useRef(0);
 
   useEffect(() => {
+    if (!enabled) {
+      setVisible(false);
+      hiddenAtRef.current = null;
+      return;
+    }
+
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
         hiddenAtRef.current = Date.now();
@@ -52,7 +61,7 @@ export function usePlayerResumeOverlay(syncStatus: SessionSyncStatus): boolean {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     if (!visible) return;
