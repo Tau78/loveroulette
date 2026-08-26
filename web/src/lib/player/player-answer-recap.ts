@@ -23,6 +23,18 @@ export function persistPlayerAnswerRecap(
   }
 }
 
+export function clearPlayerAnswerRecap(
+  eventSlug: string,
+  questionId: string,
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(recapKey(eventSlug, questionId));
+  } catch {
+    // quota / private mode
+  }
+}
+
 export function readPlayerAnswerRecap(
   eventSlug: string,
   questionId: string,

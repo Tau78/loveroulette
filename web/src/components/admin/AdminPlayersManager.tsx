@@ -25,6 +25,7 @@ import {
   updateParticipant,
 } from "@/lib/admin/animator-api";
 import type { AdminParticipantRow } from "@/lib/musicpro/participant-admin";
+import { participantAppearsOnline } from "@/lib/musicpro/presence";
 import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
 import { AdminPinModal } from "@/components/admin/AdminPinModal";
 import { Button } from "@/components/ui/button";
@@ -126,7 +127,7 @@ export function AdminPlayersManager({
   }, [load]);
 
   const onlineCount = useMemo(
-    () => participants.filter((p) => p.is_online).length,
+    () => participants.filter((p) => participantAppearsOnline(p)).length,
     [participants],
   );
 
@@ -560,6 +561,7 @@ export function AdminPlayersManager({
                     {participants.map((player) => {
                       const isEditing = editingId === player.id;
                       const isBusy = busyId === player.id;
+                      const isOnline = participantAppearsOnline(player);
 
                       return (
                         <tr
@@ -571,12 +573,12 @@ export function AdminPlayersManager({
                               variant="outline"
                               className={cn(
                                 "text-[10px] h-5",
-                                player.is_online
+                                isOnline
                                   ? "border-emerald-500/40 text-emerald-400"
                                   : "text-muted-foreground",
                               )}
                             >
-                              {player.is_online ? "Online" : "Offline"}
+                              {isOnline ? "Online" : "Offline"}
                             </Badge>
                           </td>
                           <td className="px-3 py-2">
@@ -671,7 +673,7 @@ export function AdminPlayersManager({
                                 </Button>
                               )}
 
-                              {player.is_online ? (
+                              {isOnline ? (
                                 <Button
                                   type="button"
                                   variant="ghost"

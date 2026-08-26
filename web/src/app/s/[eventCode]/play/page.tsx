@@ -29,7 +29,12 @@ import {
   type StoredParticipantProfile,
 } from "@/lib/player/participant-storage";
 import { SessionSyncIndicator } from "@/components/session/SessionSyncIndicator";
+import { PlayerResyncOverlay } from "@/components/player/PlayerResyncOverlay";
 import { useLoveRouletteSession } from "@/hooks/useLoveRouletteSession";
+import { usePlayerActionQueueFlush } from "@/hooks/usePlayerActionQueueFlush";
+import { usePlayerPresence } from "@/hooks/usePlayerPresence";
+import { usePlayerResumeOverlay } from "@/hooks/usePlayerResumeOverlay";
+import { usePlayerWakeLock } from "@/hooks/usePlayerWakeLock";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { usePlayerEventInfo } from "@/hooks/usePlayerEventInfo";
 import { isEventUuid, normalizeEventSlug } from "@/lib/musicpro/slug";
@@ -96,28 +101,6 @@ async function postJoin(
   return { ok: true, participant: data.participant };
 }
 
-function postPresence(
-  eventSlug: string,
-  participantId: string,
-  online: boolean,
-): void {
-  const body = JSON.stringify({ participantId, online });
-  const url = `/api/events/${encodeURIComponent(eventSlug)}/presence`;
-
-  if (!online && typeof navigator !== "undefined" && navigator.sendBeacon) {
-    const blob = new Blob([body], { type: "application/json" });
-    navigator.sendBeacon(url, blob);
-    return;
-  }
-
-  void fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body,
-    keepalive: !online,
-  }).catch(() => {});
-}
-
 function readAnimatorTestProfile(): StoredParticipantProfile | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
@@ -178,6 +161,15 @@ export default function PlayerPlayPage() {
     enabled: joined && runtimeState === "quiz" && Boolean(quizState),
     driveTicks: false,
   });
+
+  usePlayerWakeLock(joined);
+  usePlayerPresence({
+    eventSlug,
+    participantId,
+    enabled: joined,
+  });
+  usePlayerActionQueueFlush(eventSlug, joined);
+  const showResumeOverlay = usePlayerResumeOverlay(syncStatus);
 
   const isFinalist = useMemo(() => {
     const pool = finalsShow?.finalists?.length
@@ -368,40 +360,6 @@ export default function PlayerPlayPage() {
   }, [eventSlug, performJoin, handleJoinFailure]);
 
   useEffect(() => {
-    if (!joined || !participantId) return;
-
-    postPresence(eventSlug, participantId, true);
-
-    const heartbeat = window.setInterval(() => {
-      postPresence(eventSlug, participantId, true);
-    }, 30_000);
-
-    const onVisibility = () => {
-      postPresence(
-        eventSlug,
-        participantId,
-        document.visibilityState === "visible",
-      );
-    };
-
-    const onPageHide = () => {
-      postPresence(eventSlug, participantId, false);
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pagehide", onPageHide);
-
-    return () => {
-      window.clearInterval(heartbeat);
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pagehide", onPageHide);
-      if (joinedRef.current) {
-        postPresence(eventSlug, participantId, false);
-      }
-    };
-  }, [eventSlug, joined, participantId]);
-
-  useEffect(() => {
     if (!joined || partnerNick) return;
     if (runtimeState === "matching") setWaveMode("spin");
     else if (runtimeState === "extraction") setWaveMode("reveal");
@@ -577,6 +535,8 @@ export default function PlayerPlayPage() {
         {partnerNick ? (
           <CoupleTakeover partnerNick={partnerNick} onDismiss={dismissTakeover} />
         ) : null}
+
+        <PlayerResyncOverlay visible={showResumeOverlay} />
       </PlayerMobileShell>
     );
   }
