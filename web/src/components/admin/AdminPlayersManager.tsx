@@ -28,7 +28,7 @@ import type { AdminParticipantRow } from "@/lib/musicpro/participant-admin";
 import { participantAppearsOnline } from "@/lib/musicpro/presence";
 import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
 import { AdminPinModal } from "@/components/admin/AdminPinModal";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -381,7 +381,7 @@ export function AdminPlayersManager({
               ) : null}
             </div>
             {supported ? (
-              <Button
+              <AdminButton
                 type="button"
                 variant="outline"
                 size="icon-sm"
@@ -402,9 +402,9 @@ export function AdminPlayersManager({
                 ) : (
                   <Maximize className="size-3.5" />
                 )}
-              </Button>
+              </AdminButton>
             ) : null}
-            <Button
+            <AdminButton
               size="sm"
               variant="outline"
               className="h-8 text-xs"
@@ -415,8 +415,8 @@ export function AdminPlayersManager({
               {simulateBusy && simulateMode === "couples"
                 ? "Simulo…"
                 : "10 coppie test"}
-            </Button>
-            <Button
+            </AdminButton>
+            <AdminButton
               size="sm"
               variant="outline"
               className="h-8 text-xs border-primary/35 text-primary"
@@ -427,8 +427,8 @@ export function AdminPlayersManager({
               {simulateBusy && simulateMode === "matching"
                 ? "Matching…"
                 : "→ matching"}
-            </Button>
-            <Button
+            </AdminButton>
+            <AdminButton
               size="sm"
               className="h-8 text-xs"
               disabled={disabled}
@@ -439,7 +439,7 @@ export function AdminPlayersManager({
             >
               <Plus className="size-3.5" />
               Aggiungi
-            </Button>
+            </AdminButton>
           </div>
         </header>
 
@@ -510,20 +510,20 @@ export function AdminPlayersManager({
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
+                <AdminButton
                   size="sm"
                   disabled={disabled || busyId === "__create__" || !newNick.trim()}
                   onClick={() => void handleCreate()}
                 >
                   Salva giocatore
-                </Button>
-                <Button
+                </AdminButton>
+                <AdminButton
                   size="sm"
                   variant="ghost"
                   onClick={() => setShowAdd(false)}
                 >
                   Annulla
-                </Button>
+                </AdminButton>
               </div>
             </section>
           ) : null}
@@ -630,7 +630,7 @@ export function AdminPlayersManager({
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex flex-wrap justify-end gap-1">
-                              <Button
+                              <AdminButton
                                 type="button"
                                 variant="outline"
                                 size="xs"
@@ -640,29 +640,29 @@ export function AdminPlayersManager({
                               >
                                 <Smartphone className="size-3" />
                                 <span className="hidden sm:inline">Test</span>
-                              </Button>
+                              </AdminButton>
 
                               {isEditing ? (
                                 <>
-                                  <Button
+                                  <AdminButton
                                     type="button"
                                     size="xs"
                                     disabled={disabled || isBusy}
                                     onClick={() => void saveEdit(player.id)}
                                   >
                                     Salva
-                                  </Button>
-                                  <Button
+                                  </AdminButton>
+                                  <AdminButton
                                     type="button"
                                     variant="ghost"
                                     size="xs"
                                     onClick={() => setEditingId(null)}
                                   >
                                     Annulla
-                                  </Button>
+                                  </AdminButton>
                                 </>
                               ) : (
-                                <Button
+                                <AdminButton
                                   type="button"
                                   variant="ghost"
                                   size="xs"
@@ -670,11 +670,11 @@ export function AdminPlayersManager({
                                   onClick={() => startEdit(player)}
                                 >
                                   <Pencil className="size-3" />
-                                </Button>
+                                </AdminButton>
                               )}
 
                               {isOnline ? (
-                                <Button
+                                <AdminButton
                                   type="button"
                                   variant="ghost"
                                   size="xs"
@@ -683,10 +683,10 @@ export function AdminPlayersManager({
                                   onClick={() => void handleForceOffline(player.id)}
                                 >
                                   <WifiOff className="size-3" />
-                                </Button>
+                                </AdminButton>
                               ) : null}
 
-                              <Button
+                              <AdminButton
                                 type="button"
                                 variant="ghost"
                                 size="xs"
@@ -700,7 +700,7 @@ export function AdminPlayersManager({
                                 }}
                               >
                                 <Trash2 className="size-3 text-destructive" />
-                              </Button>
+                              </AdminButton>
                             </div>
                           </td>
                         </tr>

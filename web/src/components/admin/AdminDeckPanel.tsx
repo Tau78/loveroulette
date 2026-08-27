@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
+import { useAdminDeckAccordion } from "@/components/admin/AdminDeckAccordion";
 
 function slugPanelId(title: string): string {
   return title
@@ -18,6 +20,10 @@ function slugPanelId(title: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function panelTooltip(title: string, subtitle?: string): string {
+  return subtitle ? `${title} — ${subtitle}` : title;
 }
 
 interface AdminPanelShellProps {
@@ -74,13 +80,27 @@ export function AdminDeckPanel({
 }: AdminDeckPanelProps) {
   const resolvedPanelId = panelId ?? slugPanelId(title);
   const storageKey = `admin-deck-panel:${resolvedPanelId}`;
-  const [open, setOpen] = useState(() =>
+  const accordion = useAdminDeckAccordion();
+  const [localOpen, setLocalOpen] = useState(() =>
     readStoredOpen(storageKey, defaultOpen),
   );
 
+  const usesAccordion = collapsible && accordion != null;
+  const open = usesAccordion
+    ? accordion.isOpen(resolvedPanelId)
+    : collapsible
+      ? localOpen
+      : true;
+
+  const tooltip = panelTooltip(title, subtitle);
+
   const toggle = () => {
     if (!collapsible) return;
-    setOpen((prev) => {
+    if (usesAccordion) {
+      accordion.togglePanel(resolvedPanelId);
+      return;
+    }
+    setLocalOpen((prev) => {
       const next = !prev;
       try {
         sessionStorage.setItem(storageKey, next ? "1" : "0");
@@ -94,54 +114,40 @@ export function AdminDeckPanel({
   return (
     <section
       className={cn(
-        "rounded-lg border overflow-hidden",
+        "shrink-0 rounded-lg border flex flex-col min-h-0",
+        open && usesAccordion && "flex-1 min-h-0",
         accent
           ? "border-primary/25 bg-primary/[0.04]"
           : "border-border/40 bg-card/50",
         className,
       )}
     >
-      <header className="flex items-start justify-between gap-2 border-b border-border/30 bg-black/25 px-3 py-2">
+      <header className="shrink-0 flex items-center justify-between gap-2 border-b border-border/30 bg-black/25 px-3 py-2">
         {collapsible ? (
           <button
             type="button"
             className={cn(
-              "flex min-w-0 flex-1 items-start gap-2 text-left",
+              "flex min-w-0 flex-1 items-center gap-2 text-left",
               "rounded-sm transition-colors hover:bg-white/[0.03]",
               "-m-1 p-1",
             )}
             onClick={toggle}
             aria-expanded={open}
             aria-controls={`admin-deck-panel-body-${resolvedPanelId}`}
+            title={tooltip}
           >
-            <div className="min-w-0 flex-1">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {title}
-              </h3>
-              {subtitle ? (
-                <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground/75 line-clamp-2">
-                  {subtitle}
-                </p>
-              ) : null}
-            </div>
+            <h3 className={cn(ADMIN_UI.section, "min-w-0 flex-1 truncate")}>{title}</h3>
             <ChevronDown
               className={cn(
-                "mt-0.5 size-4 shrink-0 text-muted-foreground/70 transition-transform duration-200",
+                "size-4 shrink-0 text-white/80 transition-transform duration-200",
                 open && "rotate-180",
               )}
               aria-hidden
             />
           </button>
         ) : (
-          <div className="min-w-0 flex-1">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              {title}
-            </h3>
-            {subtitle ? (
-              <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground/75 line-clamp-2">
-                {subtitle}
-              </p>
-            ) : null}
+          <div className="min-w-0 flex-1" title={tooltip}>
+            <h3 className={cn(ADMIN_UI.section, "truncate")}>{title}</h3>
           </div>
         )}
 
@@ -155,7 +161,10 @@ export function AdminDeckPanel({
       {(!collapsible || open) ? (
         <div
           id={`admin-deck-panel-body-${resolvedPanelId}`}
-          className="p-3 space-y-2.5"
+          className={cn(
+            "p-2 space-y-2 overflow-y-auto overscroll-contain min-h-0",
+            usesAccordion && open && "flex-1",
+          )}
         >
           {children}
         </div>

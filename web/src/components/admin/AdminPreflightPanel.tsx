@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import { Copy } from "lucide-react";
 import { useEventQuestionCount } from "@/hooks/useEventQuestionCount";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { displayPath, displayUrl } from "@/lib/display/embed";
 import { cn } from "@/lib/utils";
+import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
 
 const MIN_QUESTIONS_READY = 24;
 const DEFAULT_QUIZ_TOTAL = 27;
@@ -101,8 +102,6 @@ export function AdminPreflightPanel({
     audioTraffic === "green" &&
     onlineTraffic === "green";
 
-  const subtitle = allGreen ? "Pronto" : "Check";
-
   async function copyProjectorUrl() {
     try {
       await navigator.clipboard.writeText(projectorFullUrl);
@@ -122,24 +121,28 @@ export function AdminPreflightPanel({
     <AdminPanelShell
       variant={variant}
       title="Preflight"
-      subtitle={subtitle}
       cardTitle="Checklist pre-serata"
-      collapsible={false}
+      cardDescription={
+        allGreen
+          ? "Tutti i check verdi — pronto per iniziare"
+          : "Verifica domande caricate, audio sbloccato e presenze online"
+      }
+      defaultOpen={false}
     >
       <div className="grid grid-cols-2 gap-1.5">
         <div className="flex items-center gap-1.5 rounded border border-border/30 px-2 py-1.5">
           <StatusDot status={domandeStatus} />
           <div className="min-w-0">
-            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Domande</p>
-            <p className="text-[11px] font-semibold tabular-nums">{domandeLabel}</p>
+            <p className={ADMIN_UI.label}>Domande</p>
+            <p className={ADMIN_UI.stat}>{domandeLabel}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 rounded border border-border/30 px-2 py-1.5">
           <StatusDot status={audioTraffic} />
           <div className="min-w-0">
-            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Audio</p>
-            <p className="text-[11px] font-semibold truncate">
+            <p className={ADMIN_UI.label}>Audio</p>
+            <p className={cn(ADMIN_UI.stat, "truncate")}>
               {soundtrackUnlocked === true
                 ? "OK"
                 : soundtrackUnlocked === false
@@ -152,25 +155,25 @@ export function AdminPreflightPanel({
         <div className="flex items-center gap-1.5 rounded border border-border/30 px-2 py-1.5">
           <StatusDot status={onlineTraffic} />
           <div className="min-w-0">
-            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Online</p>
-            <p className="text-[11px] font-semibold tabular-nums">{onlineCount}</p>
+            <p className={ADMIN_UI.label}>Online</p>
+            <p className={ADMIN_UI.stat}>{onlineCount}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 rounded border border-border/30 px-2 py-1.5">
           <StatusDot status={iscrittiTraffic} />
           <div className="min-w-0">
-            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Iscritti</p>
-            <p className="text-[11px] font-semibold tabular-nums">{participantCount}</p>
+            <p className={ADMIN_UI.label}>Iscritti</p>
+            <p className={ADMIN_UI.stat}>{participantCount}</p>
           </div>
         </div>
       </div>
 
       <div className="flex gap-1">
-        <code className="min-w-0 flex-1 truncate rounded border border-border/40 bg-background/30 px-2 py-1 font-mono text-[9px]">
+        <code className={cn(ADMIN_UI.mono, "min-w-0 flex-1 truncate rounded-lg border-2 border-white/25 bg-white/10 px-2 py-1.5 h-9 flex items-center")}>
           {projectorPath}
         </code>
-        <Button
+        <AdminButton
           type="button"
           variant="outline"
           size="sm"
@@ -181,7 +184,7 @@ export function AdminPreflightPanel({
         >
           <Copy className="size-3" />
           {copied ? "OK" : "Copia"}
-        </Button>
+        </AdminButton>
       </div>
     </AdminPanelShell>
   );

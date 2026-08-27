@@ -15,7 +15,7 @@ import {
   Maximize,
   PictureInPicture2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import {
   Card,
   CardContent,
@@ -128,24 +128,24 @@ function PreviewToolbar({
   return (
     <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
       {detached ? (
-        <Button type="button" variant="outline" size="xs" onClick={onAttach}>
+        <AdminButton type="button" variant="outline" size="xs" onClick={onAttach}>
           <LayoutPanelTop />
           Riattacca
-        </Button>
+        </AdminButton>
       ) : (
-        <Button type="button" variant="outline" size="xs" onClick={onDetach}>
+        <AdminButton type="button" variant="outline" size="xs" onClick={onDetach}>
           <PictureInPicture2 />
           Stacca
-        </Button>
+        </AdminButton>
       )}
-      <Button type="button" variant="ghost" size="xs" onClick={onOpenWindow}>
+      <AdminButton type="button" variant="ghost" size="xs" onClick={onOpenWindow}>
         <ExternalLink />
         Apri in finestra
-      </Button>
-      <Button type="button" variant="ghost" size="xs" onClick={onOpenFullscreen}>
+      </AdminButton>
+      <AdminButton type="button" variant="ghost" size="xs" onClick={onOpenFullscreen}>
         <Maximize />
         Schermo pieno
-      </Button>
+      </AdminButton>
     </div>
   );
 }
@@ -401,10 +401,10 @@ export function DisplayPreview({
         <p className="text-xs text-muted-foreground">
           Anteprima staccata — fluttua sopra la dashboard.
         </p>
-        <Button type="button" variant="outline" size="sm" onClick={handleAttach}>
+        <AdminButton type="button" variant="outline" size="sm" onClick={handleAttach}>
           <LayoutPanelTop />
           Riattacca
-        </Button>
+        </AdminButton>
       </div>
     ) : (
       <div

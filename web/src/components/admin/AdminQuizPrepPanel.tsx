@@ -13,7 +13,7 @@ import {
 } from "@/components/admin/AdminQuizSetupFields";
 import { useEventQuestionCount } from "@/hooks/useEventQuestionCount";
 import type { QuizSessionState, QuizSetupPrefs } from "@/lib/musicpro/quiz-state";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 
 interface AdminQuizPrepPanelProps {
   eventCode: string;

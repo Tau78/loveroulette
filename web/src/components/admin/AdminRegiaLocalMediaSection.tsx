@@ -10,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { useRegiaLocalMediaController } from "@/hooks/useRegiaLocalMediaController";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 
 interface AdminRegiaLocalMediaSectionProps {
   eventCode: string;
@@ -48,17 +48,10 @@ export function AdminRegiaLocalMediaSection({
   }
 
   return (
-    <section className="space-y-2">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/90">
-        Media locale
-      </p>
-
-      <p className="text-[10px] leading-snug text-muted-foreground">
-        Seleziona una cartella sul PC e mandala in loop sul proiettore (stesso
-        browser). I video partono muti per non coprire la colonna sonora del
-        gioco.
-      </p>
-
+    <section
+      className="space-y-2"
+      title="Seleziona cartella sul PC e mandala in loop sul proiettore (stesso browser). Video muti per non coprire la colonna sonora."
+    >
       {!supported ? (
         <p className="text-xs text-destructive">
           Browser non supportato per la sincronizzazione locale.
@@ -81,8 +74,15 @@ export function AdminRegiaLocalMediaSection({
         }}
       />
 
-      <div className="flex flex-wrap gap-1.5">
-        <Button
+      <div
+        className="flex flex-wrap gap-1.5"
+        title={
+          folderName
+            ? `${folderName} · ${itemCount} file · ${playing ? "in riproduzione" : "in pausa"} · ${muted ? "muto" : "audio attivo"}`
+            : undefined
+        }
+      >
+        <AdminButton
           type="button"
           size="sm"
           variant="outline"
@@ -91,12 +91,12 @@ export function AdminRegiaLocalMediaSection({
         >
           <FolderOpen className="size-3.5" />
           Apri cartella
-        </Button>
+        </AdminButton>
 
         {folderName ? (
           <>
             {!playing ? (
-              <Button
+              <AdminButton
                 type="button"
                 size="sm"
                 disabled={disabled || itemCount === 0}
@@ -104,9 +104,9 @@ export function AdminRegiaLocalMediaSection({
               >
                 <Play className="size-3.5" />
                 Play
-              </Button>
+              </AdminButton>
             ) : (
-              <Button
+              <AdminButton
                 type="button"
                 size="sm"
                 variant="outline"
@@ -115,10 +115,10 @@ export function AdminRegiaLocalMediaSection({
               >
                 <Pause className="size-3.5" />
                 Stop
-              </Button>
+              </AdminButton>
             )}
 
-            <Button
+            <AdminButton
               type="button"
               size="sm"
               variant={muted ? "secondary" : "outline"}
@@ -136,9 +136,9 @@ export function AdminRegiaLocalMediaSection({
                 <Volume2 className="size-3.5" />
               )}
               {muted ? "Muto" : "Audio on"}
-            </Button>
+            </AdminButton>
 
-            <Button
+            <AdminButton
               type="button"
               size="sm"
               variant="ghost"
@@ -147,19 +147,10 @@ export function AdminRegiaLocalMediaSection({
             >
               <X className="size-3.5" />
               Chiudi
-            </Button>
+            </AdminButton>
           </>
         ) : null}
       </div>
-
-      {folderName ? (
-        <p className="text-[10px] text-muted-foreground font-mono truncate">
-          {folderName} · {itemCount}{" "}
-          {itemCount === 1 ? "file" : "file"} ·{" "}
-          {playing ? "in riproduzione" : "in pausa"} ·{" "}
-          {muted ? "muto" : "audio attivo"}
-        </p>
-      ) : null}
     </section>
   );
 }

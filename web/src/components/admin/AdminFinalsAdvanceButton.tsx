@@ -2,7 +2,7 @@
 
 import { ChevronRight } from "lucide-react";
 import type { FinalsShowState } from "@/lib/musicpro/finals-show";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { cn } from "@/lib/utils";
 
 export function finalsAdvanceState(
@@ -80,7 +80,7 @@ export function AdminFinalsAdvanceButton({
         className,
       )}
     >
-      <Button
+      <AdminButton
         type="button"
         size="lg"
         className={cn(
@@ -93,7 +93,7 @@ export function AdminFinalsAdvanceButton({
       >
         <ChevronRight className="size-5 stroke-[2.5]" />
         AVANTI
-      </Button>
+      </AdminButton>
       {hint ? (
         <p className="mt-1.5 text-center text-[11px] text-muted-foreground tabular-nums">
           {hint}

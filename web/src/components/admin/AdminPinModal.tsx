@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import {
   Card,
   CardContent,
@@ -83,9 +83,9 @@ export function AdminPinModal({
                 {error}
               </p>
             ) : null}
-            <Button type="submit" className="w-full" disabled={verifying}>
+            <AdminButton type="submit" className="w-full" disabled={verifying}>
               {verifying ? "Verifica…" : "Entra in regia"}
-            </Button>
+            </AdminButton>
           </form>
         </CardContent>
       </Card>

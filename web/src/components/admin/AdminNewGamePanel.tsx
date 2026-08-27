@@ -8,7 +8,7 @@ import {
 } from "@/lib/admin/animator-api";
 import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { Label } from "@/components/ui/label";
 
 interface AdminNewGamePanelProps {
@@ -78,7 +78,8 @@ export function AdminNewGamePanel({
       variant={variant}
       title="Reset"
       cardTitle="Nuova partita"
-      collapsible={false}
+      collapsible={variant === "deck"}
+      defaultOpen={false}
     >
       <label className="flex items-center gap-2 cursor-pointer">
         <input
@@ -93,7 +94,7 @@ export function AdminNewGamePanel({
         </Label>
       </label>
 
-      <Button
+      <AdminButton
         type="button"
         variant="outline"
         size="sm"
@@ -106,7 +107,7 @@ export function AdminNewGamePanel({
       >
         <RotateCcw className="size-3.5" />
         Nuova partita
-      </Button>
+      </AdminButton>
 
       <AdminConfirmDialog
         open={confirmOpen}

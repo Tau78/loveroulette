@@ -2,6 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
 
 const MIN_QUESTION_SECONDS = 5;
 const MAX_QUESTION_SECONDS = 120;
@@ -39,13 +40,13 @@ export function AdminQuizSetupFields({
       )}
     >
       <div className="space-y-1">
-        <Label htmlFor="quiz-question-count" className="text-[10px] uppercase tracking-wide">
+        <Label htmlFor="quiz-question-count" className={ADMIN_UI.label}>
           Numero domande
         </Label>
         {questionCountReadOnly ? (
           <p
             id="quiz-question-count"
-            className="rounded-md border border-input/40 bg-input/20 px-2 py-1 text-xs tabular-nums"
+            className={cn(ADMIN_UI.stat, "rounded-lg border-2 border-white/25 bg-white/10 px-2 py-1.5 h-9 flex items-center")}
           >
             {questionCount}
           </p>
@@ -58,7 +59,7 @@ export function AdminQuizSetupFields({
               const value = Number(event.target.value);
               if (Number.isFinite(value)) onQuestionCountChange(value);
             }}
-            className="block w-full rounded-md border border-input bg-input/30 px-2 py-1 text-xs"
+            className={cn(ADMIN_UI.select, "w-full")}
           >
             {Array.from({ length: maxQuestions }, (_, index) => {
               const value = index + 1;
@@ -72,18 +73,16 @@ export function AdminQuizSetupFields({
           </select>
         )}
         {!questionCountReadOnly ? (
-          <p className="text-[10px] text-muted-foreground tabular-nums">
+          <p className={cn(ADMIN_UI.caption, "tabular-nums")}>
             Caricate: {availableQuestionCount}
           </p>
         ) : (
-          <p className="text-[10px] text-muted-foreground">
-            Fisso per questa partita
-          </p>
+          <p className={ADMIN_UI.caption}>Fisso per questa partita</p>
         )}
       </div>
 
       <div className="space-y-1">
-        <Label htmlFor="quiz-question-seconds" className="text-[10px] uppercase tracking-wide">
+        <Label htmlFor="quiz-question-seconds" className={ADMIN_UI.label}>
           Secondi per domanda
         </Label>
         <input
@@ -97,7 +96,7 @@ export function AdminQuizSetupFields({
             onQuestionSecondsChange(event.target.value);
           }}
           onBlur={onQuestionSecondsBlur}
-          className="block w-full rounded-md border border-input bg-input/30 px-2 py-1 text-xs tabular-nums"
+          className={cn(ADMIN_UI.input, "w-full tabular-nums")}
         />
       </div>
     </div>

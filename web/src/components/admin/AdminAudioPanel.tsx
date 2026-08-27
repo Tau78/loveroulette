@@ -11,7 +11,7 @@ import { useQuizGongAtCountdownEnd } from "@/hooks/useQuizGongAtCountdownEnd";
 import { useCurrentQuizQuestion } from "@/hooks/useQuizQuestions";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
-import { Button } from "@/components/ui/button";
+import { AdminButton } from "@/components/admin/AdminButton";
 import { displayUrl, openProjectorWindow } from "@/lib/display/embed";
 
 /** Admin dashboard avvia la colonna sonora al mount (autoplay policy browser). */
@@ -59,7 +59,6 @@ export function AdminAudioPanel({
   const {
     unlocked,
     muted,
-    currentTrackId,
     loadError,
     missingFilesWarning,
     unlock,
@@ -161,12 +160,11 @@ export function AdminAudioPanel({
       variant={variant}
       title="Audio & proiettore"
       cardTitle="Audio & proiettore"
-      subtitle="Audio da questo dispositivo · proiettore solo grafica"
-      cardDescription="La colonna sonora esce da questo dispositivo (PC/tablet animatore). Il proiettore mostra solo la grafica."
+      cardDescription="Colonna sonora da questo dispositivo. Il proiettore mostra solo grafica."
     >
       <div className="flex flex-wrap gap-1.5">
         {!unlocked ? (
-          <Button
+          <AdminButton
             type="button"
             size="sm"
             disabled={disabled}
@@ -174,9 +172,9 @@ export function AdminAudioPanel({
           >
             <Volume2 className="size-3.5" />
             Avvia colonna sonora
-          </Button>
+          </AdminButton>
         ) : (
-          <Button
+          <AdminButton
             type="button"
             size="sm"
             variant="outline"
@@ -189,19 +187,20 @@ export function AdminAudioPanel({
               <Volume2 className="size-3.5" />
             )}
             {muted ? "Riattiva" : "Silenzia"}
-          </Button>
+          </AdminButton>
         )}
-        <Button
+        <AdminButton
           type="button"
           variant="outline"
           size="sm"
           disabled={disabled}
+          title={projectorUrl}
           onClick={openDisplayWindow}
         >
           <Monitor className="size-3.5" />
           Apri proiettore
-        </Button>
-        <Button
+        </AdminButton>
+        <AdminButton
           type="button"
           variant="outline"
           size="sm"
@@ -210,21 +209,8 @@ export function AdminAudioPanel({
         >
           <Maximize className="size-3.5" />
           Schermo pieno
-        </Button>
+        </AdminButton>
       </div>
-
-      {unlocked ? (
-        <p className="text-[11px] text-muted-foreground">
-          Track:{" "}
-          <span className="font-mono text-foreground/80">
-            {currentTrackId ?? "—"}
-          </span>
-        </p>
-      ) : null}
-
-      <p className="text-[10px] text-muted-foreground font-mono break-all leading-relaxed">
-        {projectorUrl}
-      </p>
 
       {missingFilesWarning ? (
         <p className="text-xs text-amber-600 dark:text-amber-500">
