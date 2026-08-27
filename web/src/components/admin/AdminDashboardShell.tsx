@@ -148,6 +148,12 @@ export function AdminDashboardShell({
           ) : null}
 
           <Link
+            href={`/admin/${eventCode}/serata`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-7 px-2 text-[10px]")}
+          >
+            Serata
+          </Link>
+          <Link
             href={displayPath}
             target="_blank"
             rel="noopener noreferrer"
