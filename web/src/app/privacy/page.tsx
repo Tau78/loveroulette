@@ -1,0 +1,86 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy — Love Roulette",
+  description: "Informativa sulla privacy della plancia Love Roulette",
+  robots: { index: true, follow: true },
+};
+
+export default function PrivacyPage() {
+  return (
+    <main className="min-h-full bg-[#0d0d12] text-white px-6 py-12">
+      <article className="mx-auto max-w-2xl space-y-6 text-[17px] leading-relaxed text-[#e8e8ef]">
+        <p className="text-sm font-semibold uppercase tracking-wider text-[#E91E8C]">
+          Love Roulette
+        </p>
+        <h1
+          className="text-3xl font-bold text-white"
+          style={{ fontFamily: "var(--font-display), serif" }}
+        >
+          Informativa sulla privacy
+        </h1>
+        <p className="text-[#A0A0B0]">Ultimo aggiornamento: 27 agosto 2026</p>
+
+        <p>
+          Love Roulette è una plancia per l’animatore di una serata live in
+          sala. Non è un casinò e non è un gioco d’azzardo. Comanda quiz,
+          proiettore e telefoni dei partecipanti.
+        </p>
+
+        <h2 className="text-xl font-semibold text-white pt-2">Chi gestisce i dati</h2>
+        <p>
+          Titolare: Mauro Andreoni (MusicPro Eventi), team Apple Individual
+          YSU7PL673A. Contatto: andreoni.mauro@gmail.com.
+        </p>
+
+        <h2 className="text-xl font-semibold text-white pt-2">App iPhone e iPad</h2>
+        <p>
+          L’app apre la dashboard web della serata. Sul dispositivo restano
+          solo il codice serata e l’indirizzo del sito, per non riscriverli
+          ogni volta. Non creiamo un account Apple o un profilo utente
+          nell’app. Non c’è registrazione, non c’è “Elimina account”.
+        </p>
+
+        <h2 className="text-xl font-semibold text-white pt-2">Sito della serata</h2>
+        <p>
+          Proiettore e telefoni usano lo stesso sito. L’animatore sblocca la
+          dashboard con il PIN della serata. I partecipanti che entrano dal
+          telefono possono lasciare un soprannome e le risposte al quiz di
+          quella serata. Servono solo a far girare il gioco in sala.
+        </p>
+
+        <h2 className="text-xl font-semibold text-white pt-2">Cosa non facciamo</h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Non vendiamo dati</li>
+          <li>Non mostriamo pubblicità</li>
+          <li>Non usiamo tracciamento pubblicitario (ATT)</li>
+          <li>Non chiediamo posizione, fotocamera o microfono nell’app</li>
+          <li>Non ci sono acquisti in-app né denaro vero</li>
+        </ul>
+
+        <h2 className="text-xl font-semibold text-white pt-2">Conservazione</h2>
+        <p>
+          Codice serata e host restano sul dispositivo finché non li cambi o
+          disinstalli l’app. I dati della serata restano sul backend finché
+          l’organizzatore tiene aperto l’evento.
+        </p>
+
+        <h2 className="text-xl font-semibold text-white pt-2">Apple</h2>
+        <p>
+          Quando scarichi o aggiorni l’app, Apple tratta i dati previsti
+          dall’App Store. La connessione al sito usa solo HTTPS.
+        </p>
+
+        <h2 className="text-xl font-semibold text-white pt-2">Bambini</h2>
+        <p>
+          L’app è per chi conduce una serata per adulti. Non raccogliamo
+          dati di minori di proposito.
+        </p>
+
+        <p className="text-[#A0A0B0] pt-4">
+          Se questa informativa cambia, aggiorniamo la data in alto.
+        </p>
+      </article>
+    </main>
+  );
+}

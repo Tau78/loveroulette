@@ -2,13 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CasaProjector } from "@/components/admin/casa/CasaProjector";
+import type { CasaSpotlight } from "@/components/admin/casa/CasaPlayerSpotlight";
 import { CasaPrep } from "@/components/admin/casa/CasaPrep";
 import { CasaQuestions } from "@/components/admin/casa/CasaQuestions";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
+  DEFAULT_CASA_CLOCK,
+  formatElapsed,
+  formatExact,
+  loadClock,
+  saveClock,
+  type CasaClockPrefs,
+} from "@/lib/admin/casa-clock";
+import {
   CASA_PAD_HITS,
-  playCasaPadHit,
   prefetchCasaPadHits,
+  toggleCasaPadHit,
   type CasaPadHitId,
 } from "@/lib/admin/casa-pad-sfx";
 import { avantiLabel, stepAvanti } from "@/lib/admin/casa-avanti";
@@ -64,14 +73,28 @@ type Panel =
   | "msg"
   | "screen"
   | "gear"
+  | "clock"
   | null;
 
-const HEART_LOGO = "/grafiche/logo-transparent.png";
+const AVATAR_M = "/grafiche/avatar-m.png";
+const AVATAR_F = "/grafiche/avatar-f.png";
 
-function CasaFace({ photo, nick }: { photo?: string; nick?: string }) {
+function defaultFace(gender?: Gender) {
+  return gender === "F" ? AVATAR_F : AVATAR_M;
+}
+
+function CasaFace({
+  photo,
+  nick,
+  gender,
+}: {
+  photo?: string;
+  nick?: string;
+  gender?: Gender;
+}) {
   return (
     <span className="casa-face">
-      <img src={photo || HEART_LOGO} alt={nick ?? ""} className={photo ? undefined : "casa-face-logo"} />
+      <img src={photo || defaultFace(gender)} alt={nick ?? ""} />
     </span>
   );
 }
@@ -206,15 +229,13 @@ function isAudioFile(file: File) {
 }
 
 function PadHits({
-  hit,
+  active,
   muted,
-  volume,
-  onHit,
+  onToggle,
 }: {
-  hit: string | null;
+  active: ReadonlySet<string>;
   muted: boolean;
-  volume: number;
-  onHit: (id: CasaPadHitId) => void;
+  onToggle: (id: CasaPadHitId) => void;
 }) {
   return (
     <div className="casa-pad">
@@ -223,11 +244,10 @@ function PadHits({
           key={p.id}
           type="button"
           className="casa-pad-btn"
-          data-on={hit === p.id ? "1" : undefined}
+          data-on={active.has(p.id) ? "1" : undefined}
           onClick={() => {
             if (muted) return;
-            playCasaPadHit(p.id, volume);
-            onHit(p.id);
+            onToggle(p.id);
           }}
         >
           {p.label}
@@ -255,7 +275,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [killAsk, setKillAsk] = useState(false);
   const [vols, setVols] = useState({ sigla: 70, bed: 45, fx: 55 });
-  const [hit, setHit] = useState<string | null>(null);
+  const [hits, setHits] = useState<Set<CasaPadHitId>>(() => new Set());
   const [screen, setScreen] = useState("loop");
   const [msgFilter, setMsgFilter] = useState(false);
   const [msgs, setMsgs] = useState([
@@ -266,7 +286,12 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const [msgQueue, setMsgQueue] = useState<
     { id: string; ini: string; who: string; text: string; photo?: string; say?: boolean }[]
   >([]);
-  const [clock, setClock] = useState("20:00:00");
+  const [spotlight, setSpotlight] = useState<CasaSpotlight | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [clockPrefs, setClockPrefs] = useState<CasaClockPrefs>(() => ({
+    ...DEFAULT_CASA_CLOCK,
+    originMs: Date.now(),
+  }));
   const [mute, setMute] = useState<Record<(typeof FADERS)[number]["id"], boolean>>({
     sigla: false,
     bed: false,
@@ -297,22 +322,14 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }, []);
 
   useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      setClock(
-        [now.getHours(), now.getMinutes(), now.getSeconds()]
-          .map((n) => String(n).padStart(2, "0"))
-          .join(":"),
-      );
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
     setSlides(loadSlides(eventCode));
     setPrep(loadPrep(eventCode));
+    setClockPrefs(loadClock(eventCode));
   }, [eventCode]);
 
   const flash = msgQueue[0] ?? null;
@@ -324,6 +341,12 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     }, 10_000);
     return () => window.clearTimeout(id);
   }, [flash]);
+
+  useEffect(() => {
+    if (!spotlight) return;
+    const id = window.setTimeout(() => setSpotlight(null), 8_000);
+    return () => window.clearTimeout(id);
+  }, [spotlight]);
 
   useEffect(() => {
     if (sigla !== "warn") return;
@@ -473,6 +496,17 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     });
   }
 
+  function patchClock(patch: Partial<CasaClockPrefs>) {
+    setClockPrefs((prev) => {
+      const next = { ...prev, ...patch };
+      saveClock(eventCode, next);
+      return next;
+    });
+  }
+
+  const exactNow = formatExact(now);
+  const elapsedNow = formatElapsed(now - clockPrefs.originMs);
+
   const picked = guests.find((g) => g.id === pickedId) ?? null;
 
   function patchGuest(id: string, patch: Partial<Guest>) {
@@ -499,9 +533,20 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     );
   }
 
-  function firePad(id: CasaPadHitId) {
-    setHit(id);
-    window.setTimeout(() => setHit((cur) => (cur === id ? null : cur)), 220);
+  function togglePad(id: CasaPadHitId) {
+    const on = toggleCasaPadHit(id, vols.fx / 100, () => {
+      setHits((cur) => {
+        const next = new Set(cur);
+        next.delete(id);
+        return next;
+      });
+    });
+    setHits((cur) => {
+      const next = new Set(cur);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   }
 
   const phaseLive = (
@@ -556,7 +601,6 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     setLeft((prev) => (beat === "quiz" ? Math.min(prev, n) : n));
   }
 
-  const quizDone = manche > 0 ? Math.min(1, Math.max(0, (manche - left) / manche)) : 0;
   const mutedWho = new Set(
     guests.filter((g) => g.muted).map((g) => g.nick.trim().toLowerCase()),
   );
@@ -603,7 +647,13 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   return (
     <div className="casa">
       <header className="casa-top">
-        <p className="casa-title">{prep.venueName || eventCode}</p>
+        <button
+          type="button"
+          className="casa-title"
+          onClick={() => setOpen("prep")}
+        >
+          {prep.venueName || eventCode}
+        </button>
         <div className="casa-status">
           <div className="casa-status-side">
             <span>
@@ -613,19 +663,25 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
               In sala <b>{guests.length}</b>
             </span>
           </div>
-          <div
-            className="casa-prog"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={manche}
-            aria-valuenow={manche - left}
-            aria-label="Avanzamento domande"
+          <button
+            type="button"
+            className="casa-status-time"
+            onClick={() => setOpen("clock")}
           >
-            <i style={{ width: `${quizDone * 100}%` }} />
-          </div>
-          <span className="casa-status-time">
-            Tempo <b>{clock}</b>
-          </span>
+            {clockPrefs.showElapsed ? (
+              <span>
+                Tempo <b>{elapsedNow}</b>
+              </span>
+            ) : null}
+            {clockPrefs.showExact ? (
+              <span>
+                Ora esatta <b>{exactNow}</b>
+              </span>
+            ) : null}
+            {!clockPrefs.showElapsed && !clockPrefs.showExact ? (
+              <span>Tempo</span>
+            ) : null}
+          </button>
         </div>
       </header>
 
@@ -656,16 +712,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                       setKillAsk(false);
                     }}
                   >
-                    <CasaFace photo={g.photo} nick={g.nick} />
+                    <CasaFace photo={g.photo} nick={g.nick} gender={g.gender} />
                     <span className="casa-slot-nick">{g.nick}</span>
-                    <span className="casa-slot-meta">
-                      {g.score !== 0 ? (
-                        <em data-neg={g.score < 0 ? "1" : undefined}>
-                          {g.score > 0 ? `+${g.score}` : g.score}
-                        </em>
-                      ) : null}
-                      <span className="casa-slot-mf">{g.gender}</span>
-                    </span>
                   </button>
                 );
               })}
@@ -698,6 +746,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                 siglaVolume={mute.sigla ? 0 : vols.sigla / 100}
                 onSiglaEnded={holdSiglaFrame}
                 flash={flash}
+                spotlight={spotlight}
               />
             )}
           </div>
@@ -726,10 +775,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           <div className="casa-card casa-pad-card">
             <CasaHead onOpen={() => setOpen("pad")}>Pad</CasaHead>
             <PadHits
-              hit={hit}
+              active={hits}
               muted={mute.fx}
-              volume={vols.fx / 100}
-              onHit={firePad}
+              onToggle={togglePad}
             />
           </div>
           <button type="button" className="casa-go" onClick={go}>
@@ -773,7 +821,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                             ? "Messaggi"
                             : open === "screen"
                               ? "Schermi"
-                              : "Audio"}
+                              : open === "clock"
+                                ? "Tempo"
+                                : "Audio"}
               </p>
               <button type="button" className="casa-close" onClick={() => setOpen(null)}>
                 Chiudi
@@ -835,6 +885,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                 siglaVolume={mute.sigla ? 0 : vols.sigla / 100}
                 onSiglaEnded={holdSiglaFrame}
                 flash={flash}
+                spotlight={spotlight}
                 enlarge
               />
             ) : null}
@@ -878,6 +929,52 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             {open === "questions" ? <CasaQuestions eventCode={eventCode} /> : null}
             {open === "prep" ? <CasaPrep prep={prep} onChange={patchPrep} /> : null}
 
+            {open === "clock" ? (
+              <div className="casa-clock-panel">
+                <div className="casa-switch-row">
+                  <span>Tempo trascorso</span>
+                  <button
+                    type="button"
+                    className="casa-switch"
+                    role="switch"
+                    aria-checked={clockPrefs.showElapsed}
+                    data-on={clockPrefs.showElapsed ? "1" : undefined}
+                    onClick={() => patchClock({ showElapsed: !clockPrefs.showElapsed })}
+                  >
+                    <i />
+                  </button>
+                </div>
+                <div className="casa-switch-row">
+                  <span>Ora esatta</span>
+                  <button
+                    type="button"
+                    className="casa-switch"
+                    role="switch"
+                    aria-checked={clockPrefs.showExact}
+                    data-on={clockPrefs.showExact ? "1" : undefined}
+                    onClick={() => patchClock({ showExact: !clockPrefs.showExact })}
+                  >
+                    <i />
+                  </button>
+                </div>
+                <p className="casa-sub">
+                  Tempo <b>{elapsedNow}</b>
+                  {" · "}
+                  Ora <b>{exactNow}</b>
+                </p>
+                <button
+                  type="button"
+                  className="casa-hit"
+                  onClick={() => {
+                    patchClock({ originMs: Date.now() });
+                    setNow(Date.now());
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+            ) : null}
+
             {open === "nick" ? (
               <>
                 <input
@@ -900,7 +997,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                         setOpen(null);
                       }}
                     >
-                      <CasaFace photo={g.photo} nick={g.nick} />
+                      <CasaFace photo={g.photo} nick={g.nick} gender={g.gender} />
                       <span className="casa-slot-nick">{g.nick}</span>
                       <span className="casa-kicker">{g.gender}</span>
                     </button>
@@ -1008,10 +1105,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
             {open === "pad" ? (
               <PadHits
-                hit={hit}
+                active={hits}
                 muted={mute.fx}
-                volume={vols.fx / 100}
-                onHit={firePad}
+                onToggle={togglePad}
               />
             ) : null}
           </div>
@@ -1034,9 +1130,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                 onClick={() => shotFile.current?.click()}
               >
                 <img
-                  src={picked.photo || HEART_LOGO}
+                  src={picked.photo || defaultFace(picked.gender)}
                   alt=""
-                  className={picked.photo ? undefined : "casa-face-logo"}
                 />
               </button>
               <div>
@@ -1113,18 +1208,17 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
               <button
                 type="button"
                 className="casa-hit"
-                onClick={() => {
-                  setMsgQueue((q) => [
-                    ...q,
-                    {
-                      id: `guest-${picked.id}-${Date.now()}`,
-                      ini: picked.nick.slice(0, 1).toUpperCase(),
-                      who: picked.gender,
-                      text: picked.nick,
-                      photo: picked.photo,
-                    },
-                  ]);
-                }}
+                data-on={spotlight?.id === picked.id ? "1" : undefined}
+                onClick={() =>
+                  setSpotlight({
+                    key: Date.now(),
+                    id: picked.id,
+                    nick: picked.nick,
+                    gender: picked.gender,
+                    photo: picked.photo,
+                    score: picked.score,
+                  })
+                }
               >
                 Schermo
               </button>

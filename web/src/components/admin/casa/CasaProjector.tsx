@@ -17,6 +17,10 @@ import {
   type CasaSlide,
   type CasaSlideId,
 } from "@/lib/admin/casa-slides";
+import {
+  CasaPlayerSpotlight,
+  type CasaSpotlight,
+} from "@/components/admin/casa/CasaPlayerSpotlight";
 
 export type CasaBeat =
   | "casa"
@@ -51,6 +55,7 @@ type Props = {
   siglaVolume?: number;
   onSiglaEnded?: () => void;
   flash?: { who: string; text: string; photo?: string; say?: boolean } | null;
+  spotlight?: CasaSpotlight | null;
 };
 
 export function CasaProjector({
@@ -67,6 +72,7 @@ export function CasaProjector({
   siglaVolume = 0.7,
   onSiglaEnded,
   flash = null,
+  spotlight = null,
 }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
@@ -196,7 +202,9 @@ export function CasaProjector({
           </div>
         ) : null}
 
-        {flash ? (
+        <CasaPlayerSpotlight spot={spotlight} />
+
+        {flash && !spotlight ? (
           <div className="casa-proj-flash">
             <div className="casa-proj-plate" data-say={flash.say ? "1" : undefined}>
               {flash.photo ? (

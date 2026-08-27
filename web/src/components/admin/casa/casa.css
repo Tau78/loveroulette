@@ -37,17 +37,30 @@
 }
 
 .casa-title {
-  margin: 0;
+  display: block;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+.casa-title:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 4px;
+  border-radius: 6px;
 }
 
 .casa-status {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 2.2fr) minmax(0, 1fr);
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
   margin-top: 8px;
   overflow: hidden;
@@ -72,23 +85,25 @@
 }
 
 .casa-status-time {
-  justify-self: end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
   text-align: right;
   white-space: nowrap;
+  cursor: pointer;
 }
 
-.casa-prog {
-  height: 8px;
-  border-radius: 99px;
-  background: #323744;
-  overflow: hidden;
-}
-
-.casa-prog i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--green);
+.casa-status-time:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 4px;
+  border-radius: 6px;
 }
 
 .casa-pill {
@@ -234,31 +249,37 @@
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-auto-rows: minmax(36px, 1fr);
-  gap: 4px 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: max-content;
+  gap: 6px;
   align-content: start;
 }
 
+.casa-roster > .casa-sub {
+  grid-column: 1 / -1;
+}
+
 .casa-slot {
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) auto;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 4px;
   width: 100%;
-  min-height: 0;
-  height: 100%;
-  padding: 0 2px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
+  min-width: 0;
+  padding: 7px 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: #1c1f27;
   color: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 
 .casa-slot[data-on="1"] {
   background: #323744;
+  border-color: rgba(233, 30, 140, 0.45);
+  box-shadow: 0 0 0 1px rgba(233, 30, 140, 0.25);
 }
 
 .casa-slot[data-mute="1"] {
@@ -276,6 +297,13 @@
   white-space: nowrap;
   font-size: 12px;
   font-weight: 700;
+}
+
+.casa-slot .casa-slot-nick {
+  max-width: 100%;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .casa-slot-meta {
@@ -303,9 +331,9 @@
 }
 
 .casa-roster .casa-face {
-  width: min(26px, 80%);
-  height: auto;
-  aspect-ratio: 1;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .casa-face {
@@ -679,6 +707,108 @@
   letter-spacing: 0.04em;
   line-height: 1.1;
   color: #fff;
+}
+
+.casa-spot {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.casa-spot-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.55), transparent 55%);
+  pointer-events: none;
+}
+
+.casa-spot-ring {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  border-radius: 50%;
+  border: 3px solid rgba(233, 30, 140, 0.55);
+  box-shadow: 0 0 40px rgba(233, 30, 140, 0.35);
+  pointer-events: none;
+}
+
+.casa-spot-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 720px;
+  padding: 56px 80px 48px;
+  border-radius: 40px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.88), rgba(13, 13, 18, 0.82));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.7),
+    0 0 80px rgba(233, 30, 140, 0.22);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.casa-spot-face {
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 6px solid rgba(233, 30, 140, 0.85);
+  box-shadow: 0 0 48px rgba(233, 30, 140, 0.45);
+  background: #14171d;
+}
+
+.casa-spot-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.casa-spot-sex {
+  margin: 8px 0 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  color: #f5c84b;
+}
+
+.casa-spot-nick {
+  margin: 0;
+  font-size: 96px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 0.95;
+  color: #fff;
+  text-shadow:
+    0 0 32px rgba(233, 30, 140, 0.45),
+    0 4px 16px rgba(0, 0, 0, 1);
+}
+
+.casa-spot-score {
+  margin: 8px 0 0;
+  font-size: 80px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: #3ddc84;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.85);
+}
+
+.casa-spot-score[data-neg="1"] {
+  color: #ff5a5f;
+}
+
+.casa-spot-score[data-zero="1"] {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .casa-proj-face {
@@ -1148,6 +1278,56 @@
 .casa-dot[data-done="1"] {
   opacity: 0.45;
   text-decoration: line-through;
+}
+
+.casa-clock-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 22rem;
+}
+
+.casa-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.casa-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 99px;
+  background: #323744;
+  cursor: pointer;
+  padding: 0;
+}
+
+.casa-switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 99px;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+
+.casa-switch[data-on="1"] {
+  background: var(--green);
+}
+
+.casa-switch[data-on="1"] i {
+  transform: translateX(20px);
 }
 
 .casa-close,

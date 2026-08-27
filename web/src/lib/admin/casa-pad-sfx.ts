@@ -7,20 +7,20 @@ export const CASA_PAD_HITS = [
   { id: "cuore", label: "Cuore che batte" },
   { id: "sospiro", label: "Sospiro innamorato" },
   { id: "spavento", label: "Urlo di spavento" },
-  { id: "dolore", label: "Urlo di dolore" },
+  { id: "dolore", label: "Asino" },
 ] as const;
 
 export type CasaPadHitId = (typeof CASA_PAD_HITS)[number]["id"];
 
-/** Mixkit License (commercial, no attribution). Preview 44.1 kHz / 128 kbps. */
+/** Pad samples: Mixkit License, plus CC0 Freesound for ohno + sospiro. */
 export const CASA_PAD_SRC: Record<CasaPadHitId, string> = {
   applausi: "/grafiche/audio/pad/applausi.mp3",
   risate: "/grafiche/audio/pad/risate.mp3",
-  ohno: "/grafiche/audio/pad/ohno.mp3",
+  ohno: "/grafiche/audio/pad/ohno.mp3?v=2",
   buuuh: "/grafiche/audio/pad/buuuh.mp3",
   tuono: "/grafiche/audio/pad/tuono.mp3",
   cuore: "/grafiche/audio/pad/cuore.mp3",
-  sospiro: "/grafiche/audio/pad/sospiro.mp3",
+  sospiro: "/grafiche/audio/pad/sospiro.mp3?v=2",
   spavento: "/grafiche/audio/pad/spavento.mp3",
   dolore: "/grafiche/audio/pad/dolore.mp3",
 };
@@ -194,21 +194,59 @@ export function prefetchCasaPadHits(): void {
   }
 }
 
-export function playCasaPadHit(id: CasaPadHitId, volume = 0.7): void {
+const playing = new Map<CasaPadHitId, AudioBufferSourceNode>();
+const pending = new Set<CasaPadHitId>();
+
+function stopSource(id: CasaPadHitId): void {
+  const src = playing.get(id);
+  if (!src) return;
+  try {
+    src.stop();
+  } catch {
+    /* already stopped */
+  }
+  playing.delete(id);
+}
+
+/** Tap on: starts. Tap again: stops. Returns whether it is now playing. */
+export function toggleCasaPadHit(
+  id: CasaPadHitId,
+  volume = 0.7,
+  onEnded?: () => void,
+): boolean {
+  if (playing.has(id) || pending.has(id)) {
+    pending.delete(id);
+    stopSource(id);
+    return false;
+  }
+
   const gain = Math.min(1, Math.max(0, volume));
   const ac = audio();
-  if (!ac) return;
+  if (!ac) return false;
+
+  pending.add(id);
   void decodeHit(id).then((buf) => {
+    if (!pending.has(id)) return;
+    pending.delete(id);
+
     if (!buf) {
       playSynth(id, gain);
+      window.setTimeout(() => onEnded?.(), 900);
       return;
     }
+
     const src = ac.createBufferSource();
     const g = ac.createGain();
     g.gain.value = gain;
     src.buffer = buf;
     src.connect(g);
     g.connect(ac.destination);
+    src.onended = () => {
+      if (playing.get(id) === src) playing.delete(id);
+      onEnded?.();
+    };
+    playing.set(id, src);
     src.start();
   });
+  return true;
 }

@@ -1,0 +1,31 @@
+---
+description: Giro domande in sospeso sulla plancia Casa — chrome FASE / ORA / AIUTO ENTRA
+alwaysApply: true
+---
+
+# CasaPad — prossimo giro domande
+
+Mauro ha rimandato il giro. Quando riparte AskQuestion sulla plancia (`/admin/{codice}/serata`), **il primo blocco è questo**, prima di numeri ship/salva o altro.
+
+## Chrome incomprensibile (27 ago 2026)
+
+Sulla card Impostazioni e in header oggi si legge:
+
+- **FASE CASA** (header, pill verde)
+- **ORA · CASA** (kicker sulla card Impostazioni — stesso dato, duplicato)
+- **AIUTO ENTRA** (sembra un bottone; copy opaco)
+
+Mauro: *scritte incomprensibili e non sono pulsanti che modificano qualcosa. Sistemarli accuratamente al prossimo giro.*
+
+Non inventare copy adesso. Chiedere con form tappable: cosa deve dire, se deve restare visibile, se deve fare qualcosa.
+
+## Cosa fanno oggi (fatti, non proposte)
+
+- `Fase` / `Ora ·` = etichetta del beat (`casa`, poi sigla, slide, quiz…). Non è un controllo.
+- **AIUTO ENTRA** (`help`) = tap che manda sul proiettore la piastra «Come si entra» (Wi‑Fi + QR). In fase `casa` il QR c’è già; il tasto è un overlay extra. Non cambia la fase.
+
+## Altri giri ancora in coda (dopo questo)
+
+- Numeri ship / luci / salva (top N, durata flash, secondi Salva)
+- 8 premio / sponsor / slide extra (saltate di proposito)
+---
