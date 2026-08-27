@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EventState } from "@/lib/types";
 import type { PairProgress } from "./pair-progress";
 import { getPairProgress } from "./pair-progress";
+import { PLAYER_PRESENCE_STALE_MS } from "./presence";
 
 export interface EventStats {
   onlineCount: number;
@@ -45,7 +46,7 @@ export async function getEventStats(
     throw new Error(totalError.message);
   }
 
-  const onlineSince = new Date(Date.now() - 90_000).toISOString();
+  const onlineSince = new Date(Date.now() - PLAYER_PRESENCE_STALE_MS).toISOString();
 
   const { count: onlineCount, error: onlineError } = await supabase
     .from("love_roulette_participants")

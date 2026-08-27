@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { VotingSessionState } from "@/lib/musicpro/voting";
 import { FINALS_COPY } from "@/lib/game/late-game-copy";
+import { enqueueAndSendPlayerAction } from "@/lib/player/player-action-queue";
 import { cn } from "@/lib/utils";
 
 interface VotingPlayerProps {
@@ -35,25 +36,15 @@ export function VotingPlayer({
       setSelectedPairId(pairId);
 
       try {
-        const res = await fetch(
-          `/api/events/${encodeURIComponent(eventSlug)}/voting`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "vote",
-              participantId,
-              pairId,
-            }),
-          },
-        );
+        const result = await enqueueAndSendPlayerAction({
+          kind: "vote",
+          eventSlug,
+          participantId,
+          pairId,
+        });
 
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-
-        if (!res.ok) {
-          throw new Error(data?.error ?? "Voto non registrato.");
+        if (!result.ok) {
+          throw new Error(result.error ?? "Voto non registrato.");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Errore di rete.");

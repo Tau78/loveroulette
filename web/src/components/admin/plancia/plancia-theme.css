@@ -1,0 +1,80 @@
+/* Plancia regia — contrasto e scala da dashboard, non da micro-label OBS. */
+.plancia-console {
+  --plancia-bg: #0d0d12;
+  --plancia-surface: #1a1a24;
+  --plancia-raised: #252532;
+  --plancia-ink: #ffffff;
+  --plancia-ink-2: #d4d4de;
+  --plancia-line: rgba(255, 255, 255, 0.22);
+  --plancia-ok: #3ee08a;
+  --plancia-ok-ink: #04150c;
+  --plancia-warn: #f5c84b;
+  --plancia-warn-ink: #1a1400;
+  --plancia-danger: #ff6b7a;
+  --plancia-danger-ink: #2a0408;
+  --plancia-preview: #7dd3fc;
+  --plancia-program: #ff8a96;
+  color: var(--plancia-ink);
+  background: var(--plancia-bg);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.plancia-console button,
+.plancia-console input,
+.plancia-console textarea {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+
+.plancia-kicker {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--plancia-ink-2);
+}
+
+.plancia-meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--plancia-ink-2);
+}
+
+.plancia-input {
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--plancia-line);
+  background: #12121a;
+  color: var(--plancia-ink);
+  padding: 0 10px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.plancia-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--primary) 70%, white);
+  outline-offset: 1px;
+}
+
+.deck-key {
+  border: 1px solid #555564;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.45),
+    0 2px 0 #0a0a0e;
+}
+
+.deck-key:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.deck-key:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.55),
+    0 0 0 #0a0a0e;
+}

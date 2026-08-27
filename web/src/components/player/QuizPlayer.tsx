@@ -26,9 +26,11 @@ import {
   playerAnswerTimeLabel,
 } from "@/lib/player/public-copy";
 import {
+  clearPlayerAnswerRecap,
   persistPlayerAnswerRecap,
   readPlayerAnswerRecap,
 } from "@/lib/player/player-answer-recap";
+import { enqueueAndSendPlayerAction } from "@/lib/player/player-action-queue";
 import { cn } from "@/lib/utils";
 
 const CARD_CLASS =
@@ -143,46 +145,44 @@ export function QuizPlayer({
 
     const elapsedSeconds = computeAnswerElapsedSeconds(quizState);
 
+    const option = question.options.find((item) => item.id === optionId);
+    const label = option?.label ?? null;
+
     setSubmitting(true);
     setSubmitError(null);
     setSelectedOptionId(optionId);
+    setAnsweredQuestionId(question.id);
+    setAnsweredOptionLabel(label);
+    setAnsweredElapsedSeconds(elapsedSeconds);
+    if (label) {
+      persistPlayerAnswerRecap(eventSlug, {
+        questionId: question.id,
+        optionLabel: label,
+        elapsedSeconds,
+      });
+    }
 
     try {
-      const res = await fetch(
-        `/api/events/${encodeURIComponent(eventSlug)}/answers`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            participantId,
-            questionId: question.id,
-            optionId,
-          }),
-        },
-      );
+      const result = await enqueueAndSendPlayerAction({
+        kind: "answer",
+        eventSlug,
+        participantId,
+        questionId: question.id,
+        optionId,
+        optionLabel: label ?? undefined,
+        elapsedSeconds,
+      });
 
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(data?.error ?? "Risposta non salvata.");
-      }
-
-      setAnsweredQuestionId(question.id);
-      const option = question.options.find((item) => item.id === optionId);
-      const label = option?.label ?? null;
-      setAnsweredOptionLabel(label);
-      setAnsweredElapsedSeconds(elapsedSeconds);
-      if (label) {
-        persistPlayerAnswerRecap(eventSlug, {
-          questionId: question.id,
-          optionLabel: label,
-          elapsedSeconds: elapsedSeconds,
-        });
+      if (!result.ok) {
+        throw new Error(result.error ?? "Risposta non salvata.");
       }
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Errore di rete.");
       setSelectedOptionId(null);
+      setAnsweredQuestionId(null);
+      setAnsweredOptionLabel(null);
+      setAnsweredElapsedSeconds(null);
+      clearPlayerAnswerRecap(eventSlug, question.id);
     } finally {
       setSubmitting(false);
     }

@@ -1,0 +1,20 @@
+---
+description: Prima submission App Store e rifiuti Apple — TestFlight non è la recensione
+globs:
+  - musicpro-eventi-app/apps/mobile/**
+  - musicpro-eventi-app/docs/APP_STORE*.md
+  - musicpro-eventi-app/docs/APPLE_EAS_IOS.md
+  - musicpro-eventi-app/docs/GO_LIVE.md
+  - musicpro-eventi-app/docs/PLAY_STORE*.md
+  - .cursor/skills/apple-release/**
+---
+
+# Apple release (recensione Store)
+
+In **questo** repo **VAI** = commit + push + FTP + **TestFlight via Xcode locale** (`scripts/xcode-testflight.sh`). Non usa EAS Build. Alternativa solo se piano Expo attivo: `eas build --profile production --platform ios --auto-submit`. Né VAI né TestFlight sono Submit for Review.
+
+Prima di “è pronta per lo Store”, o se Apple boccia (2.1, Age Rating, Information Needed): leggi `.cursor/skills/apple-release/SKILL.md` e `lessons.md`. Compila `review-notes.template.txt` dall’app vera. Pacchetto già compilato: `musicpro-eventi-app/docs/APP_STORE_REVIEW_PACK.md`.
+
+Non inviare la scheda se manca il pacchetto: Notes (7 punti, inglese, < 4000, percorso tap esatto), Sign-In Required + demo nei campi dedicati, video su iPhone fisico dall’icona, privacy URL https, screenshot dell’app in uso (niente TEST/REVIEW), Age Rating (Individual → Simulated Gambling = None), App Privacy labels, export compliance nel binary. Se c’è registrazione account, serve Elimina account nella stessa build. Campi nuova password: niente Strong Password iOS.
+
+Il video non si gira da una VM cloud. Chiedi all’utente. Non inventare modelli di iPhone. Non rispondere Yes a Simulated Gambling «per sicurezza».

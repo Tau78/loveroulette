@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "LoveRoulette",
+    "slug": "love-roulette",
+    "scheme": "loveroulette",
+    "version": "1.0.0",
+    "orientation": "landscape",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0D0D12",
+    "primaryColor": "#E91E8C",
+    "description": "Plancia animatore per Love Roulette: comanda la serata live in sala. Non è un gioco d'azzardo.",
+    "platforms": [
+      "ios"
+    ],
+    "ios": {
+      "bundleIdentifier": "it.musicproeventi.loveroulette",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "requireFullScreen": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationCategoryType": "public.app-category.entertainment",
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleDevelopmentRegion": "it",
+        "UIUserInterfaceStyle": "Dark",
+        "UIRequiresFullScreen": true
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyCollectedDataTypes": [],
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          }
+        ]
+      }
+    },
+    "plugins": [
+      [
+        "expo-system-ui",
+        {
+          "backgroundColor": "#0D0D12"
+        }
+      ]
+    ],
+    "extra": {
+      "defaultAppUrl": "https://loveroulette.vercel.app",
+      "eas": {
+        "projectId": "1b18429e-06d6-42af-93c3-e087fac6f519"
+      }
+    },
+    "owner": "musicproeventi"
+  }
+}
