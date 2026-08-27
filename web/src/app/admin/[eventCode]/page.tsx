@@ -43,6 +43,16 @@ export default function AdminDashboardPage() {
   const params = useParams();
   const eventCode = normalizeEventSlug(String(params.eventCode ?? ""));
 
+  useEffect(() => {
+    if (!eventCode) return;
+    if (new URLSearchParams(window.location.search).get("studio") === "1") return;
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    const landscape = window.matchMedia("(orientation: landscape)").matches;
+    if (coarse && landscape) {
+      window.location.replace(`/admin/${encodeURIComponent(eventCode)}/serata`);
+    }
+  }, [eventCode]);
+
   const [event, setEvent] = useState<LoveRouletteEvent | null>(null);
   const [stats, setStats] = useState<EventStats>({
     onlineCount: 0,

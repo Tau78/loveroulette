@@ -56,7 +56,7 @@ export function App() {
   const adminUrl = useMemo(() => {
     if (!opened) return null;
     const [nextHost, nextCode] = opened.split("\0");
-    return `${nextHost}/admin/${encodeURIComponent(nextCode)}`;
+    return `${nextHost}/admin/${encodeURIComponent(nextCode)}/serata`;
   }, [opened]);
 
   const openDashboard = useCallback(async () => {
@@ -90,6 +90,7 @@ export function App() {
           javaScriptEnabled
           domStorageEnabled
           allowsFullscreenVideo
+          cacheEnabled={false}
           decelerationRate="normal"
         />
         <Pressable
@@ -158,7 +159,7 @@ export function App() {
               pressed && styles.ctaPressed,
             ]}
           >
-            <Text style={styles.ctaText}>Apri dashboard</Text>
+            <Text style={styles.ctaText}>Apri plancia</Text>
           </Pressable>
         </KeyboardAvoidingView>
       </SafeAreaView>
