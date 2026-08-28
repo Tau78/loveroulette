@@ -9,6 +9,7 @@ const sample = [
   {
     id: "q1",
     text: "In vacanza dove andate?",
+    category: "lifestyle",
     options: ["Mare", "Montagna", "Città", "Casa"] as [
       string,
       string,

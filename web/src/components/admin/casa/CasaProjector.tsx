@@ -17,6 +17,7 @@ import {
   type CasaSlide,
   type CasaSlideId,
 } from "@/lib/admin/casa-slides";
+import { categoryThemeLabel } from "@/lib/musicpro/quiz-display";
 import {
   CasaPlayerSpotlight,
   type CasaSpotlight,
@@ -36,10 +37,13 @@ export type CasaBeat =
   | "quiz";
 
 
-const QUIZ = {
-  question: "IN VACANZA DOVE ANDATE?",
-  options: ["MARE", "MONTAGNA", "CITTÀ", "CASA"],
+const FALLBACK_QUIZ = {
+  text: "In vacanza dove andate?",
+  category: "lifestyle",
+  options: ["Mare", "Montagna", "Città", "Casa"],
 } as const;
+
+type CasaQuizGate = "tema" | "play";
 
 type Props = {
   eventCode: string;
@@ -56,6 +60,14 @@ type Props = {
   onSiglaEnded?: () => void;
   flash?: { who: string; text: string; photo?: string; say?: boolean } | null;
   spotlight?: CasaSpotlight | null;
+  quizGate?: CasaQuizGate;
+  quizQuestion?: {
+    text: string;
+    category: string;
+    options: [string, string, string, string];
+  } | null;
+  mediaOnScreen?: { url: string; name: string; muted?: boolean } | null;
+  onClearMediaOnScreen?: () => void;
 };
 
 export function CasaProjector({
@@ -73,10 +85,15 @@ export function CasaProjector({
   onSiglaEnded,
   flash = null,
   spotlight = null,
+  quizGate = "tema",
+  quizQuestion = null,
+  mediaOnScreen = null,
+  onClearMediaOnScreen,
 }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
   const [joinUrl, setJoinUrl] = useState(`/s/${eventCode}/play`);
+  const [siglaMissing, setSiglaMissing] = useState(false);
 
   useEffect(() => {
     setJoinUrl(`${window.location.origin}/s/${eventCode}/play`);
@@ -99,6 +116,11 @@ export function CasaProjector({
   const slide = beat in slides ? slides[beat as CasaSlideId] : undefined;
   const lobby = beat === "casa" || help;
   const fullVideo = beat === "sigla" && (sigla === "on" || sigla === "hold");
+  const theme = categoryThemeLabel(quizQuestion?.category ?? FALLBACK_QUIZ.category);
+
+  useEffect(() => {
+    setSiglaMissing(false);
+  }, [siglaSrc]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -157,6 +179,15 @@ export function CasaProjector({
           <div className="casa-proj-center">
             <DisplayPhaseHero kicker="Tra un attimo" headline="SIGLA" uppercase />
           </div>
+        ) : beat === "sigla" && (sigla === "on" || sigla === "hold") && siglaMissing ? (
+          <div className="casa-proj-center">
+            <DisplayPhaseHero
+              kicker="Sigla"
+              headline="MANCA IL VIDEO"
+              subline="Caricalo da Slide e sigla"
+              uppercase
+            />
+          </div>
         ) : beat === "sigla" && (sigla === "on" || sigla === "hold") ? (
           <video
             ref={videoRef}
@@ -164,7 +195,7 @@ export function CasaProjector({
             src={siglaSrc}
             playsInline
             onEnded={onSiglaEnded}
-            onError={() => onSiglaEnded?.()}
+            onError={() => setSiglaMissing(true)}
           />
         ) : beat === "presenti" && onStage ? (
           <div className="casa-proj-center">
@@ -176,16 +207,28 @@ export function CasaProjector({
           </div>
         ) : beat === "stacco" && count != null ? (
           <div className="casa-proj-count">{count}</div>
+        ) : beat === "quiz" && quizGate === "tema" ? (
+          <div className="casa-proj-center">
+            <DisplayPhaseHero
+              kicker="Manche"
+              headline={theme.title}
+              subline={theme.subtitle}
+              pulse
+              uppercase
+            />
+          </div>
         ) : beat === "quiz" ? (
           <div className="casa-proj-quiz">
-            <p className={QUIZ_QUESTION_TEXT_CLASS}>{QUIZ.question}</p>
+            <p className={QUIZ_QUESTION_TEXT_CLASS}>
+              {(quizQuestion?.text ?? FALLBACK_QUIZ.text).toUpperCase()}
+            </p>
             <div className="casa-proj-opts">
-              {QUIZ.options.map((opt, i) => (
-                <div key={opt} className="casa-proj-opt">
+              {(quizQuestion?.options ?? FALLBACK_QUIZ.options).map((opt, i) => (
+                <div key={`${opt}-${i}`} className="casa-proj-opt">
                   <span className={QUIZ_ANSWER_LETTER_CLASS}>
                     {String.fromCharCode(65 + i)}
                   </span>
-                  <span className={QUIZ_ANSWER_TEXT_CLASS}>{opt}</span>
+                  <span className={QUIZ_ANSWER_TEXT_CLASS}>{opt.toUpperCase()}</span>
                   {showPct ? <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span> : null}
                 </div>
               ))}
@@ -199,6 +242,33 @@ export function CasaProjector({
               subline={slide.sub}
               uppercase
             />
+          </div>
+        ) : null}
+
+        {mediaOnScreen ? (
+          <div className="casa-proj-media" data-casa-media-on="">
+            {/\.(jpg|jpeg|png|gif|webp|avif|bmp)(\?|$)/i.test(mediaOnScreen.name) ||
+            /\.(jpg|jpeg|png|gif|webp|avif|bmp)(\?|$)/i.test(mediaOnScreen.url) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={mediaOnScreen.url} alt={mediaOnScreen.name} />
+            ) : (
+              <video
+                src={mediaOnScreen.url}
+                autoPlay
+                playsInline
+                loop
+                muted={mediaOnScreen.muted ?? true}
+              />
+            )}
+            {onClearMediaOnScreen ? (
+              <button
+                type="button"
+                className="casa-proj-media-clear"
+                onClick={onClearMediaOnScreen}
+              >
+                Chiudi media
+              </button>
+            ) : null}
           </div>
         ) : null}
 

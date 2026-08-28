@@ -9,6 +9,8 @@ import {
   saveQuestions,
   type CasaQuestion,
 } from "@/lib/admin/casa-questions";
+import { QUIZ_THEME_CATEGORIES } from "@/lib/audio/quiz-theme-tracks";
+import { CATEGORY_THEME_LABELS } from "@/lib/musicpro/quiz-display";
 
 const LETTERS = ["A", "B", "C", "D"] as const;
 
@@ -41,6 +43,7 @@ export function CasaQuestions({ eventCode }: Props) {
     return questions.filter(
       (row) =>
         row.text.toLowerCase().includes(q) ||
+        row.category.toLowerCase().includes(q) ||
         row.options.some((opt) => opt.toLowerCase().includes(q)),
     );
   }, [questions, query]);
@@ -136,6 +139,20 @@ export function CasaQuestions({ eventCode }: Props) {
               onChange={(e) => patchCurrent({ text: e.target.value })}
               placeholder="Testo della domanda"
             />
+          </label>
+          <label className="casa-pop-field">
+            <span>Categoria</span>
+            <select
+              className="casa-field"
+              value={current.category}
+              onChange={(e) => patchCurrent({ category: e.target.value })}
+            >
+              {QUIZ_THEME_CATEGORIES.map((id) => (
+                <option key={id} value={id}>
+                  {CATEGORY_THEME_LABELS[id].title}
+                </option>
+              ))}
+            </select>
           </label>
           <div className="casa-q-opts">
             {current.options.map((opt, i) => (

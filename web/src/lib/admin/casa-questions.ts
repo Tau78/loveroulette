@@ -7,22 +7,26 @@ export type CasaQuestion = {
   id: string;
   text: string;
   options: [string, string, string, string];
+  category: string;
 };
 
 export const DEFAULT_CASA_QUESTIONS: CasaQuestion[] = [
   {
     id: "q1",
     text: "In vacanza dove andate?",
+    category: "lifestyle",
     options: ["Mare", "Montagna", "Città", "Casa"],
   },
   {
     id: "q2",
     text: "La prima cosa che noti?",
+    category: "romantic",
     options: ["Sorriso", "Occhi", "Voce", "Stile"],
   },
   {
     id: "q3",
     text: "Sabato sera ideale?",
+    category: "fun",
     options: ["Disco", "Cena", "Divano", "Viaggio"],
   },
 ];
@@ -67,6 +71,7 @@ export function questionsFromDocument(
         return {
           id: question.id || `q-${crypto.randomUUID()}`,
           text: question.body.trim(),
+          category: question.category || "lifestyle",
           options,
         };
       }),
@@ -90,7 +95,7 @@ export function documentFromQuestions(
         questions: questions.map((question, index) => ({
           id: question.id,
           body: question.text.trim(),
-          category: "lifestyle",
+          category: question.category || "lifestyle",
           options: question.options.map((label, i) => ({
             id: `${question.id}-${i}`,
             label,
@@ -114,13 +119,24 @@ export function parseQuestionsFile(text: string): CasaQuestion[] {
   }
   if (Array.isArray(parsed)) {
     const next = parsed.map((row, index): CasaQuestion => {
-      const rec = row as { id?: string; text?: string; body?: string; options?: unknown };
+      const rec = row as {
+        id?: string;
+        text?: string;
+        body?: string;
+        category?: string;
+        options?: unknown;
+      };
       const options = fourOptions(rec.options);
       const textValue = (rec.text ?? rec.body ?? "").trim();
       if (!textValue || !options) {
         throw new Error(`Riga ${index + 1}: testo e 4 opzioni obbligatori.`);
       }
-      return { id: rec.id || `q-${index + 1}`, text: textValue, options };
+      return {
+        id: rec.id || `q-${index + 1}`,
+        text: textValue,
+        category: rec.category || "lifestyle",
+        options,
+      };
     });
     if (!next.length) throw new Error("Nessuna domanda nel file.");
     return next;
@@ -151,6 +167,7 @@ export function blankQuestion(): CasaQuestion {
   return {
     id: `q-${Date.now()}`,
     text: "",
+    category: "lifestyle",
     options: ["", "", "", ""],
   };
 }

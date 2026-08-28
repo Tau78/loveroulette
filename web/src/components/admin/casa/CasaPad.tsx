@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CasaProjector } from "@/components/admin/casa/CasaProjector";
 import type { CasaSpotlight } from "@/components/admin/casa/CasaPlayerSpotlight";
 import { CasaPrep } from "@/components/admin/casa/CasaPrep";
 import { CasaQuestions } from "@/components/admin/casa/CasaQuestions";
+import { CasaLayoutBar } from "@/components/admin/casa/widgets/CasaLayoutBar";
+import { CasaWidgetDeck } from "@/components/admin/casa/widgets/CasaWidgetDeck";
+import { CasaWidgetGallery } from "@/components/admin/casa/widgets/CasaWidgetGallery";
+import { pushApart } from "@/components/admin/casa/widgets/layout-math";
+import { widgetMeta } from "@/components/admin/casa/widgets/widget-registry";
+import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
   DEFAULT_CASA_CLOCK,
@@ -21,6 +27,46 @@ import {
   type CasaPadHitId,
 } from "@/lib/admin/casa-pad-sfx";
 import { avantiLabel, stepAvanti } from "@/lib/admin/casa-avanti";
+import { casaAutoBedLabel, resolveCasaBed } from "@/lib/admin/casa-beds";
+import {
+  createDefaultState,
+  createId,
+  getActiveProfile,
+  loadLayouts,
+  saveLayouts,
+  sizeToPx,
+  UNIQUE_WIDGET_TYPES,
+  updateActiveWidgets,
+  type CasaLayoutsState,
+  type CasaWidgetInstance,
+  type CasaWidgetSize,
+  type CasaWidgetType,
+} from "@/lib/admin/casa-layouts";
+import {
+  DEFAULT_GONG_ATMOSPHERE,
+  DEFAULT_VIDEO,
+  isAudioFile,
+  nextIndex,
+  pickDirectoryFiles,
+  revokeTracks,
+  tracksFromFiles,
+  type CasaGongAtmosphere,
+  type CasaMediaTrack,
+  type CasaRepeatMode,
+  type CasaVideoState,
+} from "@/lib/admin/casa-media";
+import {
+  getNote,
+  loadNotes,
+  saveNotes,
+  setNote,
+  type CasaNotesState,
+} from "@/lib/admin/casa-notes";
+import {
+  DEFAULT_CASA_QUESTIONS,
+  loadQuestions,
+  type CasaQuestion,
+} from "@/lib/admin/casa-questions";
 import {
   DEFAULT_MANCHE,
   DEFAULT_SECONDS,
@@ -216,16 +262,32 @@ const LINE: Record<Beat, string> = {
   quiz: "Manche in corso.",
 };
 
+function quizLine(gate: "tema" | "play") {
+  return gate === "tema"
+    ? "Slide categoria. AVANTI per la domanda."
+    : "Manche in corso.";
+}
+
 const FADERS = [
   { id: "sigla", label: "Sigla" },
   { id: "bed", label: "Sottofondo" },
   { id: "fx", label: "Effetti sonori" },
 ] as const;
 
-type BedTrack = { name: string; url: string };
+function msgLimitForSize(size: CasaWidgetSize): number {
+  return size === "L" || size === "XL" ? 8 : 3;
+}
 
-function isAudioFile(file: File) {
-  return file.type.startsWith("audio/") || /\.(mp3|wav|m4a|ogg|aac)$/i.test(file.name);
+function cycleRepeat(mode: CasaRepeatMode): CasaRepeatMode {
+  if (mode === "off") return "all";
+  if (mode === "all") return "one";
+  return "off";
+}
+
+function repeatLabel(mode: CasaRepeatMode): string {
+  if (mode === "one") return "Repeat 1";
+  if (mode === "all") return "Repeat";
+  return "Off";
 }
 
 function PadHits({
@@ -257,6 +319,13 @@ function PadHits({
   );
 }
 
+function formatMmSs(totalSec: number): string {
+  const s = Math.max(0, Math.floor(totalSec));
+  const mm = Math.floor(s / 60);
+  const ss = s % 60;
+  return `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+}
+
 export function CasaPad({ eventCode }: { eventCode: string }) {
   const [beat, setBeat] = useState<Beat>("casa");
   const [guests, setGuests] = useState<Guest[]>(SEED);
@@ -271,6 +340,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const [prep, setPrep] = useState<Prep>(DEFAULT_CASA_PREP);
   const [showPct, setShowPct] = useState(false);
   const [left, setLeft] = useState(DEFAULT_MANCHE);
+  const [quizGate, setQuizGate] = useState<"tema" | "play">("tema");
+  const [pack, setPack] = useState<CasaQuestion[]>(DEFAULT_CASA_QUESTIONS);
   const [open, setOpen] = useState<Panel>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [killAsk, setKillAsk] = useState(false);
@@ -298,24 +369,82 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     fx: false,
   });
   const [bedFolder, setBedFolder] = useState<string | null>(null);
-  const [bedList, setBedList] = useState<BedTrack[]>([]);
+  const [bedList, setBedList] = useState<CasaMediaTrack[]>([]);
   const [bedIndex, setBedIndex] = useState(0);
+  const [bedRepeat, setBedRepeat] = useState<CasaRepeatMode>("all");
+  const [bedPlaying, setBedPlaying] = useState(true);
+  const [gongAtmo, setGongAtmo] = useState<CasaGongAtmosphere>(DEFAULT_GONG_ATMOSPHERE);
+  const [videoState, setVideoState] = useState<CasaVideoState>(DEFAULT_VIDEO);
+  const [masterVol, setMasterVol] = useState(100);
+  const [layoutEdit, setLayoutEdit] = useState(false);
+  const [layouts, setLayouts] = useState<CasaLayoutsState>(createDefaultState);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [notes, setNotes] = useState<CasaNotesState>(() =>
+    typeof window === "undefined" ? { byInstanceId: {} } : loadNotes(),
+  );
+  const [freeTimerSec, setFreeTimerSec] = useState(0);
+  const [freeTimerRun, setFreeTimerRun] = useState(false);
+  const [quizLeftSec, setQuizLeftSec] = useState(DEFAULT_SECONDS);
   const [slides, setSlides] = useState(DEFAULT_SLIDES);
   const [siglaSrc, setSiglaSrc] = useState(SIGLA_SRC);
+  const [joinUrl, setJoinUrl] = useState(`/s/${eventCode}/play`);
   const siglaFile = useRef<HTMLInputElement>(null);
   const shotFile = useRef<HTMLInputElement>(null);
   const libFile = useRef<HTMLInputElement>(null);
   const bedAudio = useRef<HTMLAudioElement | null>(null);
+  const gongAudioRef = useRef<HTMLAudioElement | null>(null);
   const bedInput = useRef<HTMLInputElement>(null);
+  const bedFilesInput = useRef<HTMLInputElement>(null);
+  const gongInput = useRef<HTMLInputElement>(null);
+  const videoInput = useRef<HTMLInputElement>(null);
+  const videoTapRef = useRef<{ url: string; at: number } | null>(null);
 
   const index = BEATS.findIndex((b) => b.id === beat);
   const current = BEATS[index] ?? BEATS[0];
   const next = BEATS[index + 1];
   const onStage = guests[roll];
+  const asked = Math.max(0, manche - left);
+  const currentQ = pack[asked] ?? pack[pack.length - 1] ?? DEFAULT_CASA_QUESTIONS[0];
+  const activeProfile = getActiveProfile(layouts);
+  const activeWidgets = activeProfile.widgets;
+  const masterScale = masterVol / 100;
+  const effVol = (id: (typeof FADERS)[number]["id"]) =>
+    mute[id] ? 0 : (vols[id] / 100) * masterScale;
+
+  const activeBed = useMemo(
+    () => resolveCasaBed(beat, bedFolder ? bedList : null, bedIndex),
+    [beat, bedFolder, bedList, bedIndex],
+  );
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return q ? guests.filter((g) => g.nick.toLowerCase().includes(q)) : guests;
   }, [guests, query]);
+
+  function commitLayouts(nextLayouts: CasaLayoutsState) {
+    setLayouts(nextLayouts);
+    saveLayouts(nextLayouts);
+  }
+
+  function commitNotes(nextNotes: CasaNotesState) {
+    setNotes(nextNotes);
+    saveNotes(nextNotes);
+  }
+
+  function stopGongAtmo() {
+    const el = gongAudioRef.current;
+    if (!el) return;
+    el.pause();
+    el.currentTime = 0;
+  }
+
+  useEffect(() => {
+    setLayouts(loadLayouts());
+    setNotes(loadNotes());
+  }, []);
+
+  useEffect(() => {
+    setJoinUrl(`${window.location.origin}/s/${eventCode}/play`);
+  }, [eventCode]);
 
   useEffect(() => {
     prefetchCasaPadHits();
@@ -327,10 +456,34 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }, []);
 
   useEffect(() => {
+    if (!freeTimerRun) return;
+    const id = window.setInterval(() => setFreeTimerSec((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [freeTimerRun]);
+
+  useEffect(() => {
+    if (beat !== "quiz" || quizGate !== "play") {
+      setQuizLeftSec(seconds);
+      return;
+    }
+    setQuizLeftSec(seconds);
+    const id = window.setInterval(() => {
+      setQuizLeftSec((n) => Math.max(0, n - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [beat, quizGate, seconds, asked]);
+
+  useEffect(() => {
     setSlides(loadSlides(eventCode));
     setPrep(loadPrep(eventCode));
     setClockPrefs(loadClock(eventCode));
+    setPack(loadQuestions(eventCode));
   }, [eventCode]);
+
+  useEffect(() => {
+    if (open === "questions") return;
+    setPack(loadQuestions(eventCode));
+  }, [open, eventCode]);
 
   const flash = msgQueue[0] ?? null;
 
@@ -359,6 +512,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     if (count <= 0) {
       setBeat("quiz");
       setCount(null);
+      setQuizGate("tema");
       return;
     }
     const id = window.setTimeout(() => setCount((n) => (n == null ? n : n - 1)), 1000);
@@ -368,73 +522,136 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   useEffect(() => {
     const el = bedAudio.current;
     if (!el) return;
-    el.volume = mute.bed ? 0 : vols.bed / 100;
-  }, [mute.bed, vols.bed]);
+    el.volume = effVol("bed");
+  }, [mute.bed, vols.bed, masterVol]);
+
+  useEffect(() => {
+    const el = gongAudioRef.current;
+    if (!el) return;
+    el.volume = effVol("bed");
+  }, [mute.bed, vols.bed, masterVol]);
 
   useEffect(() => {
     const el = bedAudio.current;
-    const track = bedList[bedIndex];
-    if (!el || !track) {
-      el?.pause();
+    if (!el) return;
+    if (!activeBed) {
+      el.pause();
+      el.src = "";
       return;
     }
-    if (el.src !== track.url) {
-      el.src = track.url;
+    const abs = new URL(activeBed.url, window.location.origin).href;
+    if (el.src !== abs) {
+      el.src = activeBed.url;
     }
-    el.loop = bedList.length === 1;
+    // Auto-phase bed always loops; playlist uses onEnded + nextIndex except "one".
+    el.loop = !bedFolder || bedRepeat === "one";
+    if (bedPlaying) {
+      void el.play().catch(() => {});
+    } else {
+      el.pause();
+    }
+  }, [activeBed, bedFolder, bedRepeat, bedPlaying]);
+
+  useEffect(() => {
+    if (!showPct) {
+      stopGongAtmo();
+      return;
+    }
+    if (!gongAtmo.enabled || !gongAtmo.track) return;
+    const el = gongAudioRef.current;
+    if (!el) return;
+    // Atmosphere takeover: pause sottofondo while reveal % is up.
+    bedAudio.current?.pause();
+    el.src = gongAtmo.track.url;
+    el.loop = true;
+    el.volume = effVol("bed");
     void el.play().catch(() => {});
-  }, [bedList, bedIndex]);
+  }, [showPct, gongAtmo.enabled, gongAtmo.track]);
+
+  useEffect(() => {
+    if (showPct && gongAtmo.enabled && gongAtmo.track) return;
+    const el = bedAudio.current;
+    if (!el || !activeBed || !bedPlaying) return;
+    void el.play().catch(() => {});
+  }, [showPct, gongAtmo.enabled, gongAtmo.track, activeBed, bedPlaying]);
 
   function applyBedFiles(name: string, files: File[]) {
-    bedList.forEach((t) => URL.revokeObjectURL(t.url));
-    const next = files
-      .filter(isAudioFile)
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((file) => ({ name: file.name, url: URL.createObjectURL(file) }));
-    setBedFolder(next.length ? name : null);
-    setBedList(next);
+    revokeTracks(bedList);
+    const nextTracks = tracksFromFiles(files, "audio");
+    setBedFolder(nextTracks.length ? name : null);
+    setBedList(nextTracks);
     setBedIndex(0);
+    setBedPlaying(true);
   }
 
   async function pickBedFolder() {
-    const picker = (
-      window as Window & {
-        showDirectoryPicker?: () => Promise<{
-          name: string;
-          values: () => AsyncIterableIterator<{
-            kind: string;
-            getFile: () => Promise<File>;
-          }>;
-        }>;
-      }
-    ).showDirectoryPicker;
-    if (picker) {
-      try {
-        const dir = await picker();
-        const files: File[] = [];
-        for await (const entry of dir.values()) {
-          if (entry.kind === "file") files.push(await entry.getFile());
-        }
-        applyBedFiles(dir.name, files);
-        return;
-      } catch {
-        return;
-      }
+    const picked = await pickDirectoryFiles();
+    if (picked) {
+      applyBedFiles(picked.name, picked.files);
+      return;
     }
     bedInput.current?.click();
   }
 
   function clearBedFolder() {
-    bedList.forEach((t) => URL.revokeObjectURL(t.url));
+    revokeTracks(bedList);
     bedAudio.current?.pause();
     setBedFolder(null);
     setBedList([]);
     setBedIndex(0);
   }
 
+  function applyVideoFiles(files: File[], folderName?: string) {
+    revokeTracks(videoState.list);
+    const list = tracksFromFiles(files, "av");
+    setVideoState({
+      ...DEFAULT_VIDEO,
+      list,
+      muted: videoState.muted,
+      repeat: videoState.repeat,
+      onScreenUrl: videoState.onScreenUrl,
+      onScreenName: videoState.onScreenName,
+    });
+    void folderName;
+  }
+
+  async function pickVideoFolder() {
+    const picked = await pickDirectoryFiles();
+    if (picked) {
+      applyVideoFiles(picked.files, picked.name);
+      return;
+    }
+    videoInput.current?.click();
+  }
+
+  function clearVideoList() {
+    revokeTracks(videoState.list);
+    setVideoState((prev) => ({
+      ...DEFAULT_VIDEO,
+      muted: prev.muted,
+      onScreenUrl: prev.onScreenUrl,
+      onScreenName: prev.onScreenName,
+    }));
+  }
+
+  function clearMediaOnScreen() {
+    setVideoState((prev) => ({
+      ...prev,
+      onScreenUrl: null,
+      onScreenName: null,
+    }));
+  }
+
   function go() {
+    stopGongAtmo();
+    setShowPct(false);
     if (beat === "quiz") {
+      if (quizGate === "tema") {
+        setQuizGate("play");
+        return;
+      }
       setLeft((n) => Math.max(0, n - 1));
+      setQuizGate("tema");
       return;
     }
     const step = stepAvanti({
@@ -447,16 +664,22 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     setSigla(step.sigla);
     setRoll(step.roll);
     if (step.stacco) setCount(5);
-    if (step.beat === "quiz") setCount(null);
+    if (step.beat === "quiz") {
+      setCount(null);
+      setQuizGate("tema");
+    }
     if (step.beat !== "casa" && open === "prep") setOpen(null);
   }
 
-  const goLabel = avantiLabel({
-    beat,
-    sigla,
-    roll,
-    guestCount: guests.length,
-  });
+  const goLabel =
+    beat === "quiz" && quizGate === "tema"
+      ? "Domanda"
+      : avantiLabel({
+          beat,
+          sigla,
+          roll,
+          guestCount: guests.length,
+        });
 
   function holdSiglaFrame() {
     setSigla((s) => (s === "on" ? "hold" : s));
@@ -486,21 +709,22 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
   function skipQuestion() {
     setLeft((n) => Math.max(0, n - 1));
+    setQuizGate("tema");
   }
 
   function patchPrep(patch: Partial<Prep>) {
     setPrep((prev) => {
-      const next = { ...prev, ...patch };
-      savePrep(eventCode, next);
-      return next;
+      const nextPrep = { ...prev, ...patch };
+      savePrep(eventCode, nextPrep);
+      return nextPrep;
     });
   }
 
   function patchClock(patch: Partial<CasaClockPrefs>) {
     setClockPrefs((prev) => {
-      const next = { ...prev, ...patch };
-      saveClock(eventCode, next);
-      return next;
+      const nextClock = { ...prev, ...patch };
+      saveClock(eventCode, nextClock);
+      return nextClock;
     });
   }
 
@@ -534,32 +758,34 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }
 
   function togglePad(id: CasaPadHitId) {
-    const on = toggleCasaPadHit(id, vols.fx / 100, () => {
+    const on = toggleCasaPadHit(id, effVol("fx"), () => {
       setHits((cur) => {
-        const next = new Set(cur);
-        next.delete(id);
-        return next;
+        const nextHits = new Set(cur);
+        nextHits.delete(id);
+        return nextHits;
       });
     });
     setHits((cur) => {
-      const next = new Set(cur);
-      if (on) next.add(id);
-      else next.delete(id);
-      return next;
+      const nextHits = new Set(cur);
+      if (on) nextHits.add(id);
+      else nextHits.delete(id);
+      return nextHits;
     });
   }
 
   const phaseLive = (
     <div className="casa-phase">
-      <p className="casa-phase-kicker">Ora · {current.label}</p>
       {beat === "casa" ? (
         <button
           type="button"
-          className="casa-hit"
+          className="casa-hit casa-hit-entra"
           data-on={help ? "1" : undefined}
           onClick={() => setHelp((v) => !v)}
         >
-          Aiuto entra
+          <span className="casa-qr-ico" aria-hidden>
+            ▦
+          </span>
+          Entra
         </button>
       ) : null}
       {beat === "premio" || beat === "sponsor" ? (
@@ -644,8 +870,470 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     );
   }
 
+  function addWidget(type: CasaWidgetType) {
+    if (UNIQUE_WIDGET_TYPES.has(type) && activeWidgets.some((w) => w.type === type)) {
+      return;
+    }
+    const meta = widgetMeta(type);
+    const { w: ww, h: hh } = sizeToPx(meta.defaultSize);
+    const others = activeWidgets.map((w) => {
+      const px = sizeToPx(w.size);
+      return { x: w.x, y: w.y, w: px.w, h: px.h };
+    });
+    const pos = pushApart({ x: 40, y: 40, w: ww, h: hh }, others, 1200, 700);
+    const widget: CasaWidgetInstance = {
+      id: createId(type),
+      type,
+      x: pos.x,
+      y: pos.y,
+      size: meta.defaultSize,
+    };
+    commitLayouts(updateActiveWidgets(layouts, [...activeWidgets, widget]));
+  }
+
+  function openPanelForWidget(w: CasaWidgetInstance) {
+    const map: Partial<Record<CasaWidgetType, Panel>> = {
+      settings: "setup",
+      players: "nick",
+      messages: "msg",
+      projector: "preview",
+      audio: "audio",
+      pad: "pad",
+      clock: "clock",
+      audio_bed: "audio",
+    };
+    const panel = map[w.type];
+    if (panel) setOpen(panel);
+  }
+
+  function sendVideoToScreen(t: CasaMediaTrack, index: number) {
+    setVideoState((v) => ({
+      ...v,
+      index,
+      onScreenUrl: t.url,
+      onScreenName: t.name,
+    }));
+  }
+  function onVideoTrackPointer(t: CasaMediaTrack, index: number) {
+    const now = Date.now();
+    const prev = videoTapRef.current;
+    if (prev && prev.url === t.url && now - prev.at < 400) {
+      videoTapRef.current = null;
+      sendVideoToScreen(t, index);
+      return;
+    }
+    videoTapRef.current = { url: t.url, at: now };
+    setVideoState((v) => ({ ...v, index }));
+  }
+
+  const missingProjector = !activeWidgets.some((w) => w.type === "projector");
+  const missingAvanti = !activeWidgets.some((w) => w.type === "avanti");
+  const showMissingWarn = !layoutEdit && (missingProjector || missingAvanti);
+
+  const projectorProps = {
+    eventCode,
+    beat,
+    sigla,
+    help,
+    count,
+    onStage,
+    showPct,
+    slides,
+    siglaSrc,
+    siglaVolume: effVol("sigla"),
+    onSiglaEnded: holdSiglaFrame,
+    flash,
+    spotlight,
+    quizGate,
+    quizQuestion: currentQ,
+    mediaOnScreen:
+      videoState.onScreenUrl && videoState.onScreenName
+        ? {
+            url: videoState.onScreenUrl,
+            name: videoState.onScreenName,
+            muted: videoState.muted,
+          }
+        : null,
+    onClearMediaOnScreen: clearMediaOnScreen,
+  } as const;
+
+  function renderWidget(
+    w: CasaWidgetInstance,
+    ctx: { edit: boolean; wPx: number; hPx: number },
+  ): ReactNode {
+    const liveOff = ctx.edit ? "casa-w-controls-off" : undefined;
+    switch (w.type) {
+      case "settings":
+        return (
+          <div className={liveOff}>
+            {phaseLive}
+          </div>
+        );
+      case "players":
+        return (
+          <div className={liveOff}>
+            <div className="casa-roster">
+              {guests.length === 0 ? (
+                <p className="casa-sub">Nessuno in sala. Entra dal QR.</p>
+              ) : null}
+              {guests.map((g) => (
+                <button
+                  type="button"
+                  className="casa-slot"
+                  key={g.id}
+                  data-on={pickedId === g.id ? "1" : undefined}
+                  data-mute={g.muted ? "1" : undefined}
+                  onClick={() => {
+                    setPickedId(g.id);
+                    setKillAsk(false);
+                  }}
+                >
+                  <CasaFace photo={g.photo} nick={g.nick} gender={g.gender} />
+                  <span className="casa-slot-nick">{g.nick}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      case "messages":
+        return (
+          <div className={liveOff}>
+            <MsgRows limit={msgLimitForSize(w.size)} />
+          </div>
+        );
+      case "projector":
+        return (
+          <div className={liveOff}>
+            {open === "preview" ? (
+              <div className="casa-screen casa-screen-ghost" />
+            ) : (
+              <CasaProjector {...projectorProps} />
+            )}
+          </div>
+        );
+      case "audio":
+        return (
+          <div className={liveOff}>
+            {FADERS.map((f) => (
+              <div className="casa-mix" key={f.id}>
+                <span>{f.label}</span>
+                <i className="casa-mix-bar">
+                  <b
+                    style={{
+                      width: `${mute[f.id] ? 0 : vols[f.id] * masterScale}%`,
+                    }}
+                  />
+                </i>
+                <button
+                  type="button"
+                  className="casa-mute"
+                  data-on={mute[f.id] ? "1" : undefined}
+                  onClick={() => setMute((m) => ({ ...m, [f.id]: !m[f.id] }))}
+                >
+                  M
+                </button>
+              </div>
+            ))}
+          </div>
+        );
+      case "pad":
+        return (
+          <div className={liveOff}>
+            <PadHits active={hits} muted={mute.fx} onToggle={togglePad} />
+          </div>
+        );
+      case "avanti":
+        return (
+          <div className={liveOff}>
+            <button type="button" className="casa-go" onClick={go}>
+              {goLabel}
+            </button>
+          </div>
+        );
+      case "clock":
+        return (
+          <div className={liveOff}>
+            <div className="casa-clock-widget">
+              <em className="casa-pill">{current.label}</em>
+              {clockPrefs.showElapsed ? (
+                <span>
+                  Tempo <b>{elapsedNow}</b>
+                </span>
+              ) : null}
+              {clockPrefs.showExact ? (
+                <span>
+                  Ora <b>{exactNow}</b>
+                </span>
+              ) : null}
+              {!clockPrefs.showElapsed && !clockPrefs.showExact ? (
+                <span>Tempo</span>
+              ) : null}
+            </div>
+          </div>
+        );
+      case "timer":
+        return (
+          <div className={`casa-timer-widget ${liveOff ?? ""}`}>
+            {beat === "quiz" && quizGate === "play" ? (
+              <p className="casa-timer-readout">{quizLeftSec}s</p>
+            ) : (
+              <>
+                <p className="casa-timer-readout">{formatMmSs(freeTimerSec)}</p>
+                <div className="casa-bed-line">
+                  <button
+                    type="button"
+                    className="casa-hit"
+                    onClick={() => setFreeTimerRun((v) => !v)}
+                  >
+                    {freeTimerRun ? "Stop" : "Start"}
+                  </button>
+                  <button
+                    type="button"
+                    className="casa-hit"
+                    onClick={() => {
+                      setFreeTimerRun(false);
+                      setFreeTimerSec(0);
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      case "notes":
+        return (
+          <textarea
+            className={`casa-notes-field ${liveOff ?? ""}`}
+            value={getNote(notes, w.id)}
+            onChange={(e) => commitNotes(setNote(notes, w.id, e.target.value))}
+            placeholder="Note per la serata…"
+          />
+        );
+      case "qr_help":
+        return (
+          <div className={`casa-qr-help ${liveOff ?? ""}`}>
+            <JoinQrCode url={joinUrl} size={72} showUrl={false} className="casa-qr-mini" />
+            <button
+              type="button"
+              className="casa-hit casa-hit-entra"
+              data-on={help ? "1" : undefined}
+              onClick={() => setHelp((v) => !v)}
+            >
+              <span className="casa-qr-ico" aria-hidden>
+                ▦
+              </span>
+              Entra
+            </button>
+          </div>
+        );
+      case "volume_master":
+        return (
+          <label className={`casa-fader ${liveOff ?? ""}`}>
+            <span>Master</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={masterVol}
+              onChange={(e) => setMasterVol(Number(e.target.value))}
+            />
+            <strong>{masterVol}</strong>
+          </label>
+        );
+      case "audio_bed":
+        return (
+          <div className={`casa-media-widget ${liveOff ?? ""}`}>
+            <div className="casa-bed-line">
+              <button
+                type="button"
+                className="casa-hit"
+                onClick={() => setBedPlaying((v) => !v)}
+              >
+                {bedPlaying ? "Pausa" : "Play"}
+              </button>
+              <button
+                type="button"
+                className="casa-hit"
+                disabled={!bedFolder || bedList.length < 2}
+                onClick={() =>
+                  setBedIndex((i) =>
+                    bedList.length ? (i - 1 + bedList.length) % bedList.length : 0,
+                  )
+                }
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className="casa-hit"
+                disabled={!bedFolder || bedList.length < 2}
+                onClick={() =>
+                  setBedIndex((i) => (bedList.length ? (i + 1) % bedList.length : 0))
+                }
+              >
+                ›
+              </button>
+              <button
+                type="button"
+                className="casa-hit"
+                data-on={bedRepeat !== "off" ? "1" : undefined}
+                onClick={() => setBedRepeat((m) => cycleRepeat(m))}
+              >
+                {repeatLabel(bedRepeat)}
+              </button>
+            </div>
+            <div className="casa-bed-line">
+              <button
+                type="button"
+                className="casa-hit"
+                onClick={() => bedFilesInput.current?.click()}
+              >
+                Apri file
+              </button>
+              <button type="button" className="casa-hit" onClick={() => void pickBedFolder()}>
+                Apri cartella
+              </button>
+              <button type="button" className="casa-hit" onClick={clearBedFolder}>
+                Clear
+              </button>
+            </div>
+            <p className="casa-sub">
+              {bedFolder
+                ? `${bedFolder} · ${bedList.length} brani`
+                : `Colonna · ${casaAutoBedLabel(beat)}`}
+            </p>
+            {bedList.length ? (
+              <div className="casa-playlist">
+                {bedList.map((t, i) => (
+                  <button
+                    key={t.url}
+                    type="button"
+                    className="casa-track"
+                    data-on={i === bedIndex ? "1" : undefined}
+                    onClick={() => {
+                      setBedIndex(i);
+                      setBedPlaying(true);
+                    }}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <div className="casa-gong-atmo">
+              <label className="casa-switch-row">
+                <span>Play al gong</span>
+                <button
+                  type="button"
+                  className="casa-switch"
+                  role="switch"
+                  aria-checked={gongAtmo.enabled}
+                  data-on={gongAtmo.enabled ? "1" : undefined}
+                  onClick={() =>
+                    setGongAtmo((g) => ({ ...g, enabled: !g.enabled }))
+                  }
+                >
+                  <i />
+                </button>
+              </label>
+              <button
+                type="button"
+                className="casa-hit"
+                onClick={() => gongInput.current?.click()}
+              >
+                {gongAtmo.track ? gongAtmo.track.name : "File gong"}
+              </button>
+            </div>
+          </div>
+        );
+      case "video_player":
+        return (
+          <div className={`casa-media-widget ${liveOff ?? ""}`}>
+            <div className="casa-bed-line">
+              <button
+                type="button"
+                className="casa-hit"
+                data-on={videoState.muted ? "1" : undefined}
+                onClick={() =>
+                  setVideoState((v) => ({ ...v, muted: !v.muted }))
+                }
+              >
+                {videoState.muted ? "Muted" : "Audio"}
+              </button>
+              <button
+                type="button"
+                className="casa-hit"
+                data-on={videoState.repeat !== "off" ? "1" : undefined}
+                onClick={() =>
+                  setVideoState((v) => ({
+                    ...v,
+                    repeat: cycleRepeat(v.repeat),
+                  }))
+                }
+              >
+                {repeatLabel(videoState.repeat)}
+              </button>
+              <button
+                type="button"
+                className="casa-hit"
+                onClick={() => videoInput.current?.click()}
+              >
+                Apri
+              </button>
+              <button
+                type="button"
+                className="casa-hit"
+                onClick={() => void pickVideoFolder()}
+              >
+                Apri cartella
+              </button>
+            </div>
+            <div className="casa-bed-line">
+              <button type="button" className="casa-hit" onClick={clearVideoList}>
+                Clear lista
+              </button>
+              <button
+                type="button"
+                className="casa-hit"
+                disabled={!videoState.onScreenUrl}
+                onClick={clearMediaOnScreen}
+              >
+                Togli dal maxi
+              </button>
+            </div>
+            {videoState.list.length ? (
+              <div className="casa-playlist">
+                {videoState.list.map((t, i) => (
+                  <button
+                    key={t.url}
+                    type="button"
+                    className="casa-track"
+                    data-on={
+                      videoState.onScreenUrl === t.url || videoState.index === i
+                        ? "1"
+                        : undefined
+                    }
+                    onClick={() => onVideoTrackPointer(t, i)}
+                    onDoubleClick={() => sendVideoToScreen(t, i)}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="casa-sub">Doppio tap → manda sul proiettore</p>
+            )}
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
+
   return (
-    <div className="casa">
+    <div className="casa" data-layout-edit={layoutEdit ? "1" : undefined}>
       <header className="casa-top">
         <button
           type="button"
@@ -654,11 +1342,15 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         >
           {prep.venueName || eventCode}
         </button>
+        <CasaLayoutBar
+          edit={layoutEdit}
+          onEditChange={setLayoutEdit}
+          layouts={layouts}
+          onLayoutsChange={commitLayouts}
+          onOpenGallery={() => setGalleryOpen(true)}
+        />
         <div className="casa-status">
           <div className="casa-status-side">
-            <span>
-              Fase <em className="casa-pill">{current.label}</em>
-            </span>
             <span>
               In sala <b>{guests.length}</b>
             </span>
@@ -685,106 +1377,40 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         </div>
       </header>
 
-      <div className="casa-cols">
-        <div className="casa-col casa-col-left">
-          <div className="casa-card casa-setup">
-            <div className="casa-setup-main">
-              <CasaHead onOpen={() => setOpen("setup")}>Impostazioni</CasaHead>
-            </div>
-            {phaseLive}
+      <div className="casa-deck-wrap">
+        {showMissingWarn ? (
+          <div className="casa-layout-warn" role="status">
+            <span>
+              Manca {missingProjector && missingAvanti
+                ? "Proiettore e Avanti"
+                : missingProjector
+                  ? "Proiettore"
+                  : "Avanti"}{" "}
+              — aggiungilo dal layout
+            </span>
+            <button type="button" onClick={() => setLayoutEdit(true)}>
+              Modifica layout
+            </button>
           </div>
-          <div className="casa-card casa-people">
-            <CasaHead onOpen={() => setOpen("nick")}>Giocatori</CasaHead>
-            <div className="casa-roster">
-              {guests.length === 0 ? (
-                <p className="casa-sub">Nessuno in sala. Entra dal QR.</p>
-              ) : null}
-              {guests.map((g) => {
-                return (
-                  <button
-                    type="button"
-                    className="casa-slot"
-                    key={g.id}
-                    data-on={pickedId === g.id ? "1" : undefined}
-                    data-mute={g.muted ? "1" : undefined}
-                    onClick={() => {
-                      setPickedId(g.id);
-                      setKillAsk(false);
-                    }}
-                  >
-                    <CasaFace photo={g.photo} nick={g.nick} gender={g.gender} />
-                    <span className="casa-slot-nick">{g.nick}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="casa-card casa-msg">
-            <div className="casa-msg-head">
-              <CasaHead onOpen={() => setOpen("msg")}>Messaggi</CasaHead>
-            </div>
-            <MsgRows />
-          </div>
-        </div>
-
-        <div className="casa-col casa-center">
-          <div className="casa-card casa-preview">
-            <CasaHead onOpen={() => setOpen("preview")}>Proiettore</CasaHead>
-            {open === "preview" ? (
-              <div className="casa-screen casa-screen-ghost" />
-            ) : (
-              <CasaProjector
-                eventCode={eventCode}
-                beat={beat}
-                sigla={sigla}
-                help={help}
-                count={count}
-                onStage={onStage}
-                showPct={showPct}
-                slides={slides}
-                siglaSrc={siglaSrc}
-                siglaVolume={mute.sigla ? 0 : vols.sigla / 100}
-                onSiglaEnded={holdSiglaFrame}
-                flash={flash}
-                spotlight={spotlight}
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="casa-col casa-col-right">
-          <div className="casa-card">
-            <CasaHead onOpen={() => setOpen("audio")}>Audio</CasaHead>
-            {FADERS.map((f) => (
-              <div className="casa-mix" key={f.id}>
-                <span>{f.label}</span>
-                <i className="casa-mix-bar">
-                  <b style={{ width: `${mute[f.id] ? 0 : vols[f.id]}%` }} />
-                </i>
-                <button
-                  type="button"
-                  className="casa-mute"
-                  data-on={mute[f.id] ? "1" : undefined}
-                  onClick={() => setMute((m) => ({ ...m, [f.id]: !m[f.id] }))}
-                >
-                  M
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="casa-card casa-pad-card">
-            <CasaHead onOpen={() => setOpen("pad")}>Pad</CasaHead>
-            <PadHits
-              active={hits}
-              muted={mute.fx}
-              onToggle={togglePad}
-            />
-          </div>
-          <button type="button" className="casa-go" onClick={go}>
-            {goLabel}
-          </button>
-        </div>
+        ) : null}
+        <CasaWidgetDeck
+          edit={layoutEdit}
+          widgets={activeWidgets}
+          onChange={(widgets) =>
+            commitLayouts(updateActiveWidgets(layouts, widgets))
+          }
+          onAddRequest={() => setGalleryOpen(true)}
+          onWidgetTitleClick={openPanelForWidget}
+          renderWidget={renderWidget}
+        />
       </div>
+
+      <CasaWidgetGallery
+        open={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+        present={activeWidgets.map((w) => w.type)}
+        onAdd={addWidget}
+      />
 
       {open ? (
         <>
@@ -872,22 +1498,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             ) : null}
 
             {open === "preview" ? (
-              <CasaProjector
-                eventCode={eventCode}
-                beat={beat}
-                sigla={sigla}
-                help={help}
-                count={count}
-                onStage={onStage}
-                showPct={showPct}
-                slides={slides}
-                siglaSrc={siglaSrc}
-                siglaVolume={mute.sigla ? 0 : vols.sigla / 100}
-                onSiglaEnded={holdSiglaFrame}
-                flash={flash}
-                spotlight={spotlight}
-                enlarge
-              />
+              <CasaProjector {...projectorProps} enlarge />
             ) : null}
 
             {open === "setup" ? (
@@ -917,7 +1528,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                       Schermi
                     </button>
                     <p className="casa-sub">
-                      {LINE[beat]}
+                      {beat === "quiz" ? quizLine(quizGate) : LINE[beat]}
                       {mustAnswer ? " Chi non risponde prende −1." : ""}
                     </p>
                     {phaseLive}
@@ -1046,7 +1657,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                   <span>
                     {bedFolder
                       ? `${bedFolder} · ${bedList.length} brani`
-                      : "Colonna del gioco, segue la fase"}
+                      : `Colonna · ${casaAutoBedLabel(beat)}`}
                   </span>
                 </div>
                 {bedList.length ? (
@@ -1262,11 +1873,18 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       <audio
         ref={bedAudio}
         className="casa-hidden"
+        data-bed={activeBed?.name ?? "off"}
         onEnded={() => {
-          if (bedList.length < 2) return;
-          setBedIndex((i) => (i + 1) % bedList.length);
+          if (!bedFolder || !bedList.length) return;
+          const nextIdx = nextIndex(bedIndex, bedList.length, bedRepeat);
+          if (nextIdx == null) {
+            setBedPlaying(false);
+            return;
+          }
+          setBedIndex(nextIdx);
         }}
       />
+      <audio ref={gongAudioRef} className="casa-hidden" data-gong-atmo="" loop />
       <input
         ref={shotFile}
         type="file"
@@ -1317,6 +1935,46 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             const root = files[0]?.webkitRelativePath.split("/")[0] ?? "Cartella";
             applyBedFiles(root, Array.from(files));
           }
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={bedFilesInput}
+        type="file"
+        className="casa-hidden"
+        multiple
+        accept="audio/*"
+        onChange={(e) => {
+          const files = e.target.files;
+          if (files?.length) applyBedFiles("File", Array.from(files));
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={gongInput}
+        type="file"
+        className="casa-hidden"
+        accept="audio/*"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (!file || !isAudioFile(file)) return;
+          if (gongAtmo.track) URL.revokeObjectURL(gongAtmo.track.url);
+          setGongAtmo((g) => ({
+            ...g,
+            track: { name: file.name, url: URL.createObjectURL(file) },
+          }));
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={videoInput}
+        type="file"
+        className="casa-hidden"
+        multiple
+        accept="video/*,image/*"
+        onChange={(e) => {
+          const files = e.target.files;
+          if (files?.length) applyVideoFiles(Array.from(files));
           e.target.value = "";
         }}
       />

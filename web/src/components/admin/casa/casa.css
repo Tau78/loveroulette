@@ -1612,3 +1612,608 @@
   padding: 0 10px;
   font-size: 11px;
 }
+
+/* —— widgets / edit deck —— */
+
+.casa-layout-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.casa-layout-edit {
+  margin: 0;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.casa-layout-edit[data-on="1"] {
+  background: var(--green);
+  color: #102016;
+}
+
+.casa-layout-chip {
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.casa-layout-chip[data-on] {
+  border-color: var(--green);
+  color: var(--ink);
+  background: rgba(61, 220, 132, 0.12);
+}
+
+.casa-deck-shell {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.casa-deck-stage {
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.casa-deck-item {
+  z-index: 1;
+}
+
+.casa-deck-item:active {
+  z-index: 3;
+}
+
+.casa-deck-empty {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: min(280px, 70%);
+  height: 56px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: rgba(37, 40, 48, 0.55);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.casa-deck-empty:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.casa-w {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: 14px;
+  background: var(--card);
+  color: inherit;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.casa-w.casa-card {
+  padding: 0;
+}
+
+.casa-w[data-edit="1"] {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  touch-action: none;
+  user-select: none;
+}
+
+.casa-w-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 10px 12px 4px;
+  cursor: inherit;
+}
+
+.casa-w[data-edit="1"] .casa-w-head,
+.casa-w[data-edit="1"] .casa-w-body {
+  cursor: grab;
+}
+
+.casa-w[data-edit="1"] .casa-w-head:active,
+.casa-w[data-edit="1"] .casa-w-body:active {
+  cursor: grabbing;
+}
+
+.casa-w-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.casa-w-title-btn {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  cursor: pointer;
+  text-align: left;
+}
+
+.casa-w-title-btn:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.casa-w-warn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 99px;
+  background: var(--yellow);
+  color: #1a1d24;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.casa-w-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px 12px 12px;
+}
+
+.casa-w-jiggle {
+  animation: casa-w-jiggle 0.45s ease-in-out infinite alternate;
+  transform-origin: center center;
+}
+
+@keyframes casa-w-jiggle {
+  from {
+    transform: rotate(-0.55deg);
+  }
+  to {
+    transform: rotate(0.55deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .casa-w-jiggle {
+    animation: none;
+  }
+}
+
+.casa-w-remove,
+.casa-w-size {
+  position: absolute;
+  z-index: 4;
+  top: 6px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 99px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.casa-w-remove {
+  left: 6px;
+  background: #ff5a5f;
+  color: #fff;
+}
+
+.casa-w-size {
+  right: 6px;
+  background: #1a1d24;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.casa-gallery {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.casa-gallery-veil {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(10, 12, 16, 0.62);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.casa-gallery-sheet {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 100%);
+  max-height: min(72vh, 640px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-radius: 18px 18px 0 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.casa-gallery-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.casa-gallery-head strong {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.casa-gallery-close {
+  margin: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: #1a1d24;
+  color: var(--dim);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.casa-gallery-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+}
+
+.casa-gallery-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: #1a1d24;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.casa-gallery-item em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.casa-gallery-item:disabled,
+.casa-gallery-item[data-taken="1"] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.casa-gallery-item:not(:disabled):hover {
+  outline: 1px solid var(--green);
+}
+
+.casa-layout-add {
+  margin: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px dashed var(--line);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.casa-layout-add:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.casa-layout-menu {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  transform: translate(-12px, 8px);
+}
+
+.casa-layout-menu button {
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.casa-layout-menu button:hover {
+  background: #1a1d24;
+}
+
+.casa-deck-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 12px 12px;
+}
+
+.casa-layout-warn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(245, 200, 75, 0.12);
+  border: 1px solid rgba(245, 200, 75, 0.35);
+  color: var(--yellow);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.casa-layout-warn button {
+  margin: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--yellow);
+  color: #1a1d24;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.casa-w-controls-off {
+  pointer-events: none;
+}
+
+.casa-hit-entra {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.casa-qr-ico {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.casa-clock-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  cursor: pointer;
+  text-align: left;
+}
+
+.casa-clock-widget .casa-pill {
+  margin-left: 0;
+}
+
+.casa-clock-widget b {
+  color: var(--ink);
+}
+
+.casa-timer-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.casa-timer-readout {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.casa-notes-field {
+  width: 100%;
+  height: 100%;
+  min-height: 64px;
+  resize: none;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #1a1d24;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.casa-qr-help {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.casa-qr-mini {
+  display: inline-flex;
+  padding: 6px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.casa-media-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.casa-gong-atmo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.casa-proj-media {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.88);
+  pointer-events: auto;
+}
+
+.casa-proj-media img,
+.casa-proj-media video {
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.casa-proj-media-clear {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 1;
+  pointer-events: auto;
+  margin: 0;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.casa-w-body .casa-go {
+  width: 100%;
+  height: 100%;
+  min-height: 56px;
+}
