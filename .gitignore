@@ -2,6 +2,11 @@
 .env*
 !.env.example
 !**/.env.example
+!.env.play.example
+!**/.env.play.example
+.env.play
+.play-service-account.json
+*play-service-account*.json
 node_modules/
 .next/
 .vercel/

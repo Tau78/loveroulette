@@ -11,7 +11,8 @@
     "primaryColor": "#E91E8C",
     "description": "Plancia animatore per Love Roulette: comanda la serata live in sala. Non è un gioco d'azzardo.",
     "platforms": [
-      "ios"
+      "ios",
+      "android"
     ],
     "ios": {
       "bundleIdentifier": "it.musicproeventi.loveroulette",
@@ -42,6 +43,18 @@
           }
         ]
       }
+    },
+    "android": {
+      "package": "it.musicproeventi.loveroulette",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0D0D12",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [],
+      "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
       [

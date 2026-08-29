@@ -1,14 +1,17 @@
+# Keep EAS upload small (local prebuild / deps must not ship).
 node_modules/
 .expo/
 dist/
 web-build/
-expo-env.d.ts
-*.tsbuildinfo
 ios/
 android/
+**/.DS_Store
+*.tsbuildinfo
+expo-env.d.ts
 .env
 .env*.local
 .env.play
 .play-service-account.json
 *play-service-account*.json
 !.env.play.example
+!.env.example

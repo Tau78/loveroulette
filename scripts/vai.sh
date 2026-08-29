@@ -98,7 +98,6 @@ detect_stack() {
 
   if [[ -f eas.json || -f mobile/eas.json ]]; then
     STACK_IOS=1
-    [[ -d android || -d mobile/android ]] && STACK_ANDROID=1
   fi
   if [[ -f app.json || -f app.config.js || -f app.config.ts || -f mobile/app.json ]]; then
     if grep -q '"expo"' app.json app.config.js app.config.ts mobile/app.json 2>/dev/null \
@@ -109,7 +108,21 @@ detect_stack() {
   if [[ -d ios || -d mobile/ios ]] || compgen -G '*.xcodeproj' >/dev/null || compgen -G '*.xcworkspace' >/dev/null; then
     STACK_IOS=1
   fi
-  if [[ -d android ]]; then
+
+  # Android: cartella nativa, oppure segnali Expo/EAS in mobile/ (o root)
+  if [[ -d android || -d mobile/android ]]; then
+    STACK_ANDROID=1
+  fi
+  if [[ -f mobile/eas.json ]] && grep -qE '"android"|app-bundle' mobile/eas.json 2>/dev/null; then
+    STACK_ANDROID=1
+  fi
+  if [[ -f eas.json ]] && grep -qE '"android"|app-bundle' eas.json 2>/dev/null; then
+    STACK_ANDROID=1
+  fi
+  if [[ -f mobile/app.json ]] && grep -q '"android"' mobile/app.json 2>/dev/null; then
+    STACK_ANDROID=1
+  fi
+  if [[ -f app.json ]] && grep -q '"android"' app.json 2>/dev/null; then
     STACK_ANDROID=1
   fi
 }
@@ -415,24 +428,38 @@ run_build() {
     log "Build: già in corso, non ne lancio un’altra."
     return 0
   fi
-  if [[ -x "$ROOT/scripts/xcode-testflight.sh" ]]; then
+
+  local built=0
+
+  # iOS: Xcode TestFlight se presente; altrimenti EAS da root (legacy)
+  if [[ "$STACK_IOS" == "1" && -x "$ROOT/scripts/xcode-testflight.sh" ]]; then
     bash "$ROOT/scripts/xcode-testflight.sh"
     log "Build: Xcode / TestFlight avviata."
-    return 0
+    built=1
+  elif [[ "$STACK_IOS" == "1" && -f eas.json ]]; then
+    npx eas-cli build --platform ios --profile production --non-interactive --no-wait --auto-submit
+    log "Build: EAS ios richiesta."
+    built=1
   fi
-  if [[ -f eas.json ]]; then
-    local plat="ios"
-    [[ "$STACK_ANDROID" == "1" && "$STACK_IOS" != "1" ]] && plat="android"
-    npx eas-cli build --platform "$plat" --profile production --non-interactive --no-wait --auto-submit
-    log "Build: EAS ${plat} richiesta."
-    return 0
+
+  # Android: script dedicato (cd mobile/ al suo interno); non eas-cli dalla root
+  if [[ "$STACK_ANDROID" == "1" ]]; then
+    if [[ -f "$ROOT/scripts/eas-android-build.sh" ]]; then
+      bash "$ROOT/scripts/eas-android-build.sh" --no-wait
+      log "Build: EAS Android richiesta."
+      built=1
+    elif [[ -f android/gradlew ]]; then
+      (cd android && ./gradlew assembleRelease)
+      log "Build: Android assembleRelease ok."
+      built=1
+    else
+      log "Build: STACK_ANDROID ma manca scripts/eas-android-build.sh (o android/gradlew)."
+    fi
   fi
-  if [[ "$STACK_ANDROID" == "1" && -f android/gradlew ]]; then
-    (cd android && ./gradlew assembleRelease)
-    log "Build: Android assembleRelease ok."
-    return 0
+
+  if [[ "$built" == "0" ]]; then
+    log "Build: stack nativo presente ma manca eas.json / mobile/eas.json o lo script Xcode."
   fi
-  log "Build: stack nativo presente ma manca eas.json o lo script Xcode."
 }
 
 # --- run ---

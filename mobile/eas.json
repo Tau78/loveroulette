@@ -8,6 +8,9 @@
       "autoIncrement": false,
       "ios": {
         "image": "latest"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },
@@ -16,6 +19,9 @@
       "ios": {
         "ascAppId": "6805227768",
         "appleTeamId": "YSU7PL673A"
+      },
+      "android": {
+        "track": "internal"
       }
     }
   }
