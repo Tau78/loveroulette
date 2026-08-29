@@ -10,6 +10,7 @@ import { CasaWidgetDeck } from "@/components/admin/casa/widgets/CasaWidgetDeck";
 import { CasaWidgetGallery } from "@/components/admin/casa/widgets/CasaWidgetGallery";
 import { findAddPlacement } from "@/components/admin/casa/widgets/layout-math";
 import { widgetMeta } from "@/components/admin/casa/widgets/widget-registry";
+import { WidgetConductor } from "@/components/admin/casa/widgets/WidgetConductor";
 import { WidgetCue } from "@/components/admin/casa/widgets/WidgetCue";
 import { WidgetExtraction } from "@/components/admin/casa/widgets/WidgetExtraction";
 import { WidgetFinals } from "@/components/admin/casa/widgets/WidgetFinals";
@@ -17,7 +18,8 @@ import { WidgetLeaderboard } from "@/components/admin/casa/widgets/WidgetLeaderb
 import { WidgetPanic } from "@/components/admin/casa/widgets/WidgetPanic";
 import { WidgetPreflight } from "@/components/admin/casa/widgets/WidgetPreflight";
 import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
-import { WidgetTransport } from "@/components/admin/casa/widgets/WidgetTransport";
+import { patchEventConfig } from "@/lib/admin/animator-api";
+import { useCasaLiveSession } from "@/components/admin/casa/casa-live-session-context";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
@@ -543,6 +545,7 @@ function formatMmSs(totalSec: number): string {
 }
 
 export function CasaPad({ eventCode }: { eventCode: string }) {
+  const live = useCasaLiveSession();
   const [beat, setBeat] = useState<Beat>("casa");
   const [guests, setGuests] = useState<Guest[]>(SEED);
   const [query, setQuery] = useState("");
@@ -932,6 +935,22 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     setPrep((prev) => {
       const nextPrep = { ...prev, ...patch };
       savePrep(eventCode, nextPrep);
+      if (
+        live.pinReady &&
+        ("shipTopN" in patch ||
+          "salvaSec" in patch ||
+          "ripescaggio" in patch)
+      ) {
+        void patchEventConfig(
+          eventCode,
+          {
+            extractionCount: nextPrep.shipTopN,
+            salvaSec:
+              nextPrep.ripescaggio === "salva" ? nextPrep.salvaSec : null,
+          },
+          live.pin,
+        ).catch(() => {});
+      }
       return nextPrep;
     });
   }
@@ -1093,6 +1112,13 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     if (UNIQUE_WIDGET_TYPES.has(type) && activeWidgets.some((w) => w.type === type)) {
       return;
     }
+    // Avanti e Transport sono lo stesso conductor.
+    if (
+      (type === "avanti" || type === "transport") &&
+      activeWidgets.some((w) => w.type === "avanti" || w.type === "transport")
+    ) {
+      return;
+    }
     const meta = widgetMeta(type);
     const preferred = sizeToPx(meta.defaultSize);
     const others = activeWidgets.map((w) => {
@@ -1175,7 +1201,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }
 
   const missingProjector = !activeWidgets.some((w) => w.type === "projector");
-  const missingAvanti = !activeWidgets.some((w) => w.type === "avanti");
+  const missingAvanti = !activeWidgets.some(
+    (w) => w.type === "avanti" || w.type === "transport",
+  );
   const showMissingWarn = !layoutEdit && (missingProjector || missingAvanti);
 
   const projectorProps = {
@@ -1293,11 +1321,16 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           </div>
         );
       case "avanti":
+      case "transport":
         return (
           <div className={liveOff}>
-            <button type="button" className="casa-go" onClick={go}>
-              {goLabel}
-            </button>
+            <WidgetConductor
+              localLabel={goLabel}
+              onLocalGo={() => {
+                stopGongAtmo();
+                go();
+              }}
+            />
           </div>
         );
       case "clock":
@@ -1576,12 +1609,6 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             <WidgetQuizRegia />
           </div>
         );
-      case "transport":
-        return (
-          <div className={liveOff}>
-            <WidgetTransport />
-          </div>
-        );
       case "preflight":
         return (
           <div className={liveOff}>
@@ -1603,7 +1630,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       case "extraction":
         return (
           <div className={liveOff}>
-            <WidgetExtraction shipTopN={prep.shipTopN} />
+            <WidgetExtraction
+              shipTopN={prep.shipTopN}
+              ripescaggio={prep.ripescaggio}
+              salvaSec={prep.salvaSec}
+            />
           </div>
         );
       case "leaderboard":

@@ -7,6 +7,8 @@ import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
 const bodySchema = z.object({
   badgeRequired: z.boolean().optional(),
+  extractionCount: z.number().int().min(1).max(20).nullable().optional(),
+  salvaSec: z.number().int().min(5).max(120).nullable().optional(),
 });
 
 export async function PATCH(
@@ -34,7 +36,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (body.badgeRequired === undefined) {
+  if (
+    body.badgeRequired === undefined &&
+    body.extractionCount === undefined &&
+    body.salvaSec === undefined
+  ) {
     return NextResponse.json({ error: "No config fields to update" }, { status: 400 });
   }
 
@@ -64,7 +70,13 @@ export async function PATCH(
     }
 
     const config = await updateLoveRouletteConfig(supabase, event.id, {
-      badge_required: body.badgeRequired,
+      ...(body.badgeRequired !== undefined
+        ? { badge_required: body.badgeRequired }
+        : {}),
+      ...(body.extractionCount !== undefined
+        ? { extraction_count: body.extractionCount }
+        : {}),
+      ...(body.salvaSec !== undefined ? { salva_sec: body.salvaSec } : {}),
     });
 
     return NextResponse.json({ config });

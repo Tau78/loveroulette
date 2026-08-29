@@ -31,6 +31,8 @@ interface AdminControlPanelProps {
   onRefreshProgress?: () => Promise<{ stats: EventStats } | null>;
   /** Azioni primarie gestite dalla transport bar. */
   hideTransportActions?: boolean;
+  /** Target finalisti for auto eliminate (Ship top N). Default 3. */
+  finalistCount?: number;
 }
 
 export function AdminControlPanel({
@@ -45,6 +47,7 @@ export function AdminControlPanel({
   pairProgress = null,
   onRefreshProgress,
   hideTransportActions = false,
+  finalistCount = 3,
 }: AdminControlPanelProps) {
   const { count: questionCount, loading: questionCountLoading } =
     useEventQuestionCount(eventCode, true, questionsRefreshKey);
@@ -131,7 +134,16 @@ export function AdminControlPanel({
     setError(null);
 
     try {
-      const response = await postEliminatePair(eventCode, { mode }, animatorPin);
+      const response = await postEliminatePair(
+        eventCode,
+        {
+          mode,
+          ...(mode === "auto_to_finalists"
+            ? { finalistCount }
+            : {}),
+        },
+        animatorPin,
+      );
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as {
@@ -278,7 +290,7 @@ export function AdminControlPanel({
               disabled={disabled || busy}
               onClick={() => void eliminatePair("auto_to_finalists")}
             >
-              Top 3
+              Top {finalistCount}
             </AdminButton>
           ) : null}
         </div>

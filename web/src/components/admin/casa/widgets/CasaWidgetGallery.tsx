@@ -20,6 +20,9 @@ function isTaken(
   presentSet: Set<CasaWidgetType>,
   unique: boolean,
 ): boolean {
+  if (type === "avanti" || type === "transport") {
+    return presentSet.has("avanti") || presentSet.has("transport");
+  }
   return unique && UNIQUE_WIDGET_TYPES.has(type) && presentSet.has(type);
 }
 

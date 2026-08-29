@@ -40,6 +40,8 @@ export interface EventConfig {
   data_retention_days: number;
   /** Se true, il giocatore deve inserire il codice badge al join. */
   badge_required: boolean;
+  /** Secondi finestra «Salva sala» (ripescaggio). Null = default client (30). */
+  salva_sec: number | null;
 }
 
 export const DEFAULT_EVENT_CONFIG: EventConfig = {
@@ -63,6 +65,7 @@ export const DEFAULT_EVENT_CONFIG: EventConfig = {
   question_mode: "fixed",
   data_retention_days: 30,
   badge_required: false,
+  salva_sec: null,
 };
 
 /** @deprecated Standalone schema — use LoveRouletteEvent from @/lib/musicpro/types */

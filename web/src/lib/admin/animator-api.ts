@@ -120,7 +120,11 @@ export async function patchSessionRuntimeState(
 
 export async function patchEventConfig(
   eventCode: string,
-  body: { badgeRequired: boolean },
+  body: {
+    badgeRequired?: boolean;
+    extractionCount?: number | null;
+    salvaSec?: number | null;
+  },
   pin: string | null,
 ): Promise<Response> {
   return fetch(`/api/events/${encodeURIComponent(eventCode)}/config`, {
@@ -175,7 +179,7 @@ export async function postVotingAction(
 
 export async function postEliminatePair(
   eventCode: string,
-  body: { mode: "next" | "auto_to_finalists" },
+  body: { mode: "next" | "auto_to_finalists"; finalistCount?: number },
   pin: string | null,
 ): Promise<Response> {
   return fetch(`/api/events/${encodeURIComponent(eventCode)}/eliminate`, {

@@ -10,6 +10,7 @@ import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
 const bodySchema = z.object({
   mode: z.enum(["next", "auto_to_finalists"]),
+  finalistCount: z.number().int().min(1).max(20).optional(),
 });
 
 export async function POST(
@@ -60,7 +61,12 @@ export async function POST(
       return NextResponse.json({ error: "Invalid animator PIN" }, { status: 401 });
     }
 
-    const result = await eliminatePairs(supabase, event.id, body.mode);
+    const result = await eliminatePairs(
+      supabase,
+      event.id,
+      body.mode,
+      body.finalistCount ?? 3,
+    );
 
     return NextResponse.json({
       eliminated: result.eliminated.map((item) => ({

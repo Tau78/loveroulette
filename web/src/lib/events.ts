@@ -31,10 +31,18 @@ export function mergeEventConfig(
     question_mode: "fixed",
     data_retention_days: 30,
     badge_required: false,
+    salva_sec: null,
   };
 
   if (!partial) return base;
-  return { ...base, ...partial } as EventConfig;
+  const merged = { ...base, ...partial } as EventConfig;
+  if (
+    merged.salva_sec != null &&
+    (!Number.isFinite(merged.salva_sec) || merged.salva_sec < 1)
+  ) {
+    merged.salva_sec = null;
+  }
+  return merged;
 }
 
 export function themeClass(theme: ThemeId): string {
