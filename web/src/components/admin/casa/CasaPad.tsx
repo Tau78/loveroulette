@@ -37,6 +37,8 @@ import {
 import { avantiLabel, stepAvanti } from "@/lib/admin/casa-avanti";
 import { casaAutoBedLabel, resolveCasaBed } from "@/lib/admin/casa-beds";
 import {
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
   createDefaultState,
   createId,
   getActiveProfile,
@@ -45,6 +47,7 @@ import {
   sizeToPx,
   UNIQUE_WIDGET_TYPES,
   updateActiveWidgets,
+  widgetLayoutPx,
   type CasaLayoutsState,
   type CasaWidgetInstance,
   type CasaWidgetSize,
@@ -885,10 +888,17 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     const meta = widgetMeta(type);
     const { w: ww, h: hh } = sizeToPx(meta.defaultSize);
     const others = activeWidgets.map((w) => {
-      const px = sizeToPx(w.size);
+      const px = widgetLayoutPx(w);
       return { x: w.x, y: w.y, w: px.w, h: px.h };
     });
-    const pos = pushApart({ x: 40, y: 40, w: ww, h: hh }, others, 1200, 700);
+    const pos = pushApart(
+      { x: 40, y: 40, w: ww, h: hh },
+      others,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+    );
+    // No free slot — don't add on top of others.
+    if (!pos) return;
     const widget: CasaWidgetInstance = {
       id: createId(type),
       type,
@@ -1391,46 +1401,54 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   return (
     <div className="casa" data-layout-edit={layoutEdit ? "1" : undefined}>
       <header className="casa-top">
+        <div className="casa-top-mod casa-top-sala" aria-live="polite">
+          <span>
+            In sala <b>{guests.length}</b>
+          </span>
+        </div>
+
+        <div className="casa-top-mod casa-top-layout">
+          <CasaLayoutBar
+            edit={layoutEdit}
+            onEditChange={setLayoutEdit}
+            layouts={layouts}
+            onLayoutsChange={commitLayouts}
+            onOpenGallery={() => setGalleryOpen(true)}
+          />
+        </div>
+
         <button
           type="button"
-          className="casa-title"
+          className="casa-top-mod casa-top-event"
           onClick={() => setOpen("prep")}
         >
           {prep.venueName || eventCode}
         </button>
-        <CasaLayoutBar
-          edit={layoutEdit}
-          onEditChange={setLayoutEdit}
-          layouts={layouts}
-          onLayoutsChange={commitLayouts}
-          onOpenGallery={() => setGalleryOpen(true)}
-        />
-        <div className="casa-status">
-          <div className="casa-status-side">
+
+        <button
+          type="button"
+          className="casa-top-mod casa-top-time"
+          onClick={() => setOpen("clock")}
+        >
+          {clockPrefs.showElapsed ? (
             <span>
-              In sala <b>{guests.length}</b>
+              Tempo <b>{elapsedNow}</b>
             </span>
-          </div>
-          <button
-            type="button"
-            className="casa-status-time"
-            onClick={() => setOpen("clock")}
-          >
-            {clockPrefs.showElapsed ? (
-              <span>
-                Tempo <b>{elapsedNow}</b>
-              </span>
-            ) : null}
-            {clockPrefs.showExact ? (
-              <span>
-                Ora esatta <b>{exactNow}</b>
-              </span>
-            ) : null}
-            {!clockPrefs.showElapsed && !clockPrefs.showExact ? (
-              <span>Tempo</span>
-            ) : null}
-          </button>
-        </div>
+          ) : null}
+          {clockPrefs.showElapsed && clockPrefs.showExact ? (
+            <span className="casa-top-time-sep" aria-hidden="true">
+              ·
+            </span>
+          ) : null}
+          {clockPrefs.showExact ? (
+            <span>
+              Ora <b>{exactNow}</b>
+            </span>
+          ) : null}
+          {!clockPrefs.showElapsed && !clockPrefs.showExact ? (
+            <span>Tempo</span>
+          ) : null}
+        </button>
       </header>
 
       <div className="casa-deck-wrap">

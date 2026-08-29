@@ -29,6 +29,11 @@ export type CasaWidgetInstance = {
   x: number;
   y: number;
   size: CasaWidgetSize;
+  /** Custom pixel size; when set, overrides the discrete size box. */
+  w?: number;
+  h?: number;
+  /** Collapsed to header only; default open. */
+  collapsed?: boolean;
 };
 
 export type CasaLayoutProfile = {
@@ -41,15 +46,24 @@ export type CasaLayoutProfile = {
 };
 
 export type CasaLayoutsState = {
+  /** Bump to reset Default profile to the new factory packing. */
+  version: number;
   activeId: string;
   profiles: CasaLayoutProfile[];
 };
 
 export const STORAGE_KEY = "lr_casa_layouts";
+export const LAYOUT_VERSION = 2;
 export const MAX_CUSTOM_PROFILES = 5;
 export const NAME_MIN = 1;
 export const NAME_MAX = 24;
 export const DEFAULT_PROFILE_ID = "default";
+export const CANVAS_WIDTH = 1200;
+export const CANVAS_HEIGHT = 700;
+export const WIDGET_MIN_W = 160;
+export const WIDGET_MIN_H = 100;
+/** Header-only height when a widget is collapsed. */
+export const WIDGET_COLLAPSED_H = 36;
 
 const WIDGET_TYPES: ReadonlySet<CasaWidgetType> = new Set([
   "settings",
@@ -131,17 +145,20 @@ export const UNIQUE_WIDGET_TYPES: ReadonlySet<CasaWidgetType> = new Set([
   "cue",
 ]);
 
-/** Logical canvas snapshot (~1200×700) approximating the current 3-col CasaPad. */
+/**
+ * Packed 3-column deck filling the 1200×700 logical canvas (8px margin/gap).
+ * Custom w/h keep the board full; `size` is the nearest discrete badge.
+ */
 export const FACTORY_DEFAULT_WIDGETS: Omit<CasaWidgetInstance, "id">[] = [
-  { type: "settings", x: 12, y: 12, size: "S" },
-  { type: "players", x: 12, y: 140, size: "M" },
-  { type: "messages", x: 12, y: 420, size: "S" },
-  { type: "projector", x: 280, y: 12, size: "XL" },
-  { type: "audio", x: 900, y: 12, size: "S" },
-  { type: "audio_bed", x: 900, y: 140, size: "M" },
-  { type: "pad", x: 900, y: 330, size: "M" },
-  { type: "avanti", x: 900, y: 520, size: "S" },
-  { type: "clock", x: 12, y: 548, size: "S" },
+  { type: "settings", x: 8, y: 8, size: "S", w: 280, h: 112 },
+  { type: "players", x: 8, y: 128, size: "M", w: 280, h: 200 },
+  { type: "messages", x: 8, y: 336, size: "M", w: 280, h: 200 },
+  { type: "clock", x: 8, y: 544, size: "S", w: 280, h: 148 },
+  { type: "projector", x: 296, y: 8, size: "XL", w: 608, h: 684 },
+  { type: "audio", x: 912, y: 8, size: "S", w: 280, h: 112 },
+  { type: "audio_bed", x: 912, y: 128, size: "M", w: 280, h: 152 },
+  { type: "pad", x: 912, y: 288, size: "L", w: 280, h: 280 },
+  { type: "avanti", x: 912, y: 576, size: "S", w: 280, h: 116 },
 ];
 
 const SIZE_PX: Record<CasaWidgetSize, { w: number; h: number }> = {
@@ -153,6 +170,50 @@ const SIZE_PX: Record<CasaWidgetSize, { w: number; h: number }> = {
 
 export function sizeToPx(size: CasaWidgetSize): { w: number; h: number } {
   return { ...SIZE_PX[size] };
+}
+
+/** Resolved pixel box for a widget (custom w/h or discrete size). */
+export function widgetPx(w: Pick<CasaWidgetInstance, "size" | "w" | "h">): {
+  w: number;
+  h: number;
+} {
+  if (
+    typeof w.w === "number" &&
+    Number.isFinite(w.w) &&
+    typeof w.h === "number" &&
+    Number.isFinite(w.h)
+  ) {
+    return {
+      w: Math.max(WIDGET_MIN_W, Math.round(w.w)),
+      h: Math.max(WIDGET_MIN_H, Math.round(w.h)),
+    };
+  }
+  return sizeToPx(w.size);
+}
+
+/** Layout box on the deck (collapsed widgets shrink to header height). */
+export function widgetLayoutPx(
+  w: Pick<CasaWidgetInstance, "size" | "w" | "h" | "collapsed">,
+): { w: number; h: number } {
+  const px = widgetPx(w);
+  if (w.collapsed) return { w: px.w, h: WIDGET_COLLAPSED_H };
+  return px;
+}
+
+/** Nearest discrete size label for a pixel box (badge / cycle start). */
+export function nearestSize(w: number, h: number): CasaWidgetSize {
+  const area = Math.max(1, w) * Math.max(1, h);
+  let best: CasaWidgetSize = "M";
+  let bestDelta = Infinity;
+  for (const size of WIDGET_SIZES) {
+    const px = SIZE_PX[size];
+    const delta = Math.abs(px.w * px.h - area);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      best = size;
+    }
+  }
+  return best;
 }
 
 export function createId(prefix = "w"): string {
@@ -172,6 +233,7 @@ export function getFactoryDefaultWidgets(): CasaWidgetInstance[] {
 
 export function createDefaultState(): CasaLayoutsState {
   return {
+    version: LAYOUT_VERSION,
     activeId: DEFAULT_PROFILE_ID,
     profiles: [
       {
@@ -192,6 +254,16 @@ function clampSize(raw: unknown): CasaWidgetSize {
   return "M";
 }
 
+function sanitizeDim(raw: unknown, fallback?: number): number | undefined {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return fallback;
+  return Math.max(WIDGET_MIN_W, Math.min(CANVAS_WIDTH, Math.round(raw)));
+}
+
+function sanitizeDimH(raw: unknown, fallback?: number): number | undefined {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return fallback;
+  return Math.max(WIDGET_MIN_H, Math.min(CANVAS_HEIGHT, Math.round(raw)));
+}
+
 function sanitizeWidgets(raw: unknown): CasaWidgetInstance[] {
   if (!Array.isArray(raw)) return getFactoryDefaultWidgets();
   const out: CasaWidgetInstance[] = [];
@@ -210,13 +282,23 @@ function sanitizeWidgets(raw: unknown): CasaWidgetInstance[] {
     seenIds.add(id);
     const x = typeof w.x === "number" && Number.isFinite(w.x) ? w.x : 0;
     const y = typeof w.y === "number" && Number.isFinite(w.y) ? w.y : 0;
-    out.push({
+    const size = clampSize(w.size);
+    const ww = sanitizeDim(w.w);
+    const hh = sanitizeDimH(w.h);
+    const entry: CasaWidgetInstance = {
       id,
       type: w.type as CasaWidgetType,
       x,
       y,
-      size: clampSize(w.size),
-    });
+      size,
+    };
+    if (ww !== undefined && hh !== undefined) {
+      entry.w = ww;
+      entry.h = hh;
+      entry.size = nearestSize(ww, hh);
+    }
+    if (w.collapsed === true) entry.collapsed = true;
+    out.push(entry);
   }
   return out;
 }
@@ -301,7 +383,22 @@ function sanitizeState(raw: unknown): CasaLayoutsState {
       ? data.activeId
       : DEFAULT_PROFILE_ID;
 
-  return { activeId, profiles: trimmed };
+  const version =
+    typeof data.version === "number" && Number.isFinite(data.version)
+      ? data.version
+      : 0;
+
+  let state: CasaLayoutsState = { version, activeId, profiles: trimmed };
+
+  // Layout packing / canvas contract changed — refresh Default only.
+  if (state.version < LAYOUT_VERSION) {
+    state = {
+      ...resetDefaultToFactory(state),
+      version: LAYOUT_VERSION,
+    };
+  }
+
+  return state;
 }
 
 export function loadLayouts(): CasaLayoutsState {
@@ -309,7 +406,16 @@ export function loadLayouts(): CasaLayoutsState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return createDefaultState();
-    return sanitizeState(JSON.parse(raw));
+    const parsed = JSON.parse(raw) as Partial<CasaLayoutsState>;
+    const state = sanitizeState(parsed);
+    // Persist migration (version bump / Default refresh) so it runs once.
+    if (
+      typeof parsed.version !== "number" ||
+      parsed.version < LAYOUT_VERSION
+    ) {
+      saveLayouts(state);
+    }
+    return state;
   } catch {
     return createDefaultState();
   }
@@ -401,6 +507,7 @@ export function createProfileFromCurrent(
   };
   return {
     state: {
+      version: state.version ?? LAYOUT_VERSION,
       activeId: profile.id,
       profiles: [...state.profiles, profile],
     },
@@ -441,7 +548,7 @@ export function deleteProfile(
   const profiles = state.profiles.filter((p) => p.id !== id);
   const activeId =
     state.activeId === id ? DEFAULT_PROFILE_ID : state.activeId;
-  return { state: { activeId, profiles } };
+  return { state: { ...state, activeId, profiles } };
 }
 
 export function resetDefaultToFactory(
@@ -462,5 +569,5 @@ export function resetDefaultToFactory(
   const activeId = profiles.some((p) => p.id === state.activeId)
     ? state.activeId
     : DEFAULT_PROFILE_ID;
-  return { activeId, profiles };
+  return { ...state, version: LAYOUT_VERSION, activeId, profiles };
 }

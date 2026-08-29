@@ -31,79 +31,75 @@
 }
 
 .casa-top {
-  position: relative;
-  padding: 10px 16px 8px;
-  text-align: center;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 10px;
+  min-width: 0;
 }
 
-.casa-title {
-  display: block;
-  margin: 0 auto;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.casa-title:focus-visible {
-  outline: 2px solid var(--yellow);
-  outline-offset: 4px;
-  border-radius: 6px;
-}
-
-.casa-status {
+.casa-top-mod {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 8px;
-  overflow: hidden;
+  gap: 8px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--dim);
+  box-sizing: border-box;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--dim);
 }
 
-.casa-status b {
+.casa-top-mod b {
   color: var(--ink);
   font-weight: 800;
 }
 
-.casa-status-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
+.casa-top-sala {
+  white-space: nowrap;
 }
 
-.casa-status-time {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+.casa-top-layout {
+  padding: 2px 6px;
+  overflow: hidden;
+}
+
+.casa-top-event {
+  justify-content: center;
   margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
   font: inherit;
-  text-align: right;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: center;
+}
+
+.casa-top-event:focus-visible,
+.casa-top-time:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+.casa-top-time {
+  margin: 0;
+  font: inherit;
   white-space: nowrap;
   cursor: pointer;
+  text-align: right;
 }
 
-.casa-status-time:focus-visible {
-  outline: 2px solid var(--yellow);
-  outline-offset: 4px;
-  border-radius: 6px;
+.casa-top-time-sep {
+  color: var(--line);
+  font-weight: 800;
 }
 
 .casa-pill {
@@ -1618,10 +1614,12 @@
 .casa-layout-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin: 0;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .casa-layout-edit {
@@ -1637,6 +1635,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .casa-layout-edit[data-on="1"] {
@@ -1661,6 +1660,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .casa-layout-chip[data-on] {
@@ -1677,16 +1677,26 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.casa-deck-scale-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .casa-deck-stage {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   will-change: transform;
 }
 
 .casa-deck-item {
   z-index: 1;
+  overflow: visible;
 }
 
 .casa-deck-item:active {
@@ -1735,10 +1745,24 @@
 }
 
 .casa-w[data-edit="1"] {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: visible;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
+}
+
+.casa-w[data-resizing="1"] {
+  z-index: 6;
+  border-color: var(--green);
+  box-shadow:
+    0 0 0 1px rgba(61, 220, 132, 0.45),
+    0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.casa-deck-item[data-resizing="1"] {
+  z-index: 6;
 }
 
 .casa-w-head {
@@ -1749,6 +1773,60 @@
   flex: 0 0 auto;
   padding: 10px 12px 4px;
   cursor: inherit;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.casa-w[data-collapsed="1"] .casa-w-head {
+  height: 100%;
+  padding: 0 8px 0 12px;
+  box-sizing: border-box;
+}
+
+.casa-w[data-edit="1"] .casa-w-head {
+  padding-left: 36px;
+}
+
+.casa-w[data-edit="1"][data-collapsed="1"] .casa-w-head {
+  padding-left: 36px;
+}
+
+.casa-w-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.casa-w-collapse {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.casa-w-collapse:hover,
+.casa-w-collapse:focus-visible {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+
+.casa-w-collapse-icon {
+  display: block;
+  pointer-events: none;
 }
 
 .casa-w[data-edit="1"] .casa-w-head,
@@ -1767,6 +1845,8 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--dim);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .casa-w-title-btn {
@@ -1782,6 +1862,8 @@
   color: var(--dim);
   cursor: pointer;
   text-align: left;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .casa-w-title-btn:focus-visible {
@@ -1830,11 +1912,11 @@
   }
 }
 
-.casa-w-remove,
-.casa-w-size {
+.casa-w-remove {
   position: absolute;
   z-index: 4;
   top: 6px;
+  left: 6px;
   width: 26px;
   height: 26px;
   border: 0;
@@ -1845,21 +1927,44 @@
   line-height: 1;
   cursor: pointer;
   touch-action: manipulation;
-}
-
-.casa-w-remove {
-  left: 6px;
   background: #ff5a5f;
   color: #fff;
 }
 
-.casa-w-size {
-  right: 6px;
-  background: #1a1d24;
-  color: var(--ink);
-  border: 1px solid var(--line);
-  font-size: 10px;
-  letter-spacing: 0.04em;
+.casa-w-resize {
+  position: absolute;
+  z-index: 8;
+  right: -6px;
+  bottom: -6px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(10, 12, 16, 0.85);
+  border-radius: 10px;
+  background: var(--green);
+  color: #0a0c10;
+  cursor: nwse-resize;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.casa-w-resize:hover,
+.casa-w-resize:focus-visible {
+  filter: brightness(1.08);
+  outline: none;
+}
+
+.casa-w-resize:active {
+  transform: scale(0.96);
+}
+
+.casa-w-resize-icon {
+  display: block;
+  pointer-events: none;
 }
 
 .casa-gallery {

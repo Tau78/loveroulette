@@ -4,6 +4,7 @@ import {
   NAME_MAX,
   STORAGE_KEY,
   UNIQUE_WIDGET_TYPES,
+  WIDGET_COLLAPSED_H,
   WIDGET_LABELS,
   createDefaultState,
   createId,
@@ -12,12 +13,15 @@ import {
   getActiveProfile,
   getFactoryDefaultWidgets,
   loadLayouts,
+  nearestSize,
   renameProfile,
   resetDefaultToFactory,
   saveLayouts,
   setActiveProfile,
   sizeToPx,
   updateActiveWidgets,
+  widgetLayoutPx,
+  widgetPx,
   type CasaLayoutsState,
   type CasaWidgetInstance,
 } from "./casa-layouts";
@@ -66,6 +70,43 @@ describe("casa layouts", () => {
     expect(sizeToPx("M")).toEqual({ w: 280, h: 180 });
     expect(sizeToPx("L")).toEqual({ w: 400, h: 240 });
     expect(sizeToPx("XL")).toEqual({ w: 560, h: 360 });
+  });
+
+  it("resolves custom w/h and nearest discrete size", () => {
+    expect(widgetPx({ size: "M" })).toEqual({ w: 280, h: 180 });
+    expect(widgetPx({ size: "S", w: 608, h: 684 })).toEqual({
+      w: 608,
+      h: 684,
+    });
+    expect(nearestSize(180, 120)).toBe("S");
+    expect(nearestSize(560, 360)).toBe("XL");
+    expect(nearestSize(608, 684)).toBe("XL");
+  });
+
+  it("collapses layout height to header only", () => {
+    expect(widgetLayoutPx({ size: "M", collapsed: true })).toEqual({
+      w: 280,
+      h: WIDGET_COLLAPSED_H,
+    });
+    expect(
+      widgetLayoutPx({ size: "XL", w: 608, h: 684, collapsed: true }),
+    ).toEqual({ w: 608, h: WIDGET_COLLAPSED_H });
+    expect(widgetLayoutPx({ size: "M" }).h).toBe(180);
+  });
+
+  it("factory widgets pack the canvas without huge gaps", () => {
+    const widgets = getFactoryDefaultWidgets();
+    expect(widgets).toHaveLength(9);
+    let maxX = 0;
+    let maxY = 0;
+    for (const w of widgets) {
+      const px = widgetPx(w);
+      maxX = Math.max(maxX, w.x + px.w);
+      maxY = Math.max(maxY, w.y + px.h);
+    }
+    expect(maxX).toBeGreaterThanOrEqual(1180);
+    expect(maxY).toBeGreaterThanOrEqual(680);
+    expect(widgets.find((w) => w.type === "projector")?.w).toBe(608);
   });
 
   it("creates ids with optional prefix", () => {
@@ -230,6 +271,7 @@ describe("casa layouts", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
+        version: 2,
         activeId: "default",
         profiles: [
           {
@@ -335,5 +377,43 @@ describe("casa layouts", () => {
     expect(def.widgets.find((w) => w.type === "projector")?.id).toBe(
       "factory-projector",
     );
+  });
+
+  it("migrates old layouts by refreshing Default to factory v2", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        activeId: "default",
+        profiles: [
+          {
+            id: "default",
+            name: "Default",
+            isDefault: true,
+            updatedAt: 1,
+            widgets: [
+              {
+                id: "factory-projector",
+                type: "projector",
+                x: 280,
+                y: 12,
+                size: "XL",
+              },
+            ],
+          },
+          {
+            id: "custom-1",
+            name: "Sala A",
+            updatedAt: 1,
+            widgets: [{ id: "n", type: "notes", x: 0, y: 0, size: "S" }],
+          },
+        ],
+      }),
+    );
+    const loaded = loadLayouts();
+    expect(loaded.version).toBe(2);
+    expect(loaded.profiles.find((p) => p.isDefault)?.widgets).toHaveLength(9);
+    expect(
+      loaded.profiles.find((p) => p.id === "custom-1")?.widgets.map((w) => w.type),
+    ).toEqual(["notes"]);
   });
 });

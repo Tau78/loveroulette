@@ -8,19 +8,26 @@ import {
   type ReactNode,
 } from "react";
 import {
-  sizeToPx,
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
+  nearestSize,
+  widgetLayoutPx,
+  widgetPx,
   WIDGET_LABELS,
+  WIDGET_MIN_H,
+  WIDGET_MIN_W,
   type CasaWidgetInstance,
 } from "@/lib/admin/casa-layouts";
 import { CasaWidgetFrame } from "@/components/admin/casa/widgets/CasaWidgetFrame";
 import {
   clampRect,
+  clampResizeNoOverlap,
+  overlapsAny,
   pushApart,
   scaleToFit,
   snap,
   type Rect,
 } from "@/components/admin/casa/widgets/layout-math";
-import { cycleWidgetSize } from "@/components/admin/casa/widgets/widget-registry";
 
 type Props = {
   edit: boolean;
@@ -37,10 +44,23 @@ type Props = {
 };
 
 type DragState = {
+  kind: "move";
   id: string;
   pointerId: number;
   startX: number;
   startY: number;
+  origX: number;
+  origY: number;
+};
+
+type ResizeState = {
+  kind: "resize";
+  id: string;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  origW: number;
+  origH: number;
   origX: number;
   origY: number;
 };
@@ -52,12 +72,13 @@ export function CasaWidgetDeck({
   renderWidget,
   onWidgetTitleClick,
   onAddRequest,
-  canvasWidth = 1200,
-  canvasHeight = 700,
+  canvasWidth = CANVAS_WIDTH,
+  canvasHeight = CANVAS_HEIGHT,
 }: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ w: canvasWidth, h: canvasHeight });
-  const dragRef = useRef<DragState | null>(null);
+  const [resizingId, setResizingId] = useState<string | null>(null);
+  const dragRef = useRef<DragState | ResizeState | null>(null);
   const widgetsRef = useRef(widgets);
   widgetsRef.current = widgets;
 
@@ -80,8 +101,8 @@ export function CasaWidgetDeck({
     return widgetsRef.current
       .filter((w) => w.id !== exceptId)
       .map((w) => {
-        const { w: ww, h: hh } = sizeToPx(w.size);
-        return { x: w.x, y: w.y, w: ww, h: hh };
+        const px = widgetLayoutPx(w);
+        return { x: w.x, y: w.y, w: px.w, h: px.h };
       });
   }
 
@@ -91,6 +112,11 @@ export function CasaWidgetDeck({
   canvasRef.current = { canvasWidth, canvasHeight };
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+
+  function endPointerSession() {
+    dragRef.current = null;
+    setResizingId(null);
+  }
 
   function beginDrag(
     w: CasaWidgetInstance,
@@ -102,6 +128,7 @@ export function CasaWidgetDeck({
     e.stopPropagation();
     const pointerId = e.pointerId;
     dragRef.current = {
+      kind: "move",
       id: w.id,
       pointerId,
       startX: e.clientX,
@@ -112,23 +139,28 @@ export function CasaWidgetDeck({
 
     const onMove = (ev: PointerEvent) => {
       const drag = dragRef.current;
-      if (!drag || drag.pointerId !== ev.pointerId) return;
+      if (!drag || drag.kind !== "move" || drag.pointerId !== ev.pointerId) {
+        return;
+      }
       const s = scaleRef.current || 1;
       const { canvasWidth: cw, canvasHeight: ch } = canvasRef.current;
       const dx = (ev.clientX - drag.startX) / s;
       const dy = (ev.clientY - drag.startY) / s;
       const target = widgetsRef.current.find((item) => item.id === drag.id);
       if (!target) return;
-      const { w: ww, h: hh } = sizeToPx(target.size);
+      const px = widgetLayoutPx(target);
       const rawX = snap(drag.origX + dx);
       const rawY = snap(drag.origY + dy);
-      const clamped = clampRect(rawX, rawY, ww, hh, cw, ch);
+      const clamped = clampRect(rawX, rawY, px.w, px.h, cw, ch);
+      const others = othersRects(drag.id);
       const next = pushApart(
-        { x: clamped.x, y: clamped.y, w: ww, h: hh },
-        othersRects(drag.id),
+        { x: clamped.x, y: clamped.y, w: px.w, h: px.h },
+        others,
         cw,
         ch,
       );
+      // Overlap forbidden while dragging — skip updates that can't land free.
+      if (!next) return;
       onChangeRef.current(
         widgetsRef.current.map((item) =>
           item.id === drag.id ? { ...item, x: next.x, y: next.y } : item,
@@ -139,7 +171,88 @@ export function CasaWidgetDeck({
     const onUp = (ev: PointerEvent) => {
       const drag = dragRef.current;
       if (!drag || drag.pointerId !== ev.pointerId) return;
-      dragRef.current = null;
+      endPointerSession();
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  }
+
+  function beginResize(
+    w: CasaWidgetInstance,
+    e: ReactPointerEvent<HTMLElement>,
+  ) {
+    if (!edit) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const px = widgetPx(w);
+    const pointerId = e.pointerId;
+    setResizingId(w.id);
+    dragRef.current = {
+      kind: "resize",
+      id: w.id,
+      pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      origW: px.w,
+      origH: px.h,
+      origX: w.x,
+      origY: w.y,
+    };
+
+    try {
+      e.currentTarget.setPointerCapture(pointerId);
+    } catch {
+      /* ignore */
+    }
+
+    const onMove = (ev: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || drag.kind !== "resize" || drag.pointerId !== ev.pointerId) {
+        return;
+      }
+      const s = scaleRef.current || 1;
+      const { canvasWidth: cw, canvasHeight: ch } = canvasRef.current;
+      const dx = (ev.clientX - drag.startX) / s;
+      const dy = (ev.clientY - drag.startY) / s;
+      const others = othersRects(drag.id);
+      const sized = clampResizeNoOverlap(
+        drag.origX,
+        drag.origY,
+        drag.origW + dx,
+        drag.origH + dy,
+        cw,
+        ch,
+        WIDGET_MIN_W,
+        WIDGET_MIN_H,
+        others,
+      );
+      // Refuse a size that still overlaps (e.g. already nested after expand).
+      if (overlapsAny({ x: drag.origX, y: drag.origY, w: sized.w, h: sized.h }, others)) {
+        return;
+      }
+      onChangeRef.current(
+        widgetsRef.current.map((item) =>
+          item.id === drag.id
+            ? {
+                ...item,
+                w: sized.w,
+                h: sized.h,
+                size: nearestSize(sized.w, sized.h),
+              }
+            : item,
+        ),
+      );
+    };
+
+    const onUp = (ev: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== ev.pointerId) return;
+      endPointerSession();
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
@@ -154,20 +267,13 @@ export function CasaWidgetDeck({
     onChange(widgets.filter((w) => w.id !== id));
   }
 
-  function cycleSize(id: string) {
+  function toggleCollapse(id: string) {
+    // Expanding from collapse MAY overlap — intentional exception.
+    // Collapsing never creates overlap. Drag/resize remain no-overlap.
     onChange(
-      widgets.map((w) => {
-        if (w.id !== id) return w;
-        const nextSize = cycleWidgetSize(w.size);
-        const { w: ww, h: hh } = sizeToPx(nextSize);
-        const pos = pushApart(
-          { x: w.x, y: w.y, w: ww, h: hh },
-          othersRects(id),
-          canvasWidth,
-          canvasHeight,
-        );
-        return { ...w, size: nextSize, x: pos.x, y: pos.y };
-      }),
+      widgets.map((w) =>
+        w.id === id ? { ...w, collapsed: !w.collapsed } : w,
+      ),
     );
   }
 
@@ -191,6 +297,9 @@ export function CasaWidgetDeck({
     );
   }
 
+  const stageW = canvasWidth * scale;
+  const stageH = canvasHeight * scale;
+
   return (
     <div
       ref={shellRef}
@@ -199,48 +308,60 @@ export function CasaWidgetDeck({
       data-edit={edit ? "1" : "0"}
     >
       <div
-        className="casa-deck-stage"
-        style={{
-          width: canvasWidth,
-          height: canvasHeight,
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
-        }}
+        className="casa-deck-scale-wrap"
+        style={{ width: stageW, height: stageH }}
       >
-        {widgets.map((w) => {
-          const { w: wPx, h: hPx } = sizeToPx(w.size);
-          return (
-            <div
-              key={w.id}
-              className="casa-deck-item"
-              data-widget-id={w.id}
-              data-widget-type={w.type}
-              style={{
-                position: "absolute",
-                left: w.x,
-                top: w.y,
-                width: wPx,
-                height: hPx,
-              }}
-            >
-              <CasaWidgetFrame
-                edit={edit}
-                title={WIDGET_LABELS[w.type]}
-                size={w.size}
-                onRemove={() => removeWidget(w.id)}
-                onCycleSize={() => cycleSize(w.id)}
-                onPointerDownDrag={(e) => beginDrag(w, e)}
-                onTitleClick={
-                  onWidgetTitleClick
-                    ? () => onWidgetTitleClick(w)
-                    : undefined
-                }
+        <div
+          className="casa-deck-stage"
+          style={{
+            width: canvasWidth,
+            height: canvasHeight,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+          }}
+        >
+          {widgets.map((w) => {
+            const full = widgetPx(w);
+            const { w: wPx, h: hPx } = widgetLayoutPx(w);
+            const isResizing = resizingId === w.id;
+            return (
+              <div
+                key={w.id}
+                className="casa-deck-item"
+                data-widget-id={w.id}
+                data-widget-type={w.type}
+                data-collapsed={w.collapsed ? "1" : undefined}
+                data-resizing={isResizing ? "1" : undefined}
+                style={{
+                  position: "absolute",
+                  left: w.x,
+                  top: w.y,
+                  width: wPx,
+                  height: hPx,
+                }}
               >
-                {renderWidget(w, { edit, wPx, hPx })}
-              </CasaWidgetFrame>
-            </div>
-          );
-        })}
+                <CasaWidgetFrame
+                  edit={edit}
+                  title={WIDGET_LABELS[w.type]}
+                  size={w.size}
+                  collapsed={Boolean(w.collapsed)}
+                  resizing={isResizing}
+                  onRemove={() => removeWidget(w.id)}
+                  onToggleCollapse={() => toggleCollapse(w.id)}
+                  onPointerDownDrag={(e) => beginDrag(w, e)}
+                  onPointerDownResize={(e) => beginResize(w, e)}
+                  onTitleClick={
+                    onWidgetTitleClick
+                      ? () => onWidgetTitleClick(w)
+                      : undefined
+                  }
+                >
+                  {renderWidget(w, { edit, wPx: full.w, hPx: full.h })}
+                </CasaWidgetFrame>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
