@@ -153,7 +153,7 @@ export function CasaProjector({
         style={{
           width: PROJECTOR_CANVAS.width,
           height: PROJECTOR_CANVAS.height,
-          transform: `scale(${scale})`,
+          transform: `translate(-50%, -50%) scale(${scale})`,
         }}
       >
         <DisplayStageBackground

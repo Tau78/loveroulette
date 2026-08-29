@@ -60,12 +60,13 @@ export const NAME_MAX = 24;
 export const DEFAULT_PROFILE_ID = "default";
 export const CANVAS_WIDTH = 1200;
 export const CANVAS_HEIGHT = 700;
-export const WIDGET_MIN_W = 160;
-export const WIDGET_MIN_H = 100;
+export const WIDGET_MIN_W = 120;
+export const WIDGET_MIN_H = 80;
 /** Header-only height when a widget is collapsed. */
 export const WIDGET_COLLAPSED_H = 36;
 
-const WIDGET_TYPES: ReadonlySet<CasaWidgetType> = new Set([
+/** Canonical list — gallery / registry must cover every entry. */
+export const ALL_WIDGET_TYPES: readonly CasaWidgetType[] = [
   "settings",
   "players",
   "messages",
@@ -88,7 +89,9 @@ const WIDGET_TYPES: ReadonlySet<CasaWidgetType> = new Set([
   "extraction",
   "leaderboard",
   "cue",
-]);
+] as const;
+
+const WIDGET_TYPES: ReadonlySet<CasaWidgetType> = new Set(ALL_WIDGET_TYPES);
 
 const WIDGET_SIZES: ReadonlySet<CasaWidgetSize> = new Set([
   "S",

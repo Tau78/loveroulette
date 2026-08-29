@@ -1,4 +1,5 @@
 import {
+  ALL_WIDGET_TYPES,
   UNIQUE_WIDGET_TYPES,
   WIDGET_LABELS,
   type CasaWidgetSize,
@@ -35,20 +36,15 @@ const DEFAULT_SIZE: Partial<Record<CasaWidgetType, CasaWidgetSize>> = {
   cue: "M",
 };
 
+/**
+ * Gallery order: addable / non-factory types first, then core deck widgets.
+ * Factory defaults still appear (disabled when unique + present).
+ */
 const TYPE_ORDER: CasaWidgetType[] = [
-  "settings",
-  "players",
-  "messages",
-  "projector",
-  "audio",
-  "pad",
-  "avanti",
-  "clock",
   "timer",
   "notes",
   "qr_help",
   "volume_master",
-  "audio_bed",
   "video_player",
   "quiz_regia",
   "transport",
@@ -58,9 +54,31 @@ const TYPE_ORDER: CasaWidgetType[] = [
   "extraction",
   "leaderboard",
   "cue",
+  "settings",
+  "players",
+  "messages",
+  "projector",
+  "audio",
+  "pad",
+  "avanti",
+  "clock",
+  "audio_bed",
 ];
 
-export const WIDGET_REGISTRY: CasaWidgetMeta[] = TYPE_ORDER.map((type) => ({
+function assertRegistryComplete(order: CasaWidgetType[]): CasaWidgetType[] {
+  const missing = ALL_WIDGET_TYPES.filter((t) => !order.includes(t));
+  const extra = order.filter((t) => !(ALL_WIDGET_TYPES as readonly string[]).includes(t));
+  if (missing.length || extra.length) {
+    throw new Error(
+      `WIDGET_REGISTRY incomplete: missing=${missing.join(",") || "—"} extra=${extra.join(",") || "—"}`,
+    );
+  }
+  return order;
+}
+
+const ORDERED = assertRegistryComplete(TYPE_ORDER);
+
+export const WIDGET_REGISTRY: CasaWidgetMeta[] = ORDERED.map((type) => ({
   type,
   label: WIDGET_LABELS[type],
   sizes: ALL_SIZES,
@@ -69,13 +87,15 @@ export const WIDGET_REGISTRY: CasaWidgetMeta[] = TYPE_ORDER.map((type) => ({
 }));
 
 export function widgetMeta(type: CasaWidgetType): CasaWidgetMeta {
-  return WIDGET_REGISTRY.find((m) => m.type === type) ?? {
-    type,
-    label: WIDGET_LABELS[type],
-    sizes: ALL_SIZES,
-    defaultSize: DEFAULT_SIZE[type] ?? "M",
-    unique: UNIQUE_WIDGET_TYPES.has(type),
-  };
+  return (
+    WIDGET_REGISTRY.find((m) => m.type === type) ?? {
+      type,
+      label: WIDGET_LABELS[type],
+      sizes: ALL_SIZES,
+      defaultSize: DEFAULT_SIZE[type] ?? "M",
+      unique: UNIQUE_WIDGET_TYPES.has(type),
+    }
+  );
 }
 
 export function cycleWidgetSize(size: CasaWidgetSize): CasaWidgetSize {

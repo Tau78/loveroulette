@@ -22,10 +22,11 @@ import { CasaWidgetFrame } from "@/components/admin/casa/widgets/CasaWidgetFrame
 import {
   clampRect,
   clampResizeNoOverlap,
+  FREE_PIXEL_GRID,
+  magnetSnapPos,
   overlapsAny,
   pushApart,
   scaleToFit,
-  snap,
   type Rect,
 } from "@/components/admin/casa/widgets/layout-math";
 
@@ -149,15 +150,23 @@ export function CasaWidgetDeck({
       const target = widgetsRef.current.find((item) => item.id === drag.id);
       if (!target) return;
       const px = widgetLayoutPx(target);
-      const rawX = snap(drag.origX + dx);
-      const rawY = snap(drag.origY + dy);
-      const clamped = clampRect(rawX, rawY, px.w, px.h, cw, ch);
       const others = othersRects(drag.id);
+      const magnet = magnetSnapPos(
+        drag.origX + dx,
+        drag.origY + dy,
+        px.w,
+        px.h,
+        cw,
+        ch,
+        others,
+      );
+      const clamped = clampRect(magnet.x, magnet.y, px.w, px.h, cw, ch);
       const next = pushApart(
         { x: clamped.x, y: clamped.y, w: px.w, h: px.h },
         others,
         cw,
         ch,
+        FREE_PIXEL_GRID,
       );
       // Overlap forbidden while dragging — skip updates that can't land free.
       if (!next) return;
@@ -230,6 +239,7 @@ export function CasaWidgetDeck({
         WIDGET_MIN_W,
         WIDGET_MIN_H,
         others,
+        FREE_PIXEL_GRID,
       );
       // Refuse a size that still overlaps (e.g. already nested after expand).
       if (overlapsAny({ x: drag.origX, y: drag.origY, w: sized.w, h: sized.h }, others)) {

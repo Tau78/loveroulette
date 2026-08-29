@@ -8,7 +8,7 @@ import { CasaQuestions } from "@/components/admin/casa/CasaQuestions";
 import { CasaLayoutBar } from "@/components/admin/casa/widgets/CasaLayoutBar";
 import { CasaWidgetDeck } from "@/components/admin/casa/widgets/CasaWidgetDeck";
 import { CasaWidgetGallery } from "@/components/admin/casa/widgets/CasaWidgetGallery";
-import { pushApart } from "@/components/admin/casa/widgets/layout-math";
+import { findAddPlacement } from "@/components/admin/casa/widgets/layout-math";
 import { widgetMeta } from "@/components/admin/casa/widgets/widget-registry";
 import { WidgetCue } from "@/components/admin/casa/widgets/WidgetCue";
 import { WidgetExtraction } from "@/components/admin/casa/widgets/WidgetExtraction";
@@ -43,11 +43,16 @@ import {
   createId,
   getActiveProfile,
   loadLayouts,
+  nearestSize,
   saveLayouts,
   sizeToPx,
   UNIQUE_WIDGET_TYPES,
   updateActiveWidgets,
   widgetLayoutPx,
+  WIDGET_COLLAPSED_H,
+  WIDGET_LABELS,
+  WIDGET_MIN_H,
+  WIDGET_MIN_W,
   type CasaLayoutsState,
   type CasaWidgetInstance,
   type CasaWidgetSize,
@@ -295,10 +300,210 @@ function cycleRepeat(mode: CasaRepeatMode): CasaRepeatMode {
   return "off";
 }
 
-function repeatLabel(mode: CasaRepeatMode): string {
-  if (mode === "one") return "Repeat 1";
-  if (mode === "all") return "Repeat";
-  return "Off";
+function repeatTitle(mode: CasaRepeatMode): string {
+  if (mode === "one") return "Ripeti uno";
+  if (mode === "all") return "Ripeti tutti";
+  return "Ripeti (off)";
+}
+
+function MediaIco({
+  label,
+  onClick,
+  disabled,
+  on,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  on?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className="casa-hit casa-hit-ico"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      data-on={on ? "1" : undefined}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function IcoPlay() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle
+        cx="12"
+        cy="12"
+        r="9.25"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+      />
+      <path d="M10 8.2v7.6L16.4 12 10 8.2z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IcoPause() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <rect x="7" y="6" width="3.5" height="12" rx="1" />
+      <rect x="13.5" y="6" width="3.5" height="12" rx="1" />
+    </svg>
+  );
+}
+
+function IcoStop() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <rect x="7" y="7" width="10" height="10" rx="1.2" />
+    </svg>
+  );
+}
+
+function IcoPrev() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path d="M14.8 6.2L8.5 12l6.3 5.8V6.2z" />
+      <rect x="6.2" y="6.5" width="2" height="11" rx="0.6" />
+    </svg>
+  );
+}
+
+function IcoNext() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path d="M9.2 6.2L15.5 12 9.2 17.8V6.2z" />
+      <rect x="15.8" y="6.5" width="2" height="11" rx="0.6" />
+    </svg>
+  );
+}
+
+function IcoRepeat({ one }: { one?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor">
+      <path
+        d="M17 1.8l3.8 3.7L17 9.2"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 11.2V8.6A4.6 4.6 0 018.6 4h12.2"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7 22.2l-3.8-3.7L7 14.8"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20 12.8v2.6A4.6 4.6 0 0115.4 20H3.2"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+      {one ? (
+        <text
+          x="12"
+          y="13.6"
+          textAnchor="middle"
+          fill="currentColor"
+          stroke="none"
+          fontSize="8"
+          fontWeight="800"
+        >
+          1
+        </text>
+      ) : null}
+    </svg>
+  );
+}
+
+function IcoFolder() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path d="M3.5 6.5A2 2 0 015.5 4.5h4.2l1.6 1.7h7.2a2 2 0 012 2v9.1a2 2 0 01-2 2h-13a2 2 0 01-2-2V6.5z" />
+    </svg>
+  );
+}
+
+function IcoFile() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path d="M7 3.5h6.2L18.5 9v11.5a1.5 1.5 0 01-1.5 1.5H7A1.5 1.5 0 015.5 20.5v-15A1.5 1.5 0 017 3.5zm5.8 1.2v4.8h4.7l-4.7-4.8z" />
+    </svg>
+  );
+}
+
+function IcoClear() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor">
+      <path
+        d="M7 7l10 10M17 7L7 17"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IcoMute() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path d="M4.5 9.2h3.2L12 5.8v12.4l-4.3-3.4H4.5V9.2z" />
+      <path
+        d="M16.2 9.2l5.1 5.1M21.3 9.2l-5.1 5.1"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IcoUnmute() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path d="M4.5 9.2h3.2L12 5.8v12.4l-4.3-3.4H4.5V9.2z" />
+      <path
+        d="M15.2 9.4a3.6 3.6 0 010 5.2M17.4 7.2a6.4 6.4 0 010 9.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IcoScreenOff() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor">
+      <rect
+        x="3.5"
+        y="5.5"
+        width="17"
+        height="11"
+        rx="1.5"
+        strokeWidth="1.75"
+      />
+      <path d="M9 19.5h6" strokeWidth="1.75" strokeLinecap="round" />
+      <path
+        d="M6 7l12 10"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
 function PadHits({
@@ -871,9 +1076,12 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
               type="button"
               className="casa-trash"
               aria-label="Elimina messaggio"
+              title="Elimina messaggio"
               onClick={() => setMsgs((list) => list.filter((row) => row.id !== m.id))}
             >
-              ⌫
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M9.5 4.5h5l.7 1.2H19a1 1 0 010 2h-.6l-.9 11.1A2 2 0 0115.5 20.5h-7a2 2 0 01-2-1.7L5.6 7.7H5a1 1 0 010-2h3.8L9.5 4.5zm1.2 2h2.6l-.4-.7h-1.8l-.4.7zM7.6 7.7l.8 10.3h7.2l.8-10.3H7.6zm2.2 2.1a.8.8 0 011.6 0l-.4 6a.8.8 0 11-1.6 0l.4-6zm3.6 0a.8.8 0 011.6 0l-.4 6a.8.8 0 11-1.6 0l.4-6z" />
+              </svg>
             </button>
           </div>
         ))}
@@ -886,25 +1094,47 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       return;
     }
     const meta = widgetMeta(type);
-    const { w: ww, h: hh } = sizeToPx(meta.defaultSize);
+    const preferred = sizeToPx(meta.defaultSize);
     const others = activeWidgets.map((w) => {
       const px = widgetLayoutPx(w);
       return { x: w.x, y: w.y, w: px.w, h: px.h };
     });
-    const pos = pushApart(
-      { x: 40, y: 40, w: ww, h: hh },
+    // Prefer free slot; never overlap. May place collapsed if only header fits.
+    const pos = findAddPlacement(
+      preferred,
       others,
       CANVAS_WIDTH,
       CANVAS_HEIGHT,
+      WIDGET_MIN_W,
+      WIDGET_MIN_H,
+      40,
+      40,
+      WIDGET_COLLAPSED_H,
     );
-    // No free slot — don't add on top of others.
-    if (!pos) return;
+    if (!pos) {
+      window.alert(
+        "Nessuno spazio libero sulla plancia. Collassa o sposta un modulo, poi riprova.",
+      );
+      return;
+    }
+    const asCollapsed = pos.h <= WIDGET_COLLAPSED_H;
+    const size =
+      pos.w === preferred.w && pos.h === preferred.h
+        ? meta.defaultSize
+        : nearestSize(pos.w, Math.max(pos.h, WIDGET_MIN_H));
     const widget: CasaWidgetInstance = {
       id: createId(type),
       type,
       x: pos.x,
       y: pos.y,
-      size: meta.defaultSize,
+      size,
+      collapsed: asCollapsed || undefined,
+      ...(pos.w !== preferred.w || pos.h !== preferred.h || asCollapsed
+        ? {
+            w: pos.w,
+            h: asCollapsed ? Math.max(preferred.h, WIDGET_MIN_H) : pos.h,
+          }
+        : {}),
     };
     commitLayouts(updateActiveWidgets(layouts, [...activeWidgets, widget]));
   }
@@ -1021,7 +1251,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         );
       case "projector":
         return (
-          <div className={liveOff}>
+          <div
+            className={["casa-proj-host", liveOff].filter(Boolean).join(" ")}
+          >
             {open === "preview" ? (
               <div className="casa-screen casa-screen-ghost" />
             ) : (
@@ -1164,16 +1396,20 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         return (
           <div className={`casa-media-widget ${liveOff ?? ""}`}>
             <div className="casa-bed-line">
-              <button
-                type="button"
-                className="casa-hit"
+              <MediaIco
+                label={bedPlaying ? "Pausa" : "Play"}
                 onClick={() => setBedPlaying((v) => !v)}
               >
-                {bedPlaying ? "Pausa" : "Play"}
-              </button>
-              <button
-                type="button"
-                className="casa-hit"
+                {bedPlaying ? <IcoPause /> : <IcoPlay />}
+              </MediaIco>
+              <MediaIco
+                label="Stop"
+                onClick={() => setBedPlaying(false)}
+              >
+                <IcoStop />
+              </MediaIco>
+              <MediaIco
+                label="Precedente"
                 disabled={!bedFolder || bedList.length < 2}
                 onClick={() =>
                   setBedIndex((i) =>
@@ -1181,41 +1417,38 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                   )
                 }
               >
-                ‹
-              </button>
-              <button
-                type="button"
-                className="casa-hit"
+                <IcoPrev />
+              </MediaIco>
+              <MediaIco
+                label="Successivo"
                 disabled={!bedFolder || bedList.length < 2}
                 onClick={() =>
                   setBedIndex((i) => (bedList.length ? (i + 1) % bedList.length : 0))
                 }
               >
-                ›
-              </button>
-              <button
-                type="button"
-                className="casa-hit"
-                data-on={bedRepeat !== "off" ? "1" : undefined}
+                <IcoNext />
+              </MediaIco>
+              <MediaIco
+                label={repeatTitle(bedRepeat)}
+                on={bedRepeat !== "off"}
                 onClick={() => setBedRepeat((m) => cycleRepeat(m))}
               >
-                {repeatLabel(bedRepeat)}
-              </button>
+                <IcoRepeat one={bedRepeat === "one"} />
+              </MediaIco>
             </div>
             <div className="casa-bed-line">
-              <button
-                type="button"
-                className="casa-hit"
+              <MediaIco
+                label="Apri file"
                 onClick={() => bedFilesInput.current?.click()}
               >
-                Apri file
-              </button>
-              <button type="button" className="casa-hit" onClick={() => void pickBedFolder()}>
-                Apri cartella
-              </button>
-              <button type="button" className="casa-hit" onClick={clearBedFolder}>
-                Clear
-              </button>
+                <IcoFile />
+              </MediaIco>
+              <MediaIco label="Apri cartella" onClick={() => void pickBedFolder()}>
+                <IcoFolder />
+              </MediaIco>
+              <MediaIco label="Svuota lista" onClick={clearBedFolder}>
+                <IcoClear />
+              </MediaIco>
             </div>
             <p className="casa-sub">
               {bedFolder
@@ -1270,20 +1503,18 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         return (
           <div className={`casa-media-widget ${liveOff ?? ""}`}>
             <div className="casa-bed-line">
-              <button
-                type="button"
-                className="casa-hit"
-                data-on={videoState.muted ? "1" : undefined}
+              <MediaIco
+                label={videoState.muted ? "Audio disattivato" : "Audio attivo"}
+                on={videoState.muted}
                 onClick={() =>
                   setVideoState((v) => ({ ...v, muted: !v.muted }))
                 }
               >
-                {videoState.muted ? "Muted" : "Audio"}
-              </button>
-              <button
-                type="button"
-                className="casa-hit"
-                data-on={videoState.repeat !== "off" ? "1" : undefined}
+                {videoState.muted ? <IcoMute /> : <IcoUnmute />}
+              </MediaIco>
+              <MediaIco
+                label={repeatTitle(videoState.repeat)}
+                on={videoState.repeat !== "off"}
                 onClick={() =>
                   setVideoState((v) => ({
                     ...v,
@@ -1291,35 +1522,29 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                   }))
                 }
               >
-                {repeatLabel(videoState.repeat)}
-              </button>
-              <button
-                type="button"
-                className="casa-hit"
+                <IcoRepeat one={videoState.repeat === "one"} />
+              </MediaIco>
+              <MediaIco
+                label="Apri file"
                 onClick={() => videoInput.current?.click()}
               >
-                Apri
-              </button>
-              <button
-                type="button"
-                className="casa-hit"
-                onClick={() => void pickVideoFolder()}
-              >
-                Apri cartella
-              </button>
+                <IcoFile />
+              </MediaIco>
+              <MediaIco label="Apri cartella" onClick={() => void pickVideoFolder()}>
+                <IcoFolder />
+              </MediaIco>
             </div>
             <div className="casa-bed-line">
-              <button type="button" className="casa-hit" onClick={clearVideoList}>
-                Clear lista
-              </button>
-              <button
-                type="button"
-                className="casa-hit"
+              <MediaIco label="Svuota lista" onClick={clearVideoList}>
+                <IcoClear />
+              </MediaIco>
+              <MediaIco
+                label="Togli dal maxi"
                 disabled={!videoState.onScreenUrl}
                 onClick={clearMediaOnScreen}
               >
-                Togli dal maxi
-              </button>
+                <IcoScreenOff />
+              </MediaIco>
             </div>
             {videoState.list.length ? (
               <div className="casa-playlist">
@@ -1394,7 +1619,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           </div>
         );
       default:
-        return null;
+        return (
+          <div className={`casa-w-stub ${liveOff ?? ""}`}>
+            <p className="casa-sub">{WIDGET_LABELS[w.type]}</p>
+          </div>
+        );
     }
   }
 

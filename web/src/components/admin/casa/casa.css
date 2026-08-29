@@ -447,14 +447,25 @@
 }
 
 .casa-trash {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
   width: 32px;
   height: 32px;
+  padding: 0;
   border: 0;
   border-radius: 8px;
   background: #323744;
   color: var(--dim);
-  font-size: 16px;
   cursor: pointer;
+}
+
+.casa-trash svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
 }
 
 .casa-trash:hover {
@@ -595,6 +606,8 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   height: auto;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
   border: 0;
   border-radius: 10px;
@@ -604,10 +617,13 @@
   justify-content: center;
 }
 
+/* Expand / fullscreen preview: fill panel, letterbox 16:9 stage inside */
 .casa-screen[data-enlarge="1"] {
-  flex: 1;
+  flex: 1 1 auto;
+  width: 100%;
   height: 100%;
   max-height: none;
+  aspect-ratio: auto;
 }
 
 .casa-screen-ghost {
@@ -616,11 +632,36 @@
 }
 
 .casa-stage {
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   flex-shrink: 0;
   overflow: hidden;
   transform-origin: center center;
   pointer-events: none;
+  /* Layout stays 1920×1080; visual size from translate+scale (contain). */
+}
+
+/* Widget Proiettore: host fills body; screen fills host (no fixed 16:9 crop). */
+.casa-proj-host {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.casa-w-body:has(> .casa-proj-host) {
+  padding: 0;
+}
+
+.casa-w-body .casa-proj-host .casa-screen {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
 }
 
 .casa-pgm {
@@ -852,7 +893,8 @@
   z-index: 2;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* Admin preview: full frame visible (letterbox OK). Live /display is separate. */
+  object-fit: contain;
   background: #000;
 }
 
@@ -941,7 +983,8 @@
 .casa-bed-line {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 8px;
   font-size: 11px;
   font-weight: 700;
@@ -949,9 +992,36 @@
 }
 
 .casa-bed-line .casa-hit {
-  min-height: 32px;
+  min-height: 40px;
   padding: 0 10px;
   font-size: 10px;
+}
+
+.casa-hit-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  text-transform: none;
+}
+
+.casa-hit-ico svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.casa-hit-ico[data-on="1"] {
+  color: #102016;
+}
+
+.casa-media-widget .casa-bed-line:first-child {
+  margin-top: 0;
 }
 
 .casa-playlist {
@@ -1233,7 +1303,11 @@
 }
 
 .casa-expand[data-preview="1"] .casa-screen {
-  flex: 1;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: auto;
 }
 
 .casa-expand-head {
@@ -1748,7 +1822,6 @@
   overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -1829,13 +1902,12 @@
   pointer-events: none;
 }
 
-.casa-w[data-edit="1"] .casa-w-head,
-.casa-w[data-edit="1"] .casa-w-body {
+.casa-w[data-edit="1"] .casa-w-head {
   cursor: grab;
+  touch-action: none;
 }
 
-.casa-w[data-edit="1"] .casa-w-head:active,
-.casa-w[data-edit="1"] .casa-w-body:active {
+.casa-w[data-edit="1"] .casa-w-head:active {
   cursor: grabbing;
 }
 
@@ -1888,8 +1960,25 @@
 .casa-w-body {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 4px 12px 12px;
+  scrollbar-width: thin;
+}
+
+.casa-w-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.casa-w-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+}
+
+.casa-w-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.36);
 }
 
 .casa-w-jiggle {
@@ -1968,12 +2057,21 @@
 }
 
 .casa-gallery {
+  --bg: #1a1d24;
+  --card: #252830;
+  --line: #3a3f4a;
+  --ink: #f4f6fa;
+  --dim: #9aa3b2;
+  --green: #3ddc84;
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 80;
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  pointer-events: auto;
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 .casa-gallery-veil {
@@ -2038,6 +2136,20 @@
   display: grid;
   gap: 6px;
   min-height: 0;
+  /* Override .casa * scrollbar hide — list is long; need scroll affordance. */
+  scrollbar-width: thin;
+  -ms-overflow-style: auto;
+}
+
+.casa-gallery-list::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+  height: 6px;
+}
+
+.casa-gallery-list::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 99px;
 }
 
 .casa-gallery-item {
@@ -2176,6 +2288,16 @@
 
 .casa-w-controls-off {
   pointer-events: none;
+}
+
+.casa-w-stub {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  text-align: center;
 }
 
 .casa-hit-entra {

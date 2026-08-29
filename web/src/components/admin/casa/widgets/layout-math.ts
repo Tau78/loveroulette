@@ -1,8 +1,67 @@
 export type Rect = { x: number; y: number; w: number; h: number };
 
+/** Placement result for adding a widget (may shrink size if board is packed). */
+export type Placement = { x: number; y: number; w: number; h: number };
+
+/** Soft magnet distance for edges / neighbors (drag). */
+export const SNAP_MAGNET_PX = 8;
+
+/** Free-pixel resize / placement step (1 = no hard grid). */
+export const FREE_PIXEL_GRID = 1;
+
 export function snap(n: number, grid = 8): number {
   if (!Number.isFinite(n) || grid <= 0) return 0;
   return Math.round(n / grid) * grid;
+}
+
+/**
+ * Soft magnet: pull `n` to the nearest target if within `magnet` px;
+ * otherwise keep free pixels (rounded).
+ */
+export function magnetSnap(
+  n: number,
+  targets: number[],
+  magnet = SNAP_MAGNET_PX,
+): number {
+  if (!Number.isFinite(n)) return 0;
+  const mag = Number.isFinite(magnet) && magnet > 0 ? magnet : SNAP_MAGNET_PX;
+  let best = Math.round(n);
+  let bestDist = Infinity;
+  for (const t of targets) {
+    if (!Number.isFinite(t)) continue;
+    const d = Math.abs(n - t);
+    if (d <= mag && d < bestDist) {
+      bestDist = d;
+      best = Math.round(t);
+    }
+  }
+  return best;
+}
+
+/**
+ * Magnet-snap a widget origin to canvas edges and other widget edges/alignments.
+ */
+export function magnetSnapPos(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  boundW: number,
+  boundH: number,
+  others: Rect[],
+  magnet = SNAP_MAGNET_PX,
+): { x: number; y: number } {
+  const xTargets: number[] = [0, boundW - w];
+  const yTargets: number[] = [0, boundH - h];
+  for (const o of others) {
+    // Flush left/right of neighbor, align left/right edges.
+    xTargets.push(o.x, o.x + o.w, o.x - w, o.x + o.w - w);
+    yTargets.push(o.y, o.y + o.h, o.y - h, o.y + o.h - h);
+  }
+  return {
+    x: magnetSnap(x, xTargets, magnet),
+    y: magnetSnap(y, yTargets, magnet),
+  };
 }
 
 /** Axis-aligned bounding-box overlap (touching edges = no overlap). */
@@ -40,10 +99,11 @@ export function pushApart(
   others: Rect[],
   boundW: number,
   boundH: number,
-  grid = 8,
+  grid = FREE_PIXEL_GRID,
 ): { x: number; y: number } | null {
   const pos = clampRect(moving.x, moving.y, moving.w, moving.h, boundW, boundH);
-  const stepGrid = Number.isFinite(grid) && grid > 0 ? grid : 8;
+  const stepGrid =
+    Number.isFinite(grid) && grid > 0 ? grid : FREE_PIXEL_GRID;
 
   const hits = (x: number, y: number) =>
     others.some((o) =>
@@ -73,6 +133,53 @@ export function pushApart(
   return null;
 }
 
+/**
+ * Find a free slot for a new widget (never overlaps).
+ * Tries preferred size → min size → collapsed header height.
+ * Returns null if the board has no free slot.
+ */
+export function findAddPlacement(
+  preferred: { w: number; h: number },
+  others: Rect[],
+  boundW: number,
+  boundH: number,
+  minW: number,
+  minH: number,
+  startX = 40,
+  startY = 40,
+  collapsedH?: number,
+): Placement | null {
+  const trySize = (w: number, h: number): Placement | null => {
+    const pos = pushApart(
+      { x: startX, y: startY, w, h },
+      others,
+      boundW,
+      boundH,
+    );
+    return pos ? { x: pos.x, y: pos.y, w, h } : null;
+  };
+
+  const preferredFit = trySize(preferred.w, preferred.h);
+  if (preferredFit) return preferredFit;
+
+  if (preferred.w !== minW || preferred.h !== minH) {
+    const minFit = trySize(minW, minH);
+    if (minFit) return minFit;
+  }
+
+  if (
+    typeof collapsedH === "number" &&
+    Number.isFinite(collapsedH) &&
+    collapsedH > 0 &&
+    collapsedH !== minH
+  ) {
+    const collapsedFit = trySize(minW, collapsedH);
+    if (collapsedFit) return collapsedFit;
+  }
+
+  return null;
+}
+
 /** True if `rect` overlaps any of `others`. */
 export function overlapsAny(rect: Rect, others: Rect[]): boolean {
   return others.some((o) => rectsOverlap(rect, o));
@@ -89,7 +196,10 @@ export function scaleToFit(
   return Math.min(viewW / contentW, viewH / contentH);
 }
 
-/** Clamp a resized box: min size, stay inside canvas, snap to grid. */
+/**
+ * Clamp a resized box: min size, stay inside canvas.
+ * Default grid=1 → free pixel resize (no hard 8px snap).
+ */
 export function clampResize(
   x: number,
   y: number,
@@ -99,7 +209,7 @@ export function clampResize(
   boundH: number,
   minW: number,
   minH: number,
-  grid = 8,
+  grid = FREE_PIXEL_GRID,
 ): { w: number; h: number } {
   const maxW = Math.max(0, boundW - x);
   const maxH = Math.max(0, boundH - y);
@@ -115,6 +225,7 @@ export function clampResize(
 /**
  * SE-resize clamp that forbids overlap with other widgets.
  * Shrinks width/height from the desired size until free (or min size).
+ * Uses free-pixel steps by default so reasonable resize is not blocked.
  */
 export function clampResizeNoOverlap(
   x: number,
@@ -126,10 +237,10 @@ export function clampResizeNoOverlap(
   minW: number,
   minH: number,
   others: Rect[],
-  grid = 8,
+  grid = FREE_PIXEL_GRID,
 ): { w: number; h: number } {
   const sized = clampResize(x, y, w, h, boundW, boundH, minW, minH, grid);
-  const step = Number.isFinite(grid) && grid > 0 ? grid : 8;
+  const step = Number.isFinite(grid) && grid > 0 ? grid : FREE_PIXEL_GRID;
   let ww = sized.w;
   let hh = sized.h;
   const loW = Math.min(minW, Math.max(0, boundW - x));

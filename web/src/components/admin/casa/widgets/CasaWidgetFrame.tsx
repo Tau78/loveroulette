@@ -149,12 +149,7 @@ export function CasaWidgetFrame({
       </header>
 
       {!collapsed ? (
-        <div
-          className="casa-w-body"
-          onPointerDown={edit ? onPointerDownDrag : undefined}
-        >
-          {children}
-        </div>
+        <div className="casa-w-body">{children}</div>
       ) : null}
     </article>
   );
