@@ -1,5 +1,5 @@
 ---
-description: Giro domande in sospeso sulla plancia Casa — chrome risolto; restano numeri e slide
+description: Giro domande in sospeso sulla plancia Casa — chrome e numeri risolti
 alwaysApply: true
 ---
 
@@ -15,8 +15,16 @@ Risolto con il sistema widget:
 - **Ora · …** → rimosso dalla card Impostazioni
 - **Aiuto entra** → **Entra** (icona QR + label) che toggle help sul proiettore
 
+## Numeri ship / luci / salva — DONE
+
+- **shipTopN** = 3 (top coppie ship)
+- **luciFlashSec** = 8 (flash messaggio + spotlight sul proiettore)
+- **salvaSec** = 30 (ripescaggio Salva sala)
+
+## Premio / sponsor — DONE
+
+Saltabili (`Salta` resta); testi editabili in setup → Slide e sigla (già presenti).
+
 ## Ancora in coda
 
-- Numeri ship / luci / salva (top N, durata flash, secondi Salva)
-- 8 premio / sponsor / slide extra (saltate di proposito)
----
+—

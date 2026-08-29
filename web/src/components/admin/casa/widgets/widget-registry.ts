@@ -25,6 +25,14 @@ const DEFAULT_SIZE: Partial<Record<CasaWidgetType, CasaWidgetSize>> = {
   volume_master: "S",
   timer: "S",
   notes: "M",
+  quiz_regia: "L",
+  transport: "M",
+  preflight: "M",
+  panic: "S",
+  finals: "L",
+  extraction: "M",
+  leaderboard: "M",
+  cue: "M",
 };
 
 const TYPE_ORDER: CasaWidgetType[] = [
@@ -42,6 +50,14 @@ const TYPE_ORDER: CasaWidgetType[] = [
   "volume_master",
   "audio_bed",
   "video_player",
+  "quiz_regia",
+  "transport",
+  "preflight",
+  "panic",
+  "finals",
+  "extraction",
+  "leaderboard",
+  "cue",
 ];
 
 export const WIDGET_REGISTRY: CasaWidgetMeta[] = TYPE_ORDER.map((type) => ({

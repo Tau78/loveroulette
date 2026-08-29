@@ -13,7 +13,15 @@ export type CasaWidgetType =
   | "qr_help"
   | "volume_master"
   | "audio_bed"
-  | "video_player";
+  | "video_player"
+  | "quiz_regia"
+  | "transport"
+  | "preflight"
+  | "panic"
+  | "finals"
+  | "extraction"
+  | "leaderboard"
+  | "cue";
 
 export type CasaWidgetInstance = {
   id: string;
@@ -58,6 +66,14 @@ const WIDGET_TYPES: ReadonlySet<CasaWidgetType> = new Set([
   "volume_master",
   "audio_bed",
   "video_player",
+  "quiz_regia",
+  "transport",
+  "preflight",
+  "panic",
+  "finals",
+  "extraction",
+  "leaderboard",
+  "cue",
 ]);
 
 const WIDGET_SIZES: ReadonlySet<CasaWidgetSize> = new Set([
@@ -82,6 +98,14 @@ export const WIDGET_LABELS: Record<CasaWidgetType, string> = {
   volume_master: "Volume master",
   audio_bed: "Sottofondo",
   video_player: "Video",
+  quiz_regia: "Foglio quiz",
+  transport: "Transport GO",
+  preflight: "Preflight",
+  panic: "Panic",
+  finals: "Finali",
+  extraction: "Estrazione",
+  leaderboard: "Classifica",
+  cue: "Prossima domanda",
 };
 
 export const UNIQUE_WIDGET_TYPES: ReadonlySet<CasaWidgetType> = new Set([
@@ -97,6 +121,14 @@ export const UNIQUE_WIDGET_TYPES: ReadonlySet<CasaWidgetType> = new Set([
   "volume_master",
   "audio_bed",
   "video_player",
+  "quiz_regia",
+  "transport",
+  "preflight",
+  "panic",
+  "finals",
+  "extraction",
+  "leaderboard",
+  "cue",
 ]);
 
 /** Logical canvas snapshot (~1200×700) approximating the current 3-col CasaPad. */

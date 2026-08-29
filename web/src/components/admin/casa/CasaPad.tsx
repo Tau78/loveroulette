@@ -10,6 +10,14 @@ import { CasaWidgetDeck } from "@/components/admin/casa/widgets/CasaWidgetDeck";
 import { CasaWidgetGallery } from "@/components/admin/casa/widgets/CasaWidgetGallery";
 import { pushApart } from "@/components/admin/casa/widgets/layout-math";
 import { widgetMeta } from "@/components/admin/casa/widgets/widget-registry";
+import { WidgetCue } from "@/components/admin/casa/widgets/WidgetCue";
+import { WidgetExtraction } from "@/components/admin/casa/widgets/WidgetExtraction";
+import { WidgetFinals } from "@/components/admin/casa/widgets/WidgetFinals";
+import { WidgetLeaderboard } from "@/components/admin/casa/widgets/WidgetLeaderboard";
+import { WidgetPanic } from "@/components/admin/casa/widgets/WidgetPanic";
+import { WidgetPreflight } from "@/components/admin/casa/widgets/WidgetPreflight";
+import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
+import { WidgetTransport } from "@/components/admin/casa/widgets/WidgetTransport";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
@@ -491,15 +499,15 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     if (!flash) return;
     const id = window.setTimeout(() => {
       setMsgQueue((q) => q.slice(1));
-    }, 10_000);
+    }, prep.luciFlashSec * 1000);
     return () => window.clearTimeout(id);
-  }, [flash]);
+  }, [flash, prep.luciFlashSec]);
 
   useEffect(() => {
     if (!spotlight) return;
-    const id = window.setTimeout(() => setSpotlight(null), 8_000);
+    const id = window.setTimeout(() => setSpotlight(null), prep.luciFlashSec * 1000);
     return () => window.clearTimeout(id);
-  }, [spotlight]);
+  }, [spotlight, prep.luciFlashSec]);
 
   useEffect(() => {
     if (sigla !== "warn") return;
@@ -1325,6 +1333,54 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             ) : (
               <p className="casa-sub">Doppio tap → manda sul proiettore</p>
             )}
+          </div>
+        );
+      case "quiz_regia":
+        return (
+          <div className={liveOff}>
+            <WidgetQuizRegia />
+          </div>
+        );
+      case "transport":
+        return (
+          <div className={liveOff}>
+            <WidgetTransport />
+          </div>
+        );
+      case "preflight":
+        return (
+          <div className={liveOff}>
+            <WidgetPreflight />
+          </div>
+        );
+      case "panic":
+        return (
+          <div className={liveOff}>
+            <WidgetPanic />
+          </div>
+        );
+      case "finals":
+        return (
+          <div className={liveOff}>
+            <WidgetFinals />
+          </div>
+        );
+      case "extraction":
+        return (
+          <div className={liveOff}>
+            <WidgetExtraction shipTopN={prep.shipTopN} />
+          </div>
+        );
+      case "leaderboard":
+        return (
+          <div className={liveOff}>
+            <WidgetLeaderboard limit={Math.max(prep.shipTopN, 12)} />
+          </div>
+        );
+      case "cue":
+        return (
+          <div className={liveOff}>
+            <WidgetCue />
           </div>
         );
       default:

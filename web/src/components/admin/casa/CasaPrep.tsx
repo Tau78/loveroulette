@@ -26,7 +26,12 @@ const RIPESCA: { id: CasaRipescaggio; label: string }[] = [
   { id: "off", label: "No" },
 ];
 
-const FLAGS: { key: keyof Prep; label: string }[] = [
+type PrepFlag = Extract<
+  keyof Prep,
+  "ship" | "luci" | "lampo" | "foto" | "pausa" | "chemistry" | "speed" | "recap"
+>;
+
+const FLAGS: { key: PrepFlag; label: string }[] = [
   { key: "ship", label: "Ship" },
   { key: "luci", label: "Luci" },
   { key: "lampo", label: "Lampo" },
@@ -36,6 +41,45 @@ const FLAGS: { key: keyof Prep; label: string }[] = [
   { key: "speed", label: "Speed set" },
   { key: "recap", label: "Recap" },
 ];
+
+function NumRow({
+  label,
+  value,
+  min,
+  max,
+  onStep,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onStep: (n: number) => void;
+}) {
+  return (
+    <div className="casa-setup-row">
+      <span>{label}</span>
+      <div className="casa-stepper">
+        <button
+          type="button"
+          className="casa-stepper-btn"
+          aria-label={`${label} meno`}
+          onClick={() => onStep(Math.max(min, value - 1))}
+        >
+          −
+        </button>
+        <strong>{value}</strong>
+        <button
+          type="button"
+          className="casa-stepper-btn"
+          aria-label={`${label} più`}
+          onClick={() => onStep(Math.min(max, value + 1))}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function CasaPrep({ prep, onChange }: Props) {
   const [venues, setVenues] = useState<CasaVenue[]>([]);
@@ -144,6 +188,33 @@ export function CasaPrep({ prep, onChange }: Props) {
           </button>
         ))}
       </div>
+      {prep.ship ? (
+        <NumRow
+          label="Top ship"
+          value={prep.shipTopN}
+          min={1}
+          max={20}
+          onStep={(n) => onChange({ shipTopN: n })}
+        />
+      ) : null}
+      {prep.luci ? (
+        <NumRow
+          label="Flash luci (s)"
+          value={prep.luciFlashSec}
+          min={1}
+          max={60}
+          onStep={(n) => onChange({ luciFlashSec: n })}
+        />
+      ) : null}
+      {prep.ripescaggio === "salva" ? (
+        <NumRow
+          label="Salva sala (s)"
+          value={prep.salvaSec}
+          min={5}
+          max={120}
+          onStep={(n) => onChange({ salvaSec: n })}
+        />
+      ) : null}
     </div>
   );
 }
