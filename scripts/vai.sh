@@ -389,7 +389,7 @@ run_deploy() {
   fi
   case "$STACK_DEPLOY" in
     cloudflare) npx wrangler deploy ;;
-    vercel) npx vercel --prod --yes ;;
+    vercel) npx vercel --prod --yes --archive=tgz ;;
     netlify) npx netlify deploy --prod ;;
     fly) fly deploy ;;
     firebase) npx firebase deploy --only hosting ;;
