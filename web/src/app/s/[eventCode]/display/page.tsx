@@ -141,6 +141,12 @@ export default function DisplayPage() {
   const { state: localMediaState, active: localMediaActive } =
     useRegiaLocalMediaReceiver(eventSlug);
 
+  const localMediaIsVideo =
+    localMediaActive &&
+    (localMediaState.items[localMediaState.index]?.kind === "video");
+  /** Evita due `<video>` contemporanei (crash WKWebView / memoria). */
+  const suspendStageVideo = Boolean(localMediaIsVideo);
+
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -193,7 +199,8 @@ export default function DisplayPage() {
       <DisplayStageBackground
         logoScale={isLobby ? "full" : "compact"}
         quizPhase={isQuiz ? quizState!.displayPhase : null}
-        hideBackgroundRoulette={hideBackgroundRoulette}
+        hideBackgroundRoulette={hideBackgroundRoulette || localMediaActive}
+        suspendVideo={suspendStageVideo}
       />
 
       {finalsShow ? (

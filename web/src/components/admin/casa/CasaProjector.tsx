@@ -18,6 +18,10 @@ import {
   type CasaSlide,
   type CasaSlideId,
 } from "@/lib/admin/casa-slides";
+import {
+  probeSiglaMissing,
+  shouldMountSiglaVideo,
+} from "@/lib/admin/casa-sigla";
 import { categoryThemeLabel } from "@/lib/musicpro/quiz-display";
 import {
   CasaPlayerSpotlight,
@@ -71,6 +75,12 @@ type Props = {
   onClearMediaOnScreen?: () => void;
 };
 
+function isVideoMedia(media: { url: string; name: string } | null | undefined) {
+  if (!media) return false;
+  return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(media.name) ||
+    /\.(mp4|webm|mov|m4v)(\?|$)/i.test(media.url);
+}
+
 export function CasaProjector({
   eventCode,
   beat,
@@ -116,24 +126,39 @@ export function CasaProjector({
   const videoRef = useRef<HTMLVideoElement>(null);
   const slide = beat in slides ? slides[beat as CasaSlideId] : undefined;
   const lobby = beat === "casa" || help;
-  const fullVideo = beat === "sigla" && (sigla === "on" || sigla === "hold");
+  const siglaFullscreen = beat === "sigla" && (sigla === "on" || sigla === "hold");
+  const mountSigla = siglaFullscreen && shouldMountSiglaVideo(siglaSrc, siglaMissing);
+  const mediaVideoOn = Boolean(mediaOnScreen && isVideoMedia(mediaOnScreen));
+  /** Never keep the ambient loop while another video is the hero. */
+  const suspendBgVideo = mountSigla || mediaVideoOn || beat === "stacco";
   const theme = categoryThemeLabel(quizQuestion?.category ?? FALLBACK_QUIZ.category);
 
   useEffect(() => {
+    let cancelled = false;
     setSiglaMissing(false);
+    void probeSiglaMissing(siglaSrc).then((missing) => {
+      if (!cancelled) setSiglaMissing(missing);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [siglaSrc]);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !mountSigla) return;
     video.volume = Math.min(1, Math.max(0, siglaVolume));
-  }, [siglaVolume]);
+  }, [siglaVolume, mountSigla, siglaSrc]);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || beat !== "sigla") return;
+    if (!video || !mountSigla || beat !== "sigla") return;
+
     if (sigla === "on") {
-      void video.play().catch(() => onSiglaEnded?.());
+      void video.play().catch(() => {
+        // Autoplay / decode failure must NOT advance the show — flag missing UI.
+        setSiglaMissing(true);
+      });
     }
     if (sigla === "hold") {
       video.pause();
@@ -141,7 +166,11 @@ export function CasaProjector({
         video.currentTime = Math.max(0, video.duration - 0.05);
       }
     }
-  }, [beat, sigla, siglaSrc, onSiglaEnded]);
+
+    return () => {
+      video.pause();
+    };
+  }, [beat, sigla, siglaSrc, mountSigla]);
 
   return (
     <div
@@ -159,7 +188,10 @@ export function CasaProjector({
       >
         <DisplayStageBackground
           logoScale={lobby ? "full" : "compact"}
-          hideBackgroundRoulette={fullVideo || beat === "stacco" || beat === "quiz"}
+          hideBackgroundRoulette={
+            siglaFullscreen || beat === "stacco" || beat === "quiz" || mediaVideoOn
+          }
+          suspendVideo={suspendBgVideo}
         />
 
         {help ? (
@@ -180,7 +212,7 @@ export function CasaProjector({
           <div className="casa-proj-center">
             <DisplayPhaseHero kicker="Tra un attimo" headline="SIGLA" uppercase />
           </div>
-        ) : beat === "sigla" && (sigla === "on" || sigla === "hold") && siglaMissing ? (
+        ) : siglaFullscreen && (!mountSigla || siglaMissing) ? (
           <div className="casa-proj-center">
             <DisplayPhaseHero
               kicker="Sigla"
@@ -189,12 +221,14 @@ export function CasaProjector({
               uppercase
             />
           </div>
-        ) : beat === "sigla" && (sigla === "on" || sigla === "hold") ? (
+        ) : mountSigla ? (
           <video
+            key={siglaSrc}
             ref={videoRef}
             className="casa-proj-sigla"
             src={siglaSrc}
             playsInline
+            preload="metadata"
             onEnded={onSiglaEnded}
             onError={() => setSiglaMissing(true)}
           />
@@ -258,6 +292,8 @@ export function CasaProjector({
                 playsInline
                 loop
                 muted={mediaOnScreen.muted ?? true}
+                preload="metadata"
+                onError={() => onClearMediaOnScreen?.()}
               />
             )}
             {onClearMediaOnScreen ? (
@@ -278,6 +314,7 @@ export function CasaProjector({
           <div className="casa-proj-flash">
             <div className="casa-proj-plate" data-say={flash.say ? "1" : undefined}>
               {flash.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img className="casa-proj-face" src={flash.photo} alt="" />
               ) : null}
               {flash.say ? (

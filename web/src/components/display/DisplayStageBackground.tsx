@@ -25,20 +25,27 @@ type DisplayStageBackgroundProps = {
   quizPhase?: QuizDisplayPhase | null;
   /** Nasconde la roulette PNG di sfondo (estrazione / matching). */
   hideBackgroundRoulette?: boolean;
+  /**
+   * Smonta il loop video di sfondo (sigla / media fullscreen).
+   * Su iOS WKWebView due `<video>` attivi possono killare il content process.
+   */
+  suspendVideo?: boolean;
 };
 
 export function DisplayStageBackground({
   logoScale = "full",
   quizPhase = null,
   hideBackgroundRoulette = false,
+  suspendVideo = false,
 }: DisplayStageBackgroundProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const reduceMotion = useReducedMotion();
   const phaseConfig = quizPhase ? QUIZ_PHASE_BACKGROUNDS[quizPhase] : null;
+  const showLoopVideo = !reduceMotion && !suspendVideo;
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || reduceMotion) return;
+    if (!video || !showLoopVideo) return;
 
     video.muted = true;
     const play = () => {
@@ -47,15 +54,18 @@ export function DisplayStageBackground({
 
     play();
     video.addEventListener("loadeddata", play);
-    return () => video.removeEventListener("loadeddata", play);
-  }, [reduceMotion]);
+    return () => {
+      video.removeEventListener("loadeddata", play);
+      video.pause();
+    };
+  }, [showLoopVideo]);
 
   return (
     <div
       className="pointer-events-none absolute inset-0 overflow-hidden bg-[#0D0D12]"
       aria-hidden
     >
-      {reduceMotion ? (
+      {!showLoopVideo ? (
         <div
           className="absolute inset-0 transition-colors duration-500"
           style={{
@@ -76,7 +86,7 @@ export function DisplayStageBackground({
             loop
             muted
             playsInline
-            preload="auto"
+            preload="metadata"
           />
         </motion.div>
       )}
