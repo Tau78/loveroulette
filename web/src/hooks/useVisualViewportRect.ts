@@ -35,6 +35,28 @@ export function readVisualViewportRect(
   };
 }
 
+/** Same floor as the plancia: ignore WKWebView 0-height after the keyboard. */
+export const MIN_USABLE_VISUAL_VIEWPORT_W = 160;
+export const MIN_USABLE_VISUAL_VIEWPORT_H = 120;
+
+export function isUsableVisualViewport(
+  rect: VisualViewportRect | null | undefined,
+): rect is VisualViewportRect {
+  return (
+    !!rect &&
+    rect.width >= MIN_USABLE_VISUAL_VIEWPORT_W &&
+    rect.height >= MIN_USABLE_VISUAL_VIEWPORT_H
+  );
+}
+
+export function nextStableVisualViewportRect(
+  prev: VisualViewportRect | null,
+  next: VisualViewportRect | null,
+): VisualViewportRect | null {
+  if (isUsableVisualViewport(next)) return next;
+  return prev;
+}
+
 /** Pin a `position:fixed` overlay to the visual viewport; fall back to inset:0. */
 export function visualViewportOverlayStyle(
   rect: VisualViewportRect | null,
@@ -76,7 +98,9 @@ export function useVisualViewportRect(enabled: boolean): VisualViewportRect | nu
     }
 
     const update = () => {
-      setRect(readVisualViewportRect(viewport));
+      setRect((prev) =>
+        nextStableVisualViewportRect(prev, readVisualViewportRect(viewport)),
+      );
     };
 
     update();

@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useVisualViewportRect,
+  visualViewportOverlayStyle,
+} from "@/hooks/useVisualViewportRect";
 import { CasaProjector } from "@/components/admin/casa/CasaProjector";
 import type { CasaSpotlight } from "@/components/admin/casa/CasaPlayerSpotlight";
 import { CasaPrep } from "@/components/admin/casa/CasaPrep";
@@ -83,7 +87,6 @@ import {
   WIDGET_MIN_W,
   type CasaLayoutsState,
   type CasaWidgetInstance,
-  type CasaWidgetSize,
   type CasaWidgetType,
 } from "@/lib/admin/casa-layouts";
 import {
@@ -319,10 +322,6 @@ const FADERS = [
   { id: "bed", label: "Sottofondo" },
   { id: "fx", label: "Effetti sonori" },
 ] as const;
-
-function msgLimitForSize(size: CasaWidgetSize): number {
-  return size === "L" || size === "XL" ? 8 : 3;
-}
 
 function cycleRepeat(mode: CasaRepeatMode): CasaRepeatMode {
   if (mode === "off") return "all";
@@ -654,6 +653,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const gongInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
   const deckWrapRef = useRef<HTMLDivElement>(null);
+  const expandViewport = useVisualViewportRect(open != null);
   const videoTapRef = useRef<{ url: string; at: number } | null>(null);
 
   const index = BEATS.findIndex((b) => b.id === beat);
@@ -1187,8 +1187,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     return true;
   });
 
-  function MsgRows({ limit = 3 }: { limit?: number }) {
-    const rows = visibleMsgs.slice(-limit);
+  function MsgRows({ limit }: { limit?: number }) {
+    const rows = limit == null ? visibleMsgs : visibleMsgs.slice(-limit);
     return (
       <>
         {rows.map((m) => (
@@ -1355,7 +1355,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         );
       case "players":
         return (
-          <div className={liveOff}>
+          <div className={`casa-roster-scroll ${liveOff ?? ""}`}>
             <div className="casa-roster">
               {guests.length === 0 ? (
                 <p className="casa-sub">Nessuno in sala. Entra dal QR.</p>
@@ -1381,8 +1381,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         );
       case "messages":
         return (
-          <div className={liveOff}>
-            <MsgRows limit={msgLimitForSize(w.size)} />
+          <div className={`casa-msg-scroll ${liveOff ?? ""}`}>
+            <MsgRows />
           </div>
         );
       case "projector":
@@ -1907,7 +1907,10 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       </div>
 
       {open ? (
-        <>
+        <div
+          className="casa-expand-layer"
+          style={visualViewportOverlayStyle(expandViewport)}
+        >
           <button
             type="button"
             className="casa-veil"
@@ -1918,6 +1921,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             className="casa-expand"
             data-preview={open === "preview" ? "1" : undefined}
             data-pad={open === "pad" ? "1" : undefined}
+            data-nick={open === "nick" ? "1" : undefined}
             role="dialog"
             aria-modal="true"
           >
@@ -2097,13 +2101,16 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             ) : null}
 
             {open === "nick" ? (
-              <>
+              <div className="casa-nick-panel">
                 <input
                   className="casa-search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Cerca nick"
-                  autoFocus
+                  enterKeyHint="search"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                 />
                 <p className="casa-sub">I nick arrivano dal QR sul telefono.</p>
                 <div className="casa-list">
@@ -2124,7 +2131,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                     </button>
                   ))}
                 </div>
-              </>
+              </div>
             ) : null}
 
             {open === "audio" ? (
@@ -2243,7 +2250,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                 >
                   Filtra
                 </button>
-                <MsgRows limit={8} />
+                <MsgRows />
               </>
             ) : null}
 
@@ -2278,7 +2285,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             ) : null}
             </div>
           </div>
-        </>
+        </div>
       ) : null}
 
       {picked ? (

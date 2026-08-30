@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  isUsableVisualViewport,
+  nextStableVisualViewportRect,
   readVisualViewportRect,
   visualViewportOverlayStyle,
 } from "./useVisualViewportRect";
@@ -50,5 +52,23 @@ describe("visualViewportOverlayStyle", () => {
       width: 700,
       height: 300,
     });
+  });
+});
+
+describe("nextStableVisualViewportRect", () => {
+  const good = { top: 0, left: 0, width: 852, height: 310 };
+
+  it("keeps a usable viewport", () => {
+    expect(isUsableVisualViewport(good)).toBe(true);
+    expect(nextStableVisualViewportRect(null, good)).toEqual(good);
+  });
+
+  it("ignores a collapsed WKWebView and keeps the last box", () => {
+    expect(isUsableVisualViewport({ top: 0, left: 0, width: 852, height: 0 })).toBe(
+      false,
+    );
+    expect(
+      nextStableVisualViewportRect(good, { top: 0, left: 0, width: 852, height: 8 }),
+    ).toEqual(good);
   });
 });
