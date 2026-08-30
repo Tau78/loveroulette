@@ -19,7 +19,7 @@ export default function PrivacyPage() {
         >
           Informativa sulla privacy
         </h1>
-        <p className="text-[#A0A0B0]">Ultimo aggiornamento: 27 agosto 2026</p>
+        <p className="text-[#A0A0B0]">Ultimo aggiornamento: 31 agosto 2026</p>
 
         <p>
           Love Roulette è una plancia per l’animatore di un evento live in
@@ -35,18 +35,18 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-semibold text-white pt-2">App iPhone e iPad</h2>
         <p>
-          L’app apre la dashboard web dell’evento. Sul dispositivo restano
-          solo il codice evento e l’indirizzo del sito, per non riscriverli
-          ogni volta. Non creiamo un account Apple o un profilo utente
-          nell’app. Non c’è registrazione, non c’è “Elimina account”.
+          L’app è la plancia animatore. All’accesso chiediamo utente e password
+          staff (stessi di APP Eventi). Sul dispositivo restano la sessione
+          login e, se usi i crediti, l’orario di attivazione del credito serata
+          (6 ore). Non creiamo un account Apple nell’app e non c’è
+          registrazione pubblica.
         </p>
 
         <h2 className="text-xl font-semibold text-white pt-2">Sito dell'evento</h2>
         <p>
-          Proiettore e telefoni usano lo stesso sito. L’animatore sblocca la
-          dashboard con il PIN dell'evento. I partecipanti che entrano dal
-          telefono possono lasciare un soprannome e le risposte al quiz di
-          quell'evento. Servono solo a far girare il gioco in sala.
+          Proiettore e telefoni usano lo stesso sito (QR / link). I partecipanti
+          che entrano dal telefono possono lasciare un soprannome e le risposte
+          al quiz di quell'evento. Servono solo a far girare il gioco in sala.
         </p>
 
         <h2 className="text-xl font-semibold text-white pt-2">Cosa non facciamo</h2>
@@ -60,9 +60,9 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-semibold text-white pt-2">Conservazione</h2>
         <p>
-          Codice evento e host restano sul dispositivo finché non li cambi o
-          disinstalli l’app. I dati dell'evento restano sul backend finché
-          l’organizzatore tiene aperto l’evento.
+          Sessione login e (se presenti) dati credito restano sul dispositivo
+          finché non esci o disinstalli l’app. I dati dell'evento restano sul
+          backend finché l’organizzatore tiene aperto l’evento.
         </p>
 
         <h2 className="text-xl font-semibold text-white pt-2">Apple</h2>

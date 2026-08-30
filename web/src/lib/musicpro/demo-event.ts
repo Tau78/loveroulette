@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const DEMO_JOIN_CODE = "DEMO01";
-export const DEMO_ANIMATOR_PIN = "123456";
+/** @deprecated PIN demo dismesso — accesso plancia via login staff Eventi. */
+export const DEMO_ANIMATOR_PIN = "";
 export const DEMO_TITLE = "Love Roulette — Demo";
 
 export function isDemoJoinCode(slug: string): boolean {
@@ -12,7 +13,6 @@ function demoMetadata(): Record<string, unknown> {
   return {
     love_roulette_code: DEMO_JOIN_CODE,
     love_roulette_title: DEMO_TITLE,
-    animator_pin: DEMO_ANIMATOR_PIN,
     love_roulette: {
       theme: "dark_fuchsia",
       extraction_mode: "random",
@@ -166,6 +166,31 @@ export async function ensureDemoEvent(supabase: SupabaseClient): Promise<void> {
 
   if (!eventId) return;
   await ensureDemoSession(supabase, eventId);
+  await clearDemoAnimatorPin(supabase, eventId);
+}
+
+async function clearDemoAnimatorPin(
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<void> {
+  const { data } = await supabase
+    .from("events")
+    .select("metadata")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  const metadata = (data?.metadata ?? {}) as Record<string, unknown>;
+  if (
+    metadata.animator_pin === undefined ||
+    metadata.animator_pin === null ||
+    String(metadata.animator_pin).trim() === ""
+  ) {
+    return;
+  }
+
+  const next = { ...metadata };
+  delete next.animator_pin;
+  await supabase.from("events").update({ metadata: next }).eq("id", eventId);
 }
 
 export async function isDemoEventId(
