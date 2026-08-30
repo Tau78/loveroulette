@@ -66,6 +66,18 @@ Più «Mostra password», così il reviewer digita il demo a mano.
 
 ---
 
+## Love Roulette — 2026-08-30 — TestFlight resta sulla build 1
+
+**Cosa è successo:** Upload di build 2/3/4 ok e `VALID`, ma sul telefono TestFlight mostrava ancora **1.0.0 (1)**.
+
+**Causa:** il gruppo interno `Test` ha `hasAccessToAllBuilds = false` (non patchabile via API). Solo la 1 era collegata al gruppo. Le altre restavano in ASC senza tester.
+
+**Fix:** `POST /v1/betaGroups/{Test}/relationships/builds` con la build nuova. Script: `scripts/asc-assign-testflight.mjs`. `xcode-testflight.sh` lo lancia dopo l’upload.
+
+**Regola:** upload ≠ visibile ai tester. Dopo ogni IPA, assegna la build al gruppo Test.
+
+---
+
 ## MusicPro Eventi — Export compliance e Expo nativo
 
 **Cosa è successo:** TestFlight chiede «Conformità mancante» se `ITSAppUsesNonExemptEncryption` non è **nel binary**.

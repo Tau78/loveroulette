@@ -181,5 +181,11 @@ xcodebuild \
   "${AUTH_ARGS[@]}"
 
 echo ""
+echo "→ Assegno build $BUILD_NUM al gruppo TestFlight Test"
+if ! node "$REPO/scripts/asc-assign-testflight.mjs" "$BUILD_NUM"; then
+  echo "Avviso: upload ok, ma il gruppo Test non ha ancora la $BUILD_NUM. Riprova: node scripts/asc-assign-testflight.mjs $BUILD_NUM" >&2
+fi
+
+echo ""
 echo "Fatto. Tra 5–15 minuti controlla TestFlight (build $BUILD_NUM)."
 echo "https://appstoreconnect.apple.com/apps/6805227768/testflight/ios"
