@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useVisualViewportRect,
+  visualViewportOverlayStyle,
+} from "@/hooks/useVisualViewportRect";
 import { CasaProjector } from "@/components/admin/casa/CasaProjector";
 import type { CasaSpotlight } from "@/components/admin/casa/CasaPlayerSpotlight";
 import { CasaPrep } from "@/components/admin/casa/CasaPrep";
 import { CasaQuestions } from "@/components/admin/casa/CasaQuestions";
+import { CasaSocialPanel } from "@/components/admin/casa/social/CasaSocialPanel";
 import { CasaLayoutBar } from "@/components/admin/casa/widgets/CasaLayoutBar";
 import { CasaWidgetDeck } from "@/components/admin/casa/widgets/CasaWidgetDeck";
 import { CasaWidgetGallery } from "@/components/admin/casa/widgets/CasaWidgetGallery";
@@ -82,7 +87,6 @@ import {
   WIDGET_MIN_W,
   type CasaLayoutsState,
   type CasaWidgetInstance,
-  type CasaWidgetSize,
   type CasaWidgetType,
 } from "@/lib/admin/casa-layouts";
 import {
@@ -158,11 +162,13 @@ type Panel =
   | "preview"
   | "setup"
   | "questions"
+  | "quiz"
   | "prep"
   | "msg"
   | "screen"
   | "gear"
   | "clock"
+  | "social"
   | null;
 
 const AVATAR_M = "/grafiche/avatar-m.png";
@@ -316,10 +322,6 @@ const FADERS = [
   { id: "bed", label: "Sottofondo" },
   { id: "fx", label: "Effetti sonori" },
 ] as const;
-
-function msgLimitForSize(size: CasaWidgetSize): number {
-  return size === "L" || size === "XL" ? 8 : 3;
-}
 
 function cycleRepeat(mode: CasaRepeatMode): CasaRepeatMode {
   if (mode === "off") return "all";
@@ -651,6 +653,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const gongInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
   const deckWrapRef = useRef<HTMLDivElement>(null);
+  const expandViewport = useVisualViewportRect(open != null);
   const videoTapRef = useRef<{ url: string; at: number } | null>(null);
 
   const index = BEATS.findIndex((b) => b.id === beat);
@@ -1184,8 +1187,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     return true;
   });
 
-  function MsgRows({ limit = 3 }: { limit?: number }) {
-    const rows = visibleMsgs.slice(-limit);
+  function MsgRows({ limit }: { limit?: number }) {
+    const rows = limit == null ? visibleMsgs : visibleMsgs.slice(-limit);
     return (
       <>
         {rows.map((m) => (
@@ -1281,6 +1284,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       pad: "pad",
       clock: "clock",
       audio_bed: "audio",
+      quiz_regia: "quiz",
     };
     const panel = map[w.type];
     if (panel) setOpen(panel);
@@ -1351,7 +1355,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         );
       case "players":
         return (
-          <div className={liveOff}>
+          <div className={`casa-roster-scroll ${liveOff ?? ""}`}>
             <div className="casa-roster">
               {guests.length === 0 ? (
                 <p className="casa-sub">Nessuno in sala. Entra dal QR.</p>
@@ -1377,8 +1381,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         );
       case "messages":
         return (
-          <div className={liveOff}>
-            <MsgRows limit={msgLimitForSize(w.size)} />
+          <div className={`casa-msg-scroll ${liveOff ?? ""}`}>
+            <MsgRows />
           </div>
         );
       case "projector":
@@ -1903,7 +1907,10 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       </div>
 
       {open ? (
-        <>
+        <div
+          className="casa-expand-layer"
+          style={visualViewportOverlayStyle(expandViewport)}
+        >
           <button
             type="button"
             className="casa-veil"
@@ -1914,6 +1921,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             className="casa-expand"
             data-preview={open === "preview" ? "1" : undefined}
             data-pad={open === "pad" ? "1" : undefined}
+            data-nick={open === "nick" ? "1" : undefined}
             role="dialog"
             aria-modal="true"
           >
@@ -1933,19 +1941,24 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                             ? "Domande"
                             : open === "prep"
                               ? "Preparazione evento"
+                            : open === "social"
+                              ? "Contenuti social"
                             : open === "msg"
                             ? "Messaggi"
                             : open === "screen"
                               ? "Schermi"
                               : open === "clock"
                                 ? "Tempo"
-                                : "Audio"}
+                                : open === "quiz"
+                                  ? "Foglio quiz"
+                                  : "Audio"}
               </p>
               <button type="button" className="casa-close" onClick={() => setOpen(null)}>
                 Chiudi
               </button>
             </div>
 
+            <div className="casa-expand-body">
             {open === "gear" ? (
               <>
                 <p className="casa-sub">Testi delle slide iniziali. Restano su questo computer.</p>
@@ -2014,6 +2027,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                     <button type="button" className="casa-hit" onClick={() => setOpen("gear")}>
                       Slide e sigla
                     </button>
+                    <button type="button" className="casa-hit" onClick={() => setOpen("social")}>
+                      Contenuti social
+                    </button>
                     <button type="button" className="casa-hit" onClick={() => setOpen("screen")}>
                       Schermi
                     </button>
@@ -2028,7 +2044,15 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             ) : null}
 
             {open === "questions" ? <CasaQuestions eventCode={eventCode} /> : null}
+            {open === "quiz" ? (
+              <div className="casa-quiz-expand">
+                <WidgetQuizRegia />
+              </div>
+            ) : null}
             {open === "prep" ? <CasaPrep prep={prep} onChange={patchPrep} /> : null}
+            {open === "social" ? (
+              <CasaSocialPanel prep={prep} slides={slides} />
+            ) : null}
 
             {open === "clock" ? (
               <div className="casa-clock-panel">
@@ -2077,13 +2101,16 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             ) : null}
 
             {open === "nick" ? (
-              <>
+              <div className="casa-nick-panel">
                 <input
                   className="casa-search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Cerca nick"
-                  autoFocus
+                  enterKeyHint="search"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
                 />
                 <p className="casa-sub">I nick arrivano dal QR sul telefono.</p>
                 <div className="casa-list">
@@ -2104,7 +2131,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                     </button>
                   ))}
                 </div>
-              </>
+              </div>
             ) : null}
 
             {open === "audio" ? (
@@ -2223,7 +2250,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                 >
                   Filtra
                 </button>
-                <MsgRows limit={8} />
+                <MsgRows />
               </>
             ) : null}
 
@@ -2256,8 +2283,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                 onToggle={togglePad}
               />
             ) : null}
+            </div>
           </div>
-        </>
+        </div>
       ) : null}
 
       {picked ? (
