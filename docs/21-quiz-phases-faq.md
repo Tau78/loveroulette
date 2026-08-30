@@ -74,21 +74,25 @@ Quindi: **5 domande = ambiente demo / pool non popolato**, non la durata previst
 
 ## Fasi di ogni domanda (proiettore + mobile)
 
-Per ogni domanda il pulsante **AVANTI** in regia avanza **fase per fase**, non salta alla domanda successiva.
+Il pulsante **AVANTI** in regia guida la manche. Solo il countdown di avvio e il timer risposte si chiudono da soli.
 
-| Fase (`displayPhase`) | Proiettore | Mobile |
-|-----------------------|------------|--------|
-| **Tema** (`theme_intro`) | Slide manche / categoria | «Guarda il proiettore» |
-| **Domanda** (`question`) | Solo testo domanda | Leggi — risposte tra poco |
-| **Domanda + risposte** (`answers`) | Domanda + opzioni + countdown footer | Puoi rispondere |
-| **Risultati %** (`results`) | Percentuali in sala + gong | Tempo scaduto |
-| **Prossima domanda** (`next_question`) | Slide transizione | Attesa prossima domanda |
+| Passo | Regia | Proiettore | Tastiere |
+|-------|--------|------------|----------|
+| **0** | AVANTI lancia la **nuova manche** | Countdown 5 s, poi slide tema | Bloccate |
+| **1** | AVANTI | Testo domanda (+ media se presente) | Bloccate |
+| **2** | AVANTI | Opzioni + countdown | **Attive** |
+| **3** | Automatico a fine timer | Stop visivo/sonoro | **Chiuse** |
+| **4** | AVANTI | Percentuali in sala + SFX | Chiuse |
+| **5** | AVANTI | Classifica di accoppiamento temporanea | Chiuse |
+| **6** | AVANTI | Chiude la classifica → domanda successiva dal passo 1 | Chiuse |
 
-Sequenza: `theme_intro → question → answers → results → next_question →` (indice++) `theme_intro → …`
+Nuova manche (prima domanda del blocco): `start_countdown → theme_intro → question → …`
 
-Con **Autoplay** attivo, ogni fase scade da sola al termine del timer configurato. **AVANTI** forza il passaggio immediato (`skipPhase`).
+Domanda successiva nella stessa manche: `question → answers → (lock) → results → next_question → question`
 
-Ogni fase quiz ha un **sottofondo distinto** sul proiettore (tinta, glow e intensità ruota/video).
+Le **ultime N domande** (default **5**, impostabile in setup / Generatore `hide_ranking_last_n`) **saltano il punto 5** (classifica). Dopo i risultati si passa alla domanda successiva o al matching.
+
+Con **Auto** acceso, le fasi in hold (tema, domanda, risultati, classifica) possono avanzare da sole. Il timer risposte **non** rivela mai le % da solo: serve AVANTI.
 
 ---
 
@@ -96,7 +100,7 @@ Ogni fase quiz ha un **sottofondo distinto** sul proiettore (tinta, glow e inten
 
 Il gong suona **solo** quando scade il timer della fase **Domanda + risposte** (`answers`) — non se l’animatore salta con AVANTI prima dello zero, non in fase risultati.
 
-Allineato al **countdown del proiettore**: stesso orologio `resolveSyncedQuizClock`, trigger nel passaggio `answers` → `results` (sul «0» visivo). File: `LR_Quiz_Question_Gong` — [Pixabay Zildjian gong](https://pixabay.com/sound-effects/musical-old-zildjian-gong-quite-natural-34294/), trim ~4 s.
+Allineato al **countdown del proiettore**: stesso orologio `resolveSyncedQuizClock`, trigger quando `answers` arriva a remaining 0 (lock tastiere, overlay Stop). File: `LR_Quiz_Question_Gong` — [Pixabay Zildjian gong](https://pixabay.com/sound-effects/musical-old-zildjian-gong-quite-natural-34294/), trim ~4 s.
 
 In fase **results** la colonna sonora passa a **`LR_25_Quiz_Results_Reveal`** (bed reveal %, crossfade ~1,5 s).
 

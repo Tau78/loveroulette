@@ -31,6 +31,7 @@ const bodySchema = z.object({
   autoplaySeconds: z.number().int().min(3).max(120).optional(),
   questionCount: z.number().int().min(1).max(200).optional(),
   questionSeconds: z.number().int().min(5).max(120).optional(),
+  hideRankingLastN: z.number().int().min(0).max(30).optional(),
   enabled: z.boolean().optional(),
   displayPhase: z
     .enum([
@@ -98,6 +99,7 @@ export async function POST(
         const quiz = await startQuizSession(supabase, event.id, {
           questionCount: body.questionCount,
           questionSeconds: body.questionSeconds,
+          hideRankingLastN: body.hideRankingLastN,
         });
         return NextResponse.json({
           quiz,

@@ -4,6 +4,7 @@ import { getQuestionsForEvent } from "@/lib/musicpro/questions";
 import {
   getQuizMancheFromMetadata,
   getQuizSessionState,
+  getQuizSetupPrefs,
 } from "@/lib/musicpro/quiz-state";
 import type {
   GeneratoreExportMeta,
@@ -13,7 +14,11 @@ import type {
 } from "./types";
 import { GENERATORE_FORMAT_ID } from "./types";
 import type { QuizMancheTheme } from "@/lib/musicpro/quiz-display";
-import { DEFAULT_QUIZ_TIMING } from "@/lib/musicpro/quiz-display";
+import {
+  DEFAULT_HIDE_RANKING_LAST_N,
+  DEFAULT_QUIZ_TIMING,
+  normalizeHideRankingLastN,
+} from "@/lib/musicpro/quiz-display";
 
 function toGeneratoreQuestion(q: LoveRouletteQuestion): GeneratoreQuestion {
   return {
@@ -50,6 +55,7 @@ export async function exportMancheDocument(
     theme_intro_seconds: DEFAULT_QUIZ_TIMING.themeIntroSeconds,
     question_timer_seconds: DEFAULT_QUIZ_TIMING.questionSeconds,
     results_seconds: DEFAULT_QUIZ_TIMING.resultsSeconds,
+    hide_ranking_last_n: getQuizSetupPrefs(metadata).hideRankingLastN,
   };
 
   if (timingRaw && typeof timingRaw === "object" && !Array.isArray(timingRaw)) {
@@ -283,6 +289,12 @@ export async function importMancheDocument(
     ...metadata,
     love_roulette_manche: mancheThemes,
     love_roulette_quiz_timing: timing,
+    love_roulette_quiz_prefs: {
+      ...((metadata.love_roulette_quiz_prefs as Record<string, unknown>) ?? {}),
+      hideRankingLastN: normalizeHideRankingLastN(
+        meta?.hide_ranking_last_n ?? DEFAULT_HIDE_RANKING_LAST_N,
+      ),
+    },
   };
 
   if (quiz) {

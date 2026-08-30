@@ -3,6 +3,7 @@ import type { LastReveal } from "./extraction";
 import type { FinalsShowState } from "./finals-show";
 import {
   isPhaseExpired,
+  phaseAutoAdvancesOnTick,
   resolveSyncedQuizClock,
 } from "./quiz-display";
 import {
@@ -83,6 +84,10 @@ export function mergeLastReveal(
 }
 
 export function quizNeedsServerCatchUp(quiz: QuizSessionState): boolean {
+  if (!phaseAutoAdvancesOnTick(quiz.displayPhase, quiz.autoplayEnabled)) {
+    return false;
+  }
+
   const clock = resolveSyncedQuizClock(quiz);
   if (clock.awaitingServerTick) return true;
 

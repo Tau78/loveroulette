@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  PLAYER_NEXT_QUESTION,
   PLAYER_RESULTS_ANSWERED,
   PLAYER_RESULTS_MISSED,
   playerAnswerTimeLabel,
@@ -69,6 +70,7 @@ describe("public copy", () => {
   it("distinguishes answered vs missed results", () => {
     expect(PLAYER_RESULTS_ANSWERED).not.toContain("Tempo scaduto");
     expect(PLAYER_RESULTS_MISSED).toContain("Tempo scaduto");
+    expect(PLAYER_NEXT_QUESTION).toContain("Classifica");
   });
 
   it("formats answer time in Italian", () => {

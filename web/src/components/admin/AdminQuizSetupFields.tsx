@@ -3,9 +3,12 @@
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
+import { DEFAULT_HIDE_RANKING_LAST_N } from "@/lib/musicpro/quiz-display";
 
 const MIN_QUESTION_SECONDS = 5;
 const MAX_QUESTION_SECONDS = 120;
+const MIN_HIDE_RANKING_LAST_N = 0;
+const MAX_HIDE_RANKING_LAST_N = 30;
 
 interface AdminQuizSetupFieldsProps {
   availableQuestionCount: number;
@@ -14,6 +17,9 @@ interface AdminQuizSetupFieldsProps {
   onQuestionCountChange: (value: number) => void;
   onQuestionSecondsChange: (value: string) => void;
   onQuestionSecondsBlur?: () => void;
+  hideRankingLastN?: number;
+  onHideRankingLastNChange?: (value: number) => void;
+  hideRankingReadOnly?: boolean;
   questionCountReadOnly?: boolean;
   disabled?: boolean;
   className?: string;
@@ -26,6 +32,9 @@ export function AdminQuizSetupFields({
   onQuestionCountChange,
   onQuestionSecondsChange,
   onQuestionSecondsBlur,
+  hideRankingLastN = DEFAULT_HIDE_RANKING_LAST_N,
+  onHideRankingLastNChange,
+  hideRankingReadOnly = false,
   questionCountReadOnly = false,
   disabled = false,
   className,
@@ -99,8 +108,53 @@ export function AdminQuizSetupFields({
           className={cn(ADMIN_UI.input, "w-full tabular-nums")}
         />
       </div>
+
+      <div className="col-span-2 space-y-1">
+        <Label htmlFor="quiz-hide-ranking" className={ADMIN_UI.label}>
+          Ultime N senza classifica
+        </Label>
+        {hideRankingReadOnly || !onHideRankingLastNChange ? (
+          <p
+            id="quiz-hide-ranking"
+            className={cn(
+              ADMIN_UI.stat,
+              "flex h-9 items-center rounded-lg border-2 border-white/25 bg-white/10 px-2 py-1.5",
+            )}
+          >
+            {hideRankingLastN}
+          </p>
+        ) : (
+          <input
+            id="quiz-hide-ranking"
+            type="number"
+            min={MIN_HIDE_RANKING_LAST_N}
+            max={MAX_HIDE_RANKING_LAST_N}
+            value={hideRankingLastN}
+            disabled={disabled}
+            onChange={(event) => {
+              const parsed = Number(event.target.value);
+              if (!Number.isFinite(parsed)) return;
+              onHideRankingLastNChange(
+                Math.max(
+                  MIN_HIDE_RANKING_LAST_N,
+                  Math.min(MAX_HIDE_RANKING_LAST_N, Math.round(parsed)),
+                ),
+              );
+            }}
+            className={cn(ADMIN_UI.input, "w-full tabular-nums")}
+          />
+        )}
+        <p className={ADMIN_UI.caption}>
+          Le ultime {hideRankingLastN} domande non mostrano la classifica
+        </p>
+      </div>
     </div>
   );
 }
 
-export { MIN_QUESTION_SECONDS, MAX_QUESTION_SECONDS };
+export {
+  MIN_QUESTION_SECONDS,
+  MAX_QUESTION_SECONDS,
+  MIN_HIDE_RANKING_LAST_N,
+  MAX_HIDE_RANKING_LAST_N,
+};

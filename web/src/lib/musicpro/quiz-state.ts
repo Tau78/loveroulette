@@ -6,12 +6,15 @@ import {
   materializePoolQuestionsForEvent,
 } from "./questions";
 import {
+  DEFAULT_HIDE_RANKING_LAST_N,
   DEFAULT_QUIZ_TIMING,
   type QuizDisplayPhase,
   type QuizMancheTheme,
   type QuizTimingConfig,
   isPhaseExpired,
   nextQuizDisplayPhase,
+  normalizeHideRankingLastN,
+  phaseAutoAdvancesOnTick,
   resolvePhaseAfterQuestionAdvance,
 } from "./quiz-display";
 import type { LoveRouletteQuestionSource } from "./types";
@@ -34,6 +37,8 @@ export interface QuizSessionState {
   manche?: QuizMancheTheme[];
   /** Suona gong solo quando il countdown risposte scade (non su AVANTI). */
   gongCueKey?: string;
+  /** Ultime N domande senza classifica di accoppiamento (punto 5). */
+  hideRankingLastN: number;
 }
 
 function nowIso(): string {
@@ -97,6 +102,8 @@ export interface QuizSetupPrefs {
   /** Ultima scelta animatore (null = tutte le domande caricate). */
   questionCount: number | null;
   questionSeconds: number;
+  /** Ultime N domande senza classifica (impostabile in creazione manche). */
+  hideRankingLastN: number;
 }
 
 export function getQuizSetupPrefs(
@@ -105,21 +112,28 @@ export function getQuizSetupPrefs(
   const timing = normalizeTiming(metadata?.love_roulette_quiz_timing);
   const raw = metadata?.love_roulette_quiz_prefs;
   let questionCount: number | null = null;
+  let hideRankingLastN = DEFAULT_HIDE_RANKING_LAST_N;
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    const value = (raw as Record<string, unknown>).questionCount;
+    const prefs = raw as Record<string, unknown>;
+    const value = prefs.questionCount;
     if (typeof value === "number" && value >= 1) {
       questionCount = value;
+    }
+    if (prefs.hideRankingLastN !== undefined) {
+      hideRankingLastN = normalizeHideRankingLastN(prefs.hideRankingLastN);
     }
   }
   return {
     questionCount,
     questionSeconds: timing.questionSeconds,
+    hideRankingLastN,
   };
 }
 
 export interface StartQuizSessionOptions {
   questionCount?: number;
   questionSeconds?: number;
+  hideRankingLastN?: number;
 }
 
 async function persistQuizSetupMetadata(
@@ -145,6 +159,7 @@ async function persistQuizSetupMetadata(
     love_roulette_quiz_prefs: {
       questionCount: prefs.questionCount,
       questionSeconds: prefs.questionSeconds,
+      hideRankingLastN: prefs.hideRankingLastN,
     },
   };
 
@@ -224,6 +239,7 @@ export function getQuizSessionState(
     timing,
     manche: normalizeManche(record.manche),
     gongCueKey,
+    hideRankingLastN: normalizeHideRankingLastN(record.hideRankingLastN),
   };
 }
 
@@ -300,6 +316,11 @@ export async function startQuizSession(
     timing = { ...timing, questionSeconds: seconds };
   }
 
+  const hideRankingLastN = normalizeHideRankingLastN(
+    options.hideRankingLastN ??
+      getQuizSetupPrefs(metadata).hideRankingLastN,
+  );
+
   const { questions, source } = await getQuestionsForEvent(supabase, eventId);
 
   if (questions.length === 0) {
@@ -320,6 +341,7 @@ export async function startQuizSession(
   await persistQuizSetupMetadata(supabase, eventId, {
     questionCount: questionIds.length,
     questionSeconds: timing.questionSeconds,
+    hideRankingLastN,
   }, timing);
 
   const at = nowIso();
@@ -329,12 +351,13 @@ export async function startQuizSession(
     total: questionIds.length,
     source: source === "pool" ? "event" : source,
     autoplaySeconds: timing.questionSeconds,
-    autoplayEnabled: true,
+    autoplayEnabled: false,
     updatedAt: at,
     displayPhase: "start_countdown",
     phaseStartedAt: at,
     timing,
     manche,
+    hideRankingLastN,
   };
 
   await updateSessionRuntimeState(supabase, eventId, "quiz");
@@ -369,6 +392,7 @@ function nextDisplayPhase(
     current.displayPhase,
     current.currentIndex,
     current.total,
+    current.hideRankingLastN,
   );
 }
 
@@ -379,15 +403,21 @@ export async function tickQuizPhase(
 ): Promise<{ quiz: QuizSessionState | null; runtimeState: EventState }> {
   let current = await loadCurrentQuiz(supabase, eventId);
 
-  if (
-    !force &&
-    !isPhaseExpired(
+  if (!force) {
+    const canAuto = phaseAutoAdvancesOnTick(
       current.displayPhase,
-      current.phaseStartedAt,
-      current.timing,
-    )
-  ) {
-    return { quiz: current, runtimeState: "quiz" };
+      current.autoplayEnabled,
+    );
+    if (
+      !canAuto ||
+      !isPhaseExpired(
+        current.displayPhase,
+        current.phaseStartedAt,
+        current.timing,
+      )
+    ) {
+      return { quiz: current, runtimeState: "quiz" };
+    }
   }
 
   const maxSteps = 8;

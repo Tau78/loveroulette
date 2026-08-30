@@ -75,6 +75,7 @@ export async function postQuizAction(
     autoplaySeconds?: number;
     questionCount?: number;
     questionSeconds?: number;
+    hideRankingLastN?: number;
     enabled?: boolean;
     displayPhase?:
       | "start_countdown"

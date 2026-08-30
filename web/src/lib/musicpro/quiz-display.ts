@@ -92,8 +92,51 @@ export const QUIZ_PHASE_LABELS: Record<QuizDisplayPhase, string> = {
   question: "Domanda",
   answers: "Domanda + risposte",
   results: "Risultati %",
-  next_question: "Prossima domanda",
+  next_question: "Classifica",
 };
+
+/** Ultime N domande senza classifica di accoppiamento (default serata). */
+export const DEFAULT_HIDE_RANKING_LAST_N = 5;
+
+/** Fasi che restano in hold fino ad AVANTI (il timer risposte è l'unica chiusura automatica). */
+export const QUIZ_CONDUCTOR_HOLD_PHASES: readonly QuizDisplayPhase[] = [
+  "theme_intro",
+  "question",
+  "results",
+  "next_question",
+];
+
+export function isConductorHoldPhase(phase: QuizDisplayPhase): boolean {
+  return QUIZ_CONDUCTOR_HOLD_PHASES.includes(phase);
+}
+
+export function normalizeHideRankingLastN(raw: unknown): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    return DEFAULT_HIDE_RANKING_LAST_N;
+  }
+  return Math.max(0, Math.min(30, Math.round(raw)));
+}
+
+/** True se la domanda corrente deve mostrare la classifica temporanea (punto 5). */
+export function shouldShowPairingRanking(
+  currentIndex: number,
+  total: number,
+  hideRankingLastN: number,
+): boolean {
+  if (total <= 0) return false;
+  const hide = normalizeHideRankingLastN(hideRankingLastN);
+  return currentIndex < total - hide;
+}
+
+/** Il tick server può chiudere da solo solo countdown avvio (e, se Auto è on, le hold). Mai le risposte. */
+export function phaseAutoAdvancesOnTick(
+  phase: QuizDisplayPhase,
+  autoplayEnabled: boolean,
+): boolean {
+  if (phase === "answers") return false;
+  if (phase === "start_countdown") return true;
+  return autoplayEnabled && isConductorHoldPhase(phase);
+}
 
 export function elapsedMs(sinceIso: string, now = Date.now()): number {
   const start = Date.parse(sinceIso);
@@ -126,6 +169,7 @@ export function nextQuizDisplayPhase(
   phase: QuizDisplayPhase,
   currentIndex: number,
   total: number,
+  hideRankingLastN: number = DEFAULT_HIDE_RANKING_LAST_N,
 ): QuizDisplayPhase | "advance_index" | "finish" {
   switch (phase) {
     case "start_countdown":
@@ -139,6 +183,9 @@ export function nextQuizDisplayPhase(
     case "results":
       if (currentIndex + 1 >= total) {
         return "finish";
+      }
+      if (!shouldShowPairingRanking(currentIndex, total, hideRankingLastN)) {
+        return "advance_index";
       }
       return "next_question";
     case "next_question":
@@ -167,53 +214,66 @@ export function resolveSyncedQuizClock(
     currentIndex: number;
     total: number;
     timing: QuizTimingConfig;
+    autoplayEnabled?: boolean;
+    hideRankingLastN?: number;
   },
   now = Date.now(),
 ): SyncedQuizClock {
-  let phase = quiz.displayPhase;
+  const phase = quiz.displayPhase;
   let startedMs = Date.parse(quiz.phaseStartedAt);
   if (Number.isNaN(startedMs)) {
     startedMs = Date.parse(quiz.updatedAt);
   }
 
-  while (true) {
-    const durationMs = phaseDurationSeconds(phase, quiz.timing) * 1000;
-    const elapsed = now - startedMs;
+  const durationMs = phaseDurationSeconds(phase, quiz.timing) * 1000;
+  const elapsed = now - startedMs;
+  const remaining = Math.max(0, Math.ceil((durationMs - elapsed) / 1000));
 
-    if (elapsed < durationMs) {
-      const remaining = Math.max(0, Math.ceil((durationMs - elapsed) / 1000));
-      return {
-        displayPhase: phase,
-        phaseStartedAt: new Date(startedMs).toISOString(),
-        remaining,
-        awaitingServerTick: false,
-      };
-    }
-
-    const next = nextQuizDisplayPhase(phase, quiz.currentIndex, quiz.total);
-
-    // Countdown avvio: attendi tick server (spettacolo proiettore).
-    if (phase === "start_countdown") {
-      return {
-        displayPhase: phase,
-        phaseStartedAt: new Date(startedMs).toISOString(),
-        remaining: 0,
-        awaitingServerTick: true,
-      };
-    }
-
-    if (next === "finish" || next === "advance_index") {
-      return {
-        displayPhase: phase,
-        phaseStartedAt: new Date(startedMs).toISOString(),
-        remaining: 0,
-        awaitingServerTick: true,
-      };
-    }
-
-    startedMs += durationMs;
-    phase = next;
+  if (elapsed < durationMs) {
+    return {
+      displayPhase: phase,
+      phaseStartedAt: new Date(startedMs).toISOString(),
+      remaining,
+      awaitingServerTick: false,
+    };
   }
+
+  // Countdown avvio: attendi tick server (spettacolo proiettore).
+  if (phase === "start_countdown") {
+    return {
+      displayPhase: phase,
+      phaseStartedAt: new Date(startedMs).toISOString(),
+      remaining: 0,
+      awaitingServerTick: true,
+    };
+  }
+
+  // Risposte: il timer chiude da solo (tastiere lock) ma AVANTI rivela le %.
+  if (phase === "answers") {
+    return {
+      displayPhase: phase,
+      phaseStartedAt: new Date(startedMs).toISOString(),
+      remaining: 0,
+      awaitingServerTick: false,
+    };
+  }
+
+  // Hold conduttore: restano visibili fino ad AVANTI (Auto può tickare il server).
+  if (isConductorHoldPhase(phase)) {
+    return {
+      displayPhase: phase,
+      phaseStartedAt: new Date(startedMs).toISOString(),
+      remaining: 0,
+      awaitingServerTick: quiz.autoplayEnabled === true,
+    };
+  }
+
+  return {
+    displayPhase: phase,
+    phaseStartedAt: new Date(startedMs).toISOString(),
+    remaining: 0,
+    awaitingServerTick: false,
+  };
 }
 
 export function categoryThemeLabel(category: string): {
@@ -290,6 +350,6 @@ export function resolvePhaseAfterQuestionAdvance(
   manche?: QuizMancheTheme[] | null,
 ): QuizDisplayPhase {
   return isMancheThemeIntroForIndex(questionIds, newIndex, manche)
-    ? "theme_intro"
+    ? "start_countdown"
     : "question";
 }

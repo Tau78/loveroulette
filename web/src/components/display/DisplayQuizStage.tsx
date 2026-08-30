@@ -6,6 +6,7 @@ import type { EventState } from "@/lib/types";
 import type { LoveRouletteQuestion } from "@/lib/musicpro/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import type { QuestionResults } from "@/lib/musicpro/quiz-results";
+import type { PreviewPairRow } from "@/lib/musicpro/matching";
 import {
   resolveThemeForQuizIndex,
   type QuizDisplayPhase,
@@ -182,6 +183,83 @@ function NextQuestionCenter({ progressLabel }: { progressLabel: string | null })
   );
 }
 
+function AnswersStopOverlay() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+      <div className="relative px-10 py-8">
+        <div
+          className="pointer-events-none absolute -inset-x-6 -inset-y-4 rounded-[2rem] bg-gradient-to-b from-black/85 via-black/75 to-black/85 backdrop-blur-md border border-white/15 shadow-[0_24px_80px_rgba(0,0,0,0.7)]"
+          aria-hidden
+        />
+        <p
+          className="relative z-10 font-sans text-[72px] font-bold uppercase tracking-[0.18em] text-white"
+          style={{
+            textShadow:
+              "0 0 24px rgba(233,30,140,0.5), 0 2px 8px rgba(0,0,0,1), 0 4px 24px rgba(0,0,0,0.85)",
+          }}
+        >
+          Stop
+        </p>
+        <p className="relative z-10 mt-2 text-center text-sm uppercase tracking-[0.28em] text-primary">
+          Tempo scaduto
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PairingRanking({
+  pairs,
+  questionCount,
+}: {
+  pairs: PreviewPairRow[];
+  questionCount: number;
+}) {
+  return (
+    <div className="flex h-full min-h-0 w-full flex-col gap-3">
+      <div className="flex shrink-0 items-baseline justify-between gap-3 px-1">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
+          Classifica temporanea
+        </p>
+        <p className="text-xs tabular-nums text-white/50">
+          {questionCount} {questionCount === 1 ? "domanda" : "domande"}
+        </p>
+      </div>
+      {pairs.length === 0 ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <DisplayPhaseHero
+            kicker="Accoppiamento"
+            headline="In formazione"
+            subline="Servono più voti"
+            uppercase
+          />
+        </div>
+      ) : (
+        <ol className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+          {pairs.map((pair) => (
+            <li
+              key={`${pair.rank}-${pair.maleNickname}-${pair.femaleNickname}`}
+              className="flex min-h-0 items-center justify-between gap-3 rounded-xl border border-white/15 bg-black/55 px-4 py-1.5 backdrop-blur-sm"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-primary/55 bg-primary/15 font-mono text-base font-bold text-primary">
+                  {pair.rank}
+                </span>
+                <span className={cn(QUIZ_RESULT_LABEL_CLASS, "min-w-0 flex-1")}>
+                  {pair.maleNickname} · {pair.femaleNickname}
+                </span>
+              </span>
+              <span className={QUIZ_RESULT_PERCENT_CLASS}>
+                {Math.round(pair.score)}%
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 function AnswerOptions({
   options,
 }: {
@@ -336,6 +414,10 @@ export function DisplayQuizStage({
   onQuizUpdate,
 }: DisplayQuizStageProps) {
   const [results, setResults] = useState<QuestionResults | null>(null);
+  const [ranking, setRanking] = useState<{
+    pairs: PreviewPairRow[];
+    questionCount: number;
+  } | null>(null);
   const serverPhase = quizState.displayPhase as QuizDisplayPhase;
   const timing = quizState.timing;
   const heartProgress = resolveEveningHeartProgress("quiz", quizState);
@@ -346,7 +428,10 @@ export function DisplayQuizStage({
     eventSlug,
     quizState,
     enabled: true,
-    driveTicks: autoplayEnabled && serverPhase !== "start_countdown",
+    driveTicks:
+      autoplayEnabled &&
+      serverPhase !== "start_countdown" &&
+      serverPhase !== "answers",
     onPhaseChange: (nextPhase) => {
       if (nextPhase === "results") {
         setResults(null);
@@ -381,6 +466,41 @@ export function DisplayQuizStage({
       window.clearInterval(refresh);
     };
   }, [currentQuestion, eventSlug, phase, quizState.currentIndex]);
+
+  useEffect(() => {
+    if (phase !== "next_question") {
+      setRanking(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadRanking() {
+      try {
+        const res = await fetch(
+          `/api/events/${encodeURIComponent(eventSlug)}/quiz/ranking`,
+        );
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          pairs?: PreviewPairRow[];
+          questionCount?: number;
+        };
+        if (!cancelled) {
+          setRanking({
+            pairs: data.pairs ?? [],
+            questionCount: data.questionCount ?? 0,
+          });
+        }
+      } catch {
+        if (!cancelled) setRanking({ pairs: [], questionCount: 0 });
+      }
+    }
+
+    void loadRanking();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventSlug, phase, quizState.currentIndex]);
 
   const theme = resolveThemeForQuizIndex(
     quizState.questionIds,
@@ -475,6 +595,7 @@ export function DisplayQuizStage({
   }
 
   if (phase === "answers" && currentQuestion) {
+    const locked = remaining <= 0;
     return (
       <DisplayQuizGameLayout
         centerKey={`answers-${quizState.currentIndex}`}
@@ -484,7 +605,14 @@ export function DisplayQuizStage({
             progressLabel={progressLabel}
           />
         }
-        center={<AnswerOptions options={currentQuestion.options} />}
+        center={
+          <div className="relative h-full min-h-0">
+            <div className={locked ? "h-full min-h-0 opacity-40" : "h-full min-h-0"}>
+              <AnswerOptions options={currentQuestion.options} />
+            </div>
+            {locked ? <AnswersStopOverlay /> : null}
+          </div>
+        }
         footerCountdown={footerCountdown}
         heartProgress={heartProgress}
       />
@@ -494,19 +622,23 @@ export function DisplayQuizStage({
   if (phase === "next_question") {
     return (
       <DisplayQuizGameLayout
-        centerKey={`next-${quizState.currentIndex}`}
+        centerKey={`ranking-${quizState.currentIndex}`}
         header={
-          currentQuestion ? (
-            <QuestionHeaderPanel
-              body={currentQuestion.body}
-              progressLabel={progressLabel}
-              compact
+          <ThemeHeaderPanel
+            progressLabel={progressLabel}
+            subtitle="Classifica di accoppiamento temporaneo"
+          />
+        }
+        center={
+          ranking ? (
+            <PairingRanking
+              pairs={ranking.pairs}
+              questionCount={ranking.questionCount}
             />
           ) : (
-            <CountdownHeaderPanel />
+            <NextQuestionCenter progressLabel={progressLabel} />
           )
         }
-        center={<NextQuestionCenter progressLabel={progressLabel} />}
         footerCountdown={null}
         heartProgress={heartProgress}
       />

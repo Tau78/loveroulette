@@ -13,6 +13,7 @@ import {
 } from "@/components/admin/AdminQuizSetupFields";
 import { useEventQuestionCount } from "@/hooks/useEventQuestionCount";
 import type { QuizSessionState, QuizSetupPrefs } from "@/lib/musicpro/quiz-state";
+import { DEFAULT_HIDE_RANKING_LAST_N } from "@/lib/musicpro/quiz-display";
 import { AdminButton } from "@/components/admin/AdminButton";
 
 interface AdminQuizPrepPanelProps {
@@ -51,6 +52,9 @@ export function AdminQuizPrepPanel({
   const [questionSeconds, setQuestionSeconds] = useState(
     quizSetup.questionSeconds,
   );
+  const [hideRankingLastN, setHideRankingLastN] = useState(
+    quizSetup.hideRankingLastN ?? DEFAULT_HIDE_RANKING_LAST_N,
+  );
 
   useEffect(() => {
     if (availableCount == null || availableCount <= 0) return;
@@ -64,6 +68,12 @@ export function AdminQuizPrepPanel({
   useEffect(() => {
     setQuestionSeconds(quizSetup.questionSeconds);
   }, [quizSetup.questionSeconds]);
+
+  useEffect(() => {
+    setHideRankingLastN(
+      quizSetup.hideRankingLastN ?? DEFAULT_HIDE_RANKING_LAST_N,
+    );
+  }, [quizSetup.hideRankingLastN]);
 
   const startQuiz = useCallback(async () => {
     if (disabled || busy || availableCount == null || availableCount <= 0) return;
@@ -84,6 +94,7 @@ export function AdminQuizPrepPanel({
           action: "start",
           questionCount: count,
           questionSeconds: seconds,
+          hideRankingLastN,
         },
         animatorPin,
       );
@@ -116,6 +127,7 @@ export function AdminQuizPrepPanel({
     onQuizChange,
     questionCount,
     questionSeconds,
+    hideRankingLastN,
   ]);
 
   const canStart = availableCount != null && availableCount > 0;
@@ -152,6 +164,8 @@ export function AdminQuizPrepPanel({
           const parsed = Number(value);
           if (Number.isFinite(parsed)) setQuestionSeconds(parsed);
         }}
+        hideRankingLastN={hideRankingLastN}
+        onHideRankingLastNChange={setHideRankingLastN}
         disabled={disabled || busy || countLoading || !canStart}
       />
 

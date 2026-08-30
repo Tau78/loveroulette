@@ -267,6 +267,8 @@ export function AdminQuizPanel({
         onQuestionCountChange={() => {}}
         onQuestionSecondsChange={setSecondsDraft}
         onQuestionSecondsBlur={commitQuestionSeconds}
+        hideRankingLastN={quizState.hideRankingLastN}
+        hideRankingReadOnly
         questionCountReadOnly
         disabled={disabled || busy}
       />

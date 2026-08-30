@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import {
   PLAYER_MANCHE_KICKER,
+  PLAYER_ANSWERS_LOCKED,
   PLAYER_NEXT_QUESTION,
   PLAYER_RESULTS_MISSED,
   PLAYER_YOUR_ANSWER_KICKER,
@@ -327,7 +328,7 @@ export function QuizPlayer({
                 elapsedSeconds={answeredElapsedSeconds}
               />
             ) : (
-              <p className="text-sm text-muted-foreground">{PLAYER_RESULTS_MISSED}</p>
+              <p className="text-sm text-muted-foreground">{PLAYER_ANSWERS_LOCKED}</p>
             )}
           </CardContent>
         </Card>

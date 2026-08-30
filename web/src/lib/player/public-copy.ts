@@ -6,7 +6,9 @@ export const PLAYER_RESULTS_MISSED =
 
 export const PLAYER_YOUR_ANSWER_KICKER = "TU HAI RISPOSTO";
 
-export const PLAYER_NEXT_QUESTION = "Prossima domanda in arrivo…";
+export const PLAYER_NEXT_QUESTION = "Classifica in sala — guarda gli schermi";
+
+export const PLAYER_ANSWERS_LOCKED = "Stop — non si vota più";
 
 export const PLAYER_MANCHE_KICKER = "Nuova manche";
 

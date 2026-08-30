@@ -13,9 +13,9 @@ interface UseQuizGongAtCountdownEndOptions {
 const SYNC_POLL_MS = 32;
 
 /**
- * Gong sullo «0» del countdown: usa lo stesso orologio del proiettore
- * (`resolveSyncedQuizClock`) e suona nel frame in cui la fase passa
- * `answers` → `results`.
+ * Gong sullo «0» del countdown: stesso orologio del proiettore.
+ * Suona quando la fase `answers` arriva a remaining 0 (lock tastiere),
+ * non al click AVANTI verso i risultati.
  */
 export function useQuizGongAtCountdownEnd({
   quizState,
@@ -35,9 +35,10 @@ export function useQuizGongAtCountdownEnd({
     const cueKey = `${quizState.currentIndex}:${quizState.phaseStartedAt}`;
     if (playedRef.current === cueKey) return;
 
-    let previousPhase = resolveSyncedQuizClock(quizState).displayPhase;
+    let previousRemaining = resolveSyncedQuizClock(quizState).remaining;
+    const initial = resolveSyncedQuizClock(quizState);
 
-    if (previousPhase === "answers") {
+    if (initial.displayPhase === "answers") {
       void preloadQuizGongSound();
     }
 
@@ -45,9 +46,13 @@ export function useQuizGongAtCountdownEnd({
       const current = quizStateRef.current;
       if (!current) return;
 
-      const syncedPhase = resolveSyncedQuizClock(current).displayPhase;
+      const clock = resolveSyncedQuizClock(current);
 
-      if (previousPhase === "answers" && syncedPhase === "results") {
+      if (
+        clock.displayPhase === "answers" &&
+        previousRemaining > 0 &&
+        clock.remaining <= 0
+      ) {
         if (playedRef.current !== cueKey) {
           playedRef.current = cueKey;
           void playQuizGongSound({ dedupKey: cueKey });
@@ -56,9 +61,9 @@ export function useQuizGongAtCountdownEnd({
         return;
       }
 
-      previousPhase = syncedPhase;
+      previousRemaining = clock.remaining;
 
-      if (syncedPhase !== "answers") {
+      if (clock.displayPhase !== "answers") {
         window.clearInterval(interval);
       }
     }, SYNC_POLL_MS);

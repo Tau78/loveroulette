@@ -27,11 +27,22 @@ const baseQuiz = (): QuizSessionState => ({
   },
   autoplayEnabled: true,
   autoplaySeconds: 15,
+  hideRankingLastN: 5,
 });
 
 describe("session-sync", () => {
-  it("detects expired quiz phase for catch-up", () => {
-    expect(quizNeedsServerCatchUp(baseQuiz())).toBe(true);
+  it("does not catch up an expired answers lock — AVANTI rivela le %", () => {
+    expect(quizNeedsServerCatchUp(baseQuiz())).toBe(false);
+  });
+
+  it("catches up start_countdown when the launch clock is done", () => {
+    expect(
+      quizNeedsServerCatchUp({
+        ...baseQuiz(),
+        displayPhase: "start_countdown",
+        phaseStartedAt: new Date(Date.now() - 8_000).toISOString(),
+      }),
+    ).toBe(true);
   });
 
   it("keeps newer finals show on merge", () => {

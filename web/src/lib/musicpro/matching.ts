@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   calculateSimpleAffinity,
-  rankPairs,
   type AnswerMap,
   type QuestionMeta,
 } from "@/lib/matching/affinity";
@@ -43,15 +42,116 @@ async function loadParticipantsByGender(
   supabase: SupabaseClient,
   eventId: string,
   gender: "male" | "female",
-): Promise<Array<{ id: string }>> {
+): Promise<Array<{ id: string; nickname: string }>> {
   const { data, error } = await supabase
     .from("love_roulette_participants")
-    .select("id")
+    .select("id, nickname")
     .eq("event_id", eventId)
     .eq("gender", gender);
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as Array<{ id: string }>;
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    nickname: typeof row.nickname === "string" ? row.nickname : "—",
+  }));
+}
+
+export interface PreviewPairRow {
+  rank: number;
+  maleNickname: string;
+  femaleNickname: string;
+  score: number;
+}
+
+export interface PreviewPairsResult {
+  pairs: PreviewPairRow[];
+  questionCount: number;
+}
+
+async function scoreAllPairs(
+  supabase: SupabaseClient,
+  eventId: string,
+  questionIds?: string[],
+): Promise<{
+  ranked: Array<{
+    maleId: string;
+    femaleId: string;
+    maleNickname: string;
+    femaleNickname: string;
+    score: number;
+  }>;
+  questionCount: number;
+}> {
+  const males = await loadParticipantsByGender(supabase, eventId, "male");
+  const females = await loadParticipantsByGender(supabase, eventId, "female");
+
+  if (males.length === 0 || females.length === 0) {
+    return { ranked: [], questionCount: 0 };
+  }
+
+  const participantIds = [...males, ...females].map((p) => p.id);
+  const answersByParticipant = await loadAnswersMap(supabase, participantIds);
+
+  let ids = questionIds;
+  if (!ids || ids.length === 0) {
+    ids = deriveQuestionIdsFromAnswers(answersByParticipant);
+  }
+
+  const { questions: allQuestions } = await getQuestionsForEvent(
+    supabase,
+    eventId,
+  );
+  const questionMeta: QuestionMeta[] = allQuestions
+    .filter((q) => ids.includes(q.id))
+    .map((q) => ({ id: q.id, weight: q.weight, category: q.category }));
+
+  const candidates = [];
+  for (const male of males) {
+    const answersMale = answersByParticipant[male.id] ?? {};
+    for (const female of females) {
+      const answersFemale = answersByParticipant[female.id] ?? {};
+      const score = calculateSimpleAffinity(
+        answersMale,
+        answersFemale,
+        questionMeta,
+      );
+      candidates.push({
+        maleId: male.id,
+        femaleId: female.id,
+        maleNickname: male.nickname,
+        femaleNickname: female.nickname,
+        score,
+      });
+    }
+  }
+
+  return {
+    ranked: [...candidates].sort((a, b) => b.score - a.score),
+    questionCount: questionMeta.length,
+  };
+}
+
+/** Classifica temporanea dalle risposte già date — non scrive le coppie finali. */
+export async function computePreviewPairs(
+  supabase: SupabaseClient,
+  eventId: string,
+  options?: { questionIds?: string[]; limit?: number },
+): Promise<PreviewPairsResult> {
+  const { ranked, questionCount } = await scoreAllPairs(
+    supabase,
+    eventId,
+    options?.questionIds,
+  );
+  const limit = options?.limit ?? 8;
+  return {
+    questionCount,
+    pairs: ranked.slice(0, limit).map((pair, index) => ({
+      rank: index + 1,
+      maleNickname: pair.maleNickname,
+      femaleNickname: pair.femaleNickname,
+      score: pair.score,
+    })),
+  };
 }
 
 async function loadAnswersMap(
@@ -119,61 +219,21 @@ export async function computeAndPersistPairs(
     if (deleteError) throw new Error(deleteError.message);
   }
 
-  const males = await loadParticipantsByGender(supabase, eventId, "male");
-  const females = await loadParticipantsByGender(supabase, eventId, "female");
-
-  if (males.length === 0 || females.length === 0) {
-    const message =
-      males.length === 0 && females.length === 0
-        ? "Nessun partecipante per il matching."
-        : males.length === 0
-          ? "Nessun partecipante maschio per il matching."
-          : "Nessuna partecipante femmina per il matching.";
-    console.warn(`[matching] Event ${eventId}: ${message}`);
-    throw new MatchingError(message);
-  }
-
-  const participantIds = [...males, ...females].map((p) => p.id);
-  const answersByParticipant = await loadAnswersMap(supabase, participantIds);
-
-  let questionIds = options?.questionIds;
-  if (!questionIds || questionIds.length === 0) {
-    questionIds = deriveQuestionIdsFromAnswers(answersByParticipant);
-  }
-
-  const { questions: allQuestions } = await getQuestionsForEvent(
+  const { ranked, questionCount } = await scoreAllPairs(
     supabase,
     eventId,
+    options?.questionIds,
   );
-  const questionMeta: QuestionMeta[] = allQuestions
-    .filter((q) => questionIds.includes(q.id))
-    .map((q) => ({ id: q.id, weight: q.weight, category: q.category }));
 
-  if (questionMeta.length === 0) {
+  if (ranked.length === 0) {
+    throw new MatchingError("Nessun partecipante per il matching.");
+  }
+
+  if (questionCount === 0) {
     throw new MatchingError(
       "Nessuna domanda disponibile per calcolare l'affinità.",
     );
   }
-
-  const candidates = [];
-  for (const male of males) {
-    const answersMale = answersByParticipant[male.id] ?? {};
-    for (const female of females) {
-      const answersFemale = answersByParticipant[female.id] ?? {};
-      const score = calculateSimpleAffinity(
-        answersMale,
-        answersFemale,
-        questionMeta,
-      );
-      candidates.push({
-        maleId: male.id,
-        femaleId: female.id,
-        score,
-      });
-    }
-  }
-
-  const ranked = rankPairs(candidates);
   const rows = ranked.map((pair, index) => ({
     event_id: eventId,
     participant_male_id: pair.maleId,

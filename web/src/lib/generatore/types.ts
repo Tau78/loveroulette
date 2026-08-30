@@ -34,6 +34,8 @@ export interface GeneratoreExportMeta {
   question_timer_seconds?: number;
   results_seconds?: number;
   next_question_seconds?: number;
+  /** Ultime N domande senza classifica di accoppiamento. */
+  hide_ranking_last_n?: number;
 }
 
 export interface GeneratoreMancheDocument {

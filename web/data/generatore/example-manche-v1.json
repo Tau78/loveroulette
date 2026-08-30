@@ -61,6 +61,7 @@
     "start_countdown_seconds": 5,
     "theme_intro_seconds": 4,
     "question_timer_seconds": 15,
-    "results_seconds": 6
+    "results_seconds": 6,
+    "hide_ranking_last_n": 5
   }
 }

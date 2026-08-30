@@ -46,6 +46,6 @@ describe("resolvePhaseAfterQuestionAdvance", () => {
     ).toBe("question");
     expect(
       resolvePhaseAfterQuestionAdvance(["q01", "q02", "q04"], 2, MANCHE),
-    ).toBe("theme_intro");
+    ).toBe("start_countdown");
   });
 });

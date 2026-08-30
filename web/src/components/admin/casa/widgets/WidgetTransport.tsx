@@ -64,6 +64,7 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
       await runQuizAction("start", {
         questionCount: event?.quizSetup.questionCount ?? undefined,
         questionSeconds: event?.quizSetup.questionSeconds ?? undefined,
+        hideRankingLastN: event?.quizSetup.hideRankingLastN,
       });
     } finally {
       setStartBusy(false);
