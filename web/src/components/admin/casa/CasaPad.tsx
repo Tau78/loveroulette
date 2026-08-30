@@ -159,6 +159,7 @@ type Panel =
   | "preview"
   | "setup"
   | "questions"
+  | "quiz"
   | "prep"
   | "msg"
   | "screen"
@@ -1283,6 +1284,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       pad: "pad",
       clock: "clock",
       audio_bed: "audio",
+      quiz_regia: "quiz",
     };
     const panel = map[w.type];
     if (panel) setOpen(panel);
@@ -1943,13 +1945,16 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                               ? "Schermi"
                               : open === "clock"
                                 ? "Tempo"
-                                : "Audio"}
+                                : open === "quiz"
+                                  ? "Foglio quiz"
+                                  : "Audio"}
               </p>
               <button type="button" className="casa-close" onClick={() => setOpen(null)}>
                 Chiudi
               </button>
             </div>
 
+            <div className="casa-expand-body">
             {open === "gear" ? (
               <>
                 <p className="casa-sub">Testi delle slide iniziali. Restano su questo computer.</p>
@@ -2035,6 +2040,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             ) : null}
 
             {open === "questions" ? <CasaQuestions eventCode={eventCode} /> : null}
+            {open === "quiz" ? (
+              <div className="casa-quiz-expand">
+                <WidgetQuizRegia />
+              </div>
+            ) : null}
             {open === "prep" ? <CasaPrep prep={prep} onChange={patchPrep} /> : null}
             {open === "social" ? (
               <CasaSocialPanel prep={prep} slides={slides} />
@@ -2266,6 +2276,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                 onToggle={togglePad}
               />
             ) : null}
+            </div>
           </div>
         </>
       ) : null}
