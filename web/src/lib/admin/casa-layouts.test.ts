@@ -14,6 +14,8 @@ import {
   COMPACT_CANVAS_HEIGHT,
   COMPACT_CANVAS_WIDTH,
   getFactoryCompactWidgets,
+  packCompactPlancia,
+  scaleCompactWidgets,
   getFactoryDefaultWidgets,
   loadLayouts,
   nearestSize,
@@ -117,6 +119,31 @@ describe("casa layouts", () => {
     }
     expect(maxX).toBeGreaterThanOrEqual(COMPACT_CANVAS_WIDTH - 16);
     expect(maxY).toBeGreaterThanOrEqual(COMPACT_CANVAS_HEIGHT - 16);
+  });
+
+  it("packs compact widgets to the measured iPhone view", () => {
+    const viewW = 852;
+    const viewH = 310;
+    const widgets = packCompactPlancia(viewW, viewH);
+    expect(widgets).toHaveLength(5);
+    let maxX = 0;
+    let maxY = 0;
+    for (const w of widgets) {
+      const px = widgetPx(w);
+      maxX = Math.max(maxX, w.x + px.w);
+      maxY = Math.max(maxY, w.y + px.h);
+      expect(w.x + px.w).toBeLessThanOrEqual(viewW);
+      expect(w.y + px.h).toBeLessThanOrEqual(viewH);
+    }
+    expect(maxX).toBeGreaterThanOrEqual(viewW - 16);
+    expect(maxY).toBeGreaterThanOrEqual(viewH - 16);
+  });
+
+  it("scales a compact layout to a new view", () => {
+    const packed = packCompactPlancia(800, 300);
+    const scaled = scaleCompactWidgets(packed, 800, 300, 1000, 375);
+    expect(scaled).toHaveLength(5);
+    expect(scaled[0]?.w).toBeGreaterThan(packed[0]?.w ?? 0);
   });
 
   it("factory widgets pack the canvas without huge gaps", () => {

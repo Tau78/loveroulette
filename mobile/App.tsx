@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -94,7 +95,12 @@ function WebPlancia({
         ]}
       >
         <Pressable
-          onPress={closeDashboard}
+          onPress={() => {
+            Alert.alert("Uscire?", "Vuoi veramente uscire?", [
+              { text: "Annulla", style: "cancel" },
+              { text: "Esci", style: "destructive", onPress: closeDashboard },
+            ]);
+          }}
           style={styles.back}
           accessibilityRole="button"
           accessibilityLabel="Cambia serata"

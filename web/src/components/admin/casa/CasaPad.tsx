@@ -66,13 +66,18 @@ import {
   COMPACT_CANVAS_HEIGHT,
   COMPACT_CANVAS_WIDTH,
   DEFAULT_PROFILE_ID,
+  clearCompactLayout,
   createDefaultState,
   getFactoryCompactWidgets,
   createId,
   getActiveProfile,
+  loadCompactLayout,
   loadLayouts,
   nearestSize,
+  packCompactPlancia,
+  saveCompactLayout,
   saveLayouts,
+  scaleCompactWidgets,
   sizeToPx,
   UNIQUE_WIDGET_TYPES,
   updateActiveWidgets,
@@ -623,7 +628,16 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const [masterVol, setMasterVol] = useState(100);
   const [layoutEdit, setLayoutEdit] = useState(false);
   const [layouts, setLayouts] = useState<CasaLayoutsState>(createDefaultState);
-  const [deckView, setDeckView] = useState({ w: CANVAS_WIDTH, h: CANVAS_HEIGHT });
+  const [deckView, setDeckView] = useState(() =>
+    typeof window === "undefined"
+      ? { w: CANVAS_WIDTH, h: CANVAS_HEIGHT }
+      : { w: window.innerWidth, h: window.innerHeight },
+  );
+  const [compactWidgets, setCompactWidgets] = useState<CasaWidgetInstance[]>(
+    () => getFactoryCompactWidgets(),
+  );
+  const [compactDirty, setCompactDirty] = useState(false);
+  const compactViewRef = useRef(deckView);
   const [audioRoute, setAudioRoute] = useState<CasaAudioRoute>(
     DEFAULT_CASA_AUDIO_ROUTE,
   );
@@ -662,12 +676,14 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const activeProfile = getActiveProfile(layouts);
   const compactDeck = isCompactPlanciaView(deckView.w, deckView.h);
   const useCompactDeck =
-    compactDeck && layouts.activeId === DEFAULT_PROFILE_ID && !layoutEdit;
-  const activeWidgets = useCompactDeck
-    ? getFactoryCompactWidgets()
-    : activeProfile.widgets;
-  const deckCanvasW = useCompactDeck ? COMPACT_CANVAS_WIDTH : CANVAS_WIDTH;
-  const deckCanvasH = useCompactDeck ? COMPACT_CANVAS_HEIGHT : CANVAS_HEIGHT;
+    compactDeck && layouts.activeId === DEFAULT_PROFILE_ID;
+  const deckCanvasW = useCompactDeck
+    ? Math.max(360, Math.round(deckView.w) || 360)
+    : CANVAS_WIDTH;
+  const deckCanvasH = useCompactDeck
+    ? Math.max(200, Math.round(deckView.h) || 200)
+    : CANVAS_HEIGHT;
+  const activeWidgets = useCompactDeck ? compactWidgets : activeProfile.widgets;
   const remoteAudio = isRemoteAudioRoute(audioRoute);
   const masterScale = masterVol / 100;
   const effVol = (id: (typeof FADERS)[number]["id"]) =>
@@ -685,6 +701,23 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   function commitLayouts(nextLayouts: CasaLayoutsState) {
     setLayouts(nextLayouts);
     saveLayouts(nextLayouts);
+  }
+
+  function commitCompactWidgets(nextWidgets: CasaWidgetInstance[]) {
+    setCompactWidgets(nextWidgets);
+    setCompactDirty(true);
+    saveCompactLayout({
+      version: 1,
+      widgets: nextWidgets,
+      canvasW: deckCanvasW,
+      canvasH: deckCanvasH,
+    });
+  }
+
+  function resetCompactToFactory() {
+    clearCompactLayout();
+    setCompactDirty(false);
+    setCompactWidgets(packCompactPlancia(deckCanvasW, deckCanvasH));
   }
 
   function commitNotes(nextNotes: CasaNotesState) {
@@ -725,17 +758,66 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }, []);
 
   useEffect(() => {
-    const el = deckWrapRef.current;
-    if (!el) return;
+    const wrap = deckWrapRef.current;
+    if (!wrap) return;
     const measure = () => {
+      const shell = wrap.querySelector<HTMLElement>("[data-casa-deck]");
+      const el = shell ?? wrap;
       const r = el.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8) return;
       setDeckView({ w: r.width, h: r.height });
     };
     measure();
     const ro = new ResizeObserver(measure);
-    ro.observe(el);
+    ro.observe(wrap);
     return () => ro.disconnect();
+  }, [layoutEdit]);
+
+  useEffect(() => {
+    const saved = loadCompactLayout();
+    if (!saved) return;
+    setCompactDirty(true);
+    setCompactWidgets(
+      scaleCompactWidgets(
+        saved.widgets,
+        saved.canvasW,
+        saved.canvasH,
+        Math.max(360, Math.round(deckView.w) || COMPACT_CANVAS_WIDTH),
+        Math.max(200, Math.round(deckView.h) || COMPACT_CANVAS_HEIGHT),
+      ),
+    );
+    compactViewRef.current = {
+      w: Math.max(360, Math.round(deckView.w) || COMPACT_CANVAS_WIDTH),
+      h: Math.max(200, Math.round(deckView.h) || COMPACT_CANVAS_HEIGHT),
+    };
   }, []);
+
+  useEffect(() => {
+    if (!useCompactDeck) return;
+    const next = { w: deckCanvasW, h: deckCanvasH };
+    const prev = compactViewRef.current;
+    compactViewRef.current = next;
+    if (!compactDirty) {
+      setCompactWidgets(packCompactPlancia(next.w, next.h));
+      return;
+    }
+    if (
+      Math.abs(prev.w - next.w) < 4 &&
+      Math.abs(prev.h - next.h) < 4
+    ) {
+      return;
+    }
+    setCompactWidgets((widgets) => {
+      const scaled = scaleCompactWidgets(widgets, prev.w, prev.h, next.w, next.h);
+      saveCompactLayout({
+        version: 1,
+        widgets: scaled,
+        canvasW: next.w,
+        canvasH: next.h,
+      });
+      return scaled;
+    });
+  }, [useCompactDeck, deckCanvasW, deckCanvasH, compactDirty]);
 
   useEffect(() => {
     if (open !== "audio") return;
@@ -1216,8 +1298,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     const pos = findAddPlacement(
       preferred,
       others,
-      CANVAS_WIDTH,
-      CANVAS_HEIGHT,
+      deckCanvasW,
+      deckCanvasH,
       WIDGET_MIN_W,
       WIDGET_MIN_H,
       40,
@@ -1249,7 +1331,12 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           }
         : {}),
     };
-    commitLayouts(updateActiveWidgets(layouts, [...activeWidgets, widget]));
+    const next = [...activeWidgets, widget];
+    if (useCompactDeck) {
+      commitCompactWidgets(next);
+      return;
+    }
+    commitLayouts(updateActiveWidgets(layouts, next));
   }
 
   function openPanelForWidget(w: CasaWidgetInstance) {
@@ -1795,6 +1882,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             onEditChange={setLayoutEdit}
             layouts={layouts}
             onLayoutsChange={commitLayouts}
+            onFactoryReset={resetCompactToFactory}
             onOpenGallery={() => {
               document.getElementById("casa-gallery-dock")?.scrollIntoView({
                 block: "nearest",
@@ -1863,12 +1951,15 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           />
         ) : null}
         <CasaWidgetDeck
-          edit={layoutEdit && !useCompactDeck}
+          edit={layoutEdit}
           widgets={activeWidgets}
           canvasWidth={deckCanvasW}
           canvasHeight={deckCanvasH}
           onChange={(widgets) => {
-            if (useCompactDeck) return;
+            if (useCompactDeck) {
+              commitCompactWidgets(widgets);
+              return;
+            }
             commitLayouts(updateActiveWidgets(layouts, widgets));
           }}
           onAddRequest={() => setLayoutEdit(true)}

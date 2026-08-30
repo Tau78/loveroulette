@@ -2316,6 +2316,17 @@ html.casa-native-chrome .casa {
   min-height: 44px;
 }
 
+.casa-deck-wrap[data-compact="1"] .casa-gallery-dock {
+  max-height: 72px;
+  padding: 4px 8px;
+  gap: 4px;
+}
+
+.casa-deck-wrap[data-compact="1"] .casa-gallery-dock .casa-gallery-item {
+  min-width: 120px;
+  min-height: 36px;
+}
+
 .casa-gallery-hint {
   font-size: 11px;
   font-weight: 700;
