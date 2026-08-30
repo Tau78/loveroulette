@@ -4,13 +4,13 @@ Love Roulette is a live-show conductor board (iPad / iPhone landscape). It is NO
 
 1) SCREEN RECORDING
 A screen recording on a physical iPhone (latest iOS) should be attached. It starts at the app icon and shows:
-- First screen: “Plancia animatore”. Field “Codice serata” = DEMO01. Field “Host web” left as https://loveroulette.vercel.app. Tap “Apri dashboard”.
-- Web dashboard for that event. If a PIN modal appears (“PIN animatore”), enter the demo PIN below. Then the live control deck is visible (fasi, quiz, preview proiettore).
-- Tap “Serata” (top-left overlay) to go back to the code screen.
+- First screen: login “Plancia animatore”. Username = admin. Password = admin12. Tap “Entra”.
+- Live control deck loads for the demo event (fasi, quiz, preview proiettore). No PIN modal.
+- Tap “Evento” (top-left) to open the event sheet (credits / Esci). Tap “Esci” to return to login.
 No in-app purchases or subscriptions.
 No public social feed — no report/block.
 No App Tracking Transparency, location, contacts, or camera.
-No account registration and no “Elimina account” — the app does not create user accounts.
+Staff login only (same credentials as MusicPro Eventi). No public self-registration in this app.
 
 2) DEVICES AND OS TESTED BEFORE SUBMISSION
 - Build uploaded from Xcode on this Mac (TestFlight production build 1).
@@ -18,21 +18,21 @@ No account registration and no “Elimina account” — the app does not create
 Do not invent models. Owner must add the exact iPhone / iPad + iOS used for the video.
 
 3) WHAT THE APP DOES / WHO IT IS FOR
-Love Roulette is for the host of a live singles night. The app opens the animator dashboard for one event code. The projector and guest phones use the same website and the same code; they are not in this binary. This is not simulated gambling.
+Love Roulette is for the host of a live singles night. The app opens the animator dashboard for one demo/lab event after staff login. The projector and guest phones use the same website; they are not in this binary. This is not simulated gambling.
 
 4) HOW TO SET UP AND USE THE MAIN FEATURES
-No Apple / Google / email login. Sign-In Required can stay OFF for an App Store account. The only gate is the event PIN on the website (not an iCloud account).
-Event code: DEMO01
-Host: https://loveroulette.vercel.app
-Animator PIN (if the modal “Inserisci il PIN della serata” appears): 123456
+Sign-In Required: ON. Demo account for App Review:
+Username: admin
+Password: admin12
+(This bootstrap staff user has unlimited event credits.)
 Then:
-1. Open the app → type DEMO01 → tap “Apri dashboard”.
-2. Enter PIN 123456 if asked.
-3. Use the dashboard (quiz / fasi / preview). Do not change real customer events; DEMO01 is the lab event.
-4. There is no account deletion path.
+1. Open the app → enter admin / admin12 → tap “Entra”.
+2. Use the dashboard (quiz / fasi / preview). Do not change real customer events; DEMO01 is the lab event.
+3. Tap “Evento” for credit status / logout.
+4. Account deletion is not offered because accounts are created by the organizer in MusicPro Eventi (staff), not by end-user registration in this app.
 
 5) EXTERNAL SERVICES USED FOR CORE FEATURES
-- Own website / backend: https://loveroulette.vercel.app (Next.js + Supabase). The iOS app is a WebView of /admin/{code}.
+- Own website / backend: https://loveroulette.vercel.app (Next.js + Supabase). The iOS app is a WebView of /admin/DEMO01/serata after login.
 - None of: ads, analytics SDKs, payment processor, AI, Sign in with Apple, Google, iCloud Drive.
 Encryption: HTTPS/TLS only (ITSAppUsesNonExemptEncryption = false).
 

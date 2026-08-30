@@ -28,7 +28,6 @@ declare
   v_event_id uuid := null;  -- SET THIS for Path A, or leave null to use Path B
   v_join_code text := 'DEMO01';
   v_demo_title text := 'Love Roulette — Demo';
-  v_animator_pin text := '123456';
 begin
   -- -------------------------------------------------------------------------
   -- Path A — Patch an EXISTING MusicPro event (recommended if you already have one)
@@ -41,10 +40,9 @@ begin
     update public.events
     set
       game_format = 'love_roulette',
-      metadata = coalesce(metadata, '{}'::jsonb) || jsonb_build_object(
+      metadata = (coalesce(metadata, '{}'::jsonb) || jsonb_build_object(
         'love_roulette_code', v_join_code,
         'love_roulette_title', v_demo_title,
-        'animator_pin', v_animator_pin,
         'love_roulette', jsonb_build_object(
           'theme', 'dark_fuchsia',
           'extraction_mode', 'random',
@@ -59,7 +57,7 @@ begin
           'jury_enabled', false,
           'question_mode', 'dynamic'
         )
-      ),
+      )) - 'animator_pin',
       updated_at = now()
     where id = v_event_id;
 
@@ -103,7 +101,6 @@ begin
       jsonb_build_object(
         'love_roulette_code', v_join_code,
         'love_roulette_title', v_demo_title,
-        'animator_pin', v_animator_pin,
         'love_roulette', jsonb_build_object(
           'theme', 'dark_fuchsia',
           'extraction_mode', 'random',

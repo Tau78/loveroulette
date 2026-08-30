@@ -7,9 +7,9 @@ import {
   type RefObject,
 } from "react";
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -26,22 +26,25 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
+import {
+  STORAGE_CREDIT_ACTIVATED_AT,
+  STORAGE_SESSION,
+  loginWithPassword,
+  parseStoredSession,
+  serializeSession,
+  type StaffSession,
+} from "./src/auth";
+import {
+  canRunPlancia,
+  creditStatus,
+  formatExpiry,
+  formatRemaining,
+  type CreditStatus,
+} from "./src/credits";
 
 const DEFAULT_HOST = "https://loveroulette.vercel.app";
-const STORAGE_HOST = "lr.plancia.host";
-const STORAGE_CODE = "lr.plancia.code";
+const DEFAULT_EVENT_CODE = "DEMO01";
 const CASA_BG = "#1a1d24";
-
-function normalizeHost(raw: string): string {
-  const trimmed = raw.trim().replace(/\/$/, "");
-  if (!trimmed) return DEFAULT_HOST;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
-}
-
-function normalizeCode(raw: string): string {
-  return raw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
-}
 
 function safeAreaScript(insets: {
   top: number;
@@ -59,6 +62,112 @@ function safeAreaScript(insets: {
   })();true;`;
 }
 
+function EventoSheet({
+  visible,
+  session,
+  status,
+  onClose,
+  onActivate,
+  onLogout,
+  activating,
+}: {
+  visible: boolean;
+  session: StaffSession;
+  status: CreditStatus;
+  onClose: () => void;
+  onActivate: () => void;
+  onLogout: () => void;
+  activating: boolean;
+}) {
+  const creditLine =
+    status.kind === "unlimited"
+      ? "Crediti illimitati"
+      : status.kind === "active"
+        ? `Attivo · scade alle ${formatExpiry(status.expiresAt)} (${formatRemaining(status.remainingMs)})`
+        : "Nessun credito attivo";
+
+  const showActivate = status.kind !== "unlimited";
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.sheetBackdrop} onPress={onClose}>
+        <Pressable
+          style={styles.sheetCard}
+          onPress={(event) => event.stopPropagation()}
+        >
+          <Text style={styles.sheetKicker}>Evento</Text>
+          <Text style={styles.sheetTitle}>Plancia</Text>
+          <Text style={styles.sheetMeta}>Utente · {session.username}</Text>
+          <Text style={styles.sheetMeta}>{creditLine}</Text>
+
+          {showActivate ? (
+            <Pressable
+              onPress={onActivate}
+              disabled={activating || status.kind === "active"}
+              style={({ pressed }) => [
+                styles.sheetPrimary,
+                (activating || status.kind === "active") && styles.ctaDisabled,
+                pressed && styles.ctaPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Attiva credito"
+            >
+              <Text style={styles.sheetPrimaryText}>
+                {status.kind === "active"
+                  ? "Credito già attivo"
+                  : activating
+                    ? "Attivo…"
+                    : "Attiva credito"}
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={styles.sheetHint}>
+              <Text style={styles.sheetHintText}>
+                Account admin: attivazione non necessaria.
+              </Text>
+            </View>
+          )}
+
+          {status.kind !== "unlimited" ? (
+            <Text style={styles.sheetFine}>
+              Un credito dura 6 ore dal momento dell'attivazione.
+            </Text>
+          ) : null}
+
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => [
+              styles.sheetSecondary,
+              pressed && styles.ctaPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Chiudi"
+          >
+            <Text style={styles.sheetSecondaryText}>Chiudi</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={onLogout}
+            style={({ pressed }) => [
+              styles.sheetDanger,
+              pressed && styles.ctaPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Esci"
+          >
+            <Text style={styles.sheetDangerText}>Esci</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 function WebPlancia({
   adminUrl,
   webRef,
@@ -67,19 +176,34 @@ function WebPlancia({
   setWebError,
   setWebLoading,
   retryLoad,
-  closeDashboard,
+  session,
+  status,
+  onOpenEvento,
+  eventoOpen,
+  onCloseEvento,
+  onActivateCredit,
+  onLogout,
+  activating,
 }: {
-  adminUrl: string;
+  adminUrl: string | null;
   webRef: RefObject<WebView | null>;
   webError: string | null;
   webLoading: boolean;
   setWebError: (value: string | null) => void;
   setWebLoading: (value: boolean) => void;
   retryLoad: () => void;
-  closeDashboard: () => void;
+  session: StaffSession;
+  status: CreditStatus;
+  onOpenEvento: () => void;
+  eventoOpen: boolean;
+  onCloseEvento: () => void;
+  onActivateCredit: () => void;
+  onLogout: () => void;
+  activating: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const insetJs = useMemo(() => safeAreaScript(insets), [insets]);
+  const allowed = canRunPlancia(status);
 
   return (
     <View style={styles.webRoot}>
@@ -95,63 +219,83 @@ function WebPlancia({
         ]}
       >
         <Pressable
-          onPress={() => {
-            Alert.alert("Uscire?", "Vuoi veramente uscire?", [
-              { text: "Annulla", style: "cancel" },
-              { text: "Esci", style: "destructive", onPress: closeDashboard },
-            ]);
-          }}
+          onPress={onOpenEvento}
           style={styles.back}
           accessibilityRole="button"
-          accessibilityLabel="Cambia evento"
+          accessibilityLabel="Evento"
         >
           <Text style={styles.backText}>Evento</Text>
         </Pressable>
+        {status.kind === "active" ? (
+          <Text style={styles.chromeCredit}>
+            {formatRemaining(status.remainingMs)}
+          </Text>
+        ) : status.kind === "unlimited" ? (
+          <Text style={styles.chromeCredit}>∞</Text>
+        ) : null}
       </View>
-      <WebView
-        ref={webRef}
-        source={{ uri: adminUrl }}
-        style={styles.web}
-        allowsInlineMediaPlayback
-        mediaPlaybackRequiresUserAction={false}
-        allowsBackForwardNavigationGestures
-        setSupportMultipleWindows={false}
-        javaScriptEnabled
-        domStorageEnabled
-        allowsFullscreenVideo
-        cacheEnabled={false}
-        decelerationRate="normal"
-        hideKeyboardAccessoryView
-        keyboardDisplayRequiresUserAction={false}
-        automaticallyAdjustContentInsets={false}
-        contentInsetAdjustmentBehavior="never"
-        injectedJavaScriptBeforeContentLoaded={insetJs}
-        injectedJavaScript={insetJs}
-        startInLoadingState
-        renderLoading={() => (
-          <View style={styles.webCover} pointerEvents="none">
-            <Text style={styles.webCoverText}>Apro la plancia…</Text>
-          </View>
-        )}
-        onLoadEnd={() => setWebLoading(false)}
-        onError={(event) => {
-          const failedUrl = event.nativeEvent.url || adminUrl;
-          setWebLoading(false);
-          setWebError(`Non riesco ad aprire la plancia.\n${failedUrl}`);
-        }}
-        onHttpError={(event) => {
-          const { statusCode, url } = event.nativeEvent;
-          const failedUrl = url || adminUrl;
-          const isPlancia =
-            failedUrl === adminUrl || /\/admin\/[^/]+\/serata/.test(failedUrl);
-          if (!isPlancia) return;
-          setWebLoading(false);
-          setWebError(
-            `Errore HTTP ${statusCode}. Non riesco ad aprire la plancia.\n${failedUrl}`,
-          );
-        }}
-      />
-      {webError ? (
+
+      {allowed && adminUrl ? (
+        <WebView
+          ref={webRef}
+          source={{ uri: adminUrl }}
+          style={styles.web}
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          allowsBackForwardNavigationGestures
+          setSupportMultipleWindows={false}
+          javaScriptEnabled
+          domStorageEnabled
+          allowsFullscreenVideo
+          cacheEnabled={false}
+          decelerationRate="normal"
+          hideKeyboardAccessoryView
+          keyboardDisplayRequiresUserAction={false}
+          automaticallyAdjustContentInsets={false}
+          contentInsetAdjustmentBehavior="never"
+          injectedJavaScriptBeforeContentLoaded={insetJs}
+          injectedJavaScript={insetJs}
+          startInLoadingState
+          renderLoading={() => (
+            <View style={styles.webCover} pointerEvents="none">
+              <Text style={styles.webCoverText}>Apro la plancia…</Text>
+            </View>
+          )}
+          onLoadEnd={() => setWebLoading(false)}
+          onError={(event) => {
+            const failedUrl = event.nativeEvent.url || adminUrl;
+            setWebLoading(false);
+            setWebError(`Non riesco ad aprire la plancia.\n${failedUrl}`);
+          }}
+          onHttpError={(event) => {
+            const { statusCode, url } = event.nativeEvent;
+            const failedUrl = url || adminUrl;
+            const isPlancia =
+              failedUrl === adminUrl || /\/admin\/[^/]+\/serata/.test(failedUrl);
+            if (!isPlancia) return;
+            setWebLoading(false);
+            setWebError(
+              `Errore HTTP ${statusCode}. Non riesco ad aprire la plancia.\n${failedUrl}`,
+            );
+          }}
+        />
+      ) : (
+        <View style={styles.webCover}>
+          <Text style={styles.webCoverText}>
+            Attiva un credito per aprire la plancia.
+          </Text>
+          <Pressable
+            onPress={onOpenEvento}
+            style={styles.retry}
+            accessibilityRole="button"
+            accessibilityLabel="Apri Evento"
+          >
+            <Text style={styles.retryText}>Apri Evento</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {allowed && webError ? (
         <View style={styles.webCover}>
           <Text style={styles.webCoverText}>{webError}</Text>
           <Pressable
@@ -163,11 +307,21 @@ function WebPlancia({
             <Text style={styles.retryText}>Riprova</Text>
           </Pressable>
         </View>
-      ) : webLoading ? (
+      ) : allowed && webLoading ? (
         <View style={styles.webCover} pointerEvents="none">
           <Text style={styles.webCoverText}>Apro la plancia…</Text>
         </View>
       ) : null}
+
+      <EventoSheet
+        visible={eventoOpen}
+        session={session}
+        status={status}
+        onClose={onCloseEvento}
+        onActivate={onActivateCredit}
+        onLogout={onLogout}
+        activating={activating}
+      />
     </View>
   );
 }
@@ -181,25 +335,31 @@ function waitForKeyboardDown(): Promise<void> {
 }
 
 export function App() {
-  const [host, setHost] = useState(DEFAULT_HOST);
-  const [code, setCode] = useState("");
-  const [opened, setOpened] = useState<string | null>(null);
+  const [session, setSession] = useState<StaffSession | null>(null);
+  const [activatedAt, setActivatedAt] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loggingIn, setLoggingIn] = useState(false);
   const [webError, setWebError] = useState<string | null>(null);
   const [webLoading, setWebLoading] = useState(true);
+  const [eventoOpen, setEventoOpen] = useState(false);
+  const [activating, setActivating] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const webRef = useRef<WebView>(null);
   useKeepAwake();
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [savedHost, savedCode] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_HOST),
-        AsyncStorage.getItem(STORAGE_CODE),
+      const [rawSession, rawActivated] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_SESSION),
+        AsyncStorage.getItem(STORAGE_CREDIT_ACTIVATED_AT),
       ]);
       if (cancelled) return;
-      if (savedHost) setHost(savedHost);
-      if (savedCode) setCode(savedCode);
+      setSession(parseStoredSession(rawSession));
+      setActivatedAt(rawActivated);
       setReady(true);
     })();
     return () => {
@@ -207,28 +367,70 @@ export function App() {
     };
   }, []);
 
-  const adminUrl = useMemo(() => {
-    if (!opened) return null;
-    const [nextHost, nextCode] = opened.split("\0");
-    return `${nextHost}/admin/${encodeURIComponent(nextCode)}/serata`;
-  }, [opened]);
+  useEffect(() => {
+    if (!session) return;
+    const id = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, [session]);
 
-  const openDashboard = useCallback(async () => {
-    const nextHost = normalizeHost(host);
-    const nextCode = normalizeCode(code);
-    if (nextCode.length < 3) return;
+  const status = useMemo(
+    () => creditStatus(session, activatedAt, nowMs),
+    [session, activatedAt, nowMs],
+  );
+
+  const adminUrl = useMemo(() => {
+    if (!session) return null;
+    if (!canRunPlancia(status)) return null;
+    return `${DEFAULT_HOST}/admin/${DEFAULT_EVENT_CODE}/serata`;
+  }, [session, status]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (canRunPlancia(status)) return;
+    setEventoOpen(true);
+  }, [session, status]);
+
+  const submitLogin = useCallback(async () => {
+    setLoginError(null);
+    setLoggingIn(true);
+    const result = loginWithPassword(username, password);
+    if (!result.ok) {
+      setLoggingIn(false);
+      setLoginError(result.error);
+      return;
+    }
     Keyboard.dismiss();
-    setHost(nextHost);
-    setCode(nextCode);
-    await AsyncStorage.multiSet([
-      [STORAGE_HOST, nextHost],
-      [STORAGE_CODE, nextCode],
-    ]);
+    await AsyncStorage.setItem(STORAGE_SESSION, serializeSession(result.session));
     await waitForKeyboardDown();
+    setSession(result.session);
+    setPassword("");
+    setLoggingIn(false);
     setWebError(null);
     setWebLoading(true);
-    setOpened(`${nextHost}\0${nextCode}`);
-  }, [code, host]);
+    if (!result.session.unlimitedCredits && !canRunPlancia(creditStatus(result.session, activatedAt))) {
+      setEventoOpen(true);
+    }
+  }, [username, password, activatedAt]);
+
+  const activateCredit = useCallback(async () => {
+    if (!session || session.unlimitedCredits) return;
+    setActivating(true);
+    const iso = new Date().toISOString();
+    await AsyncStorage.setItem(STORAGE_CREDIT_ACTIVATED_AT, iso);
+    setActivatedAt(iso);
+    setActivating(false);
+    setWebError(null);
+    setWebLoading(true);
+    setEventoOpen(false);
+  }, [session]);
+
+  const logout = useCallback(async () => {
+    setEventoOpen(false);
+    await AsyncStorage.removeItem(STORAGE_SESSION);
+    setSession(null);
+    setWebError(null);
+    setWebLoading(true);
+  }, []);
 
   const retryLoad = useCallback(() => {
     setWebError(null);
@@ -236,17 +438,11 @@ export function App() {
     webRef.current?.reload();
   }, []);
 
-  const closeDashboard = useCallback(() => {
-    setOpened(null);
-    setWebError(null);
-    setWebLoading(true);
-  }, []);
-
   if (!ready) {
     return <View style={styles.boot} />;
   }
 
-  if (adminUrl) {
+  if (session) {
     return (
       <SafeAreaProvider>
         <WebPlancia
@@ -257,7 +453,14 @@ export function App() {
           setWebError={setWebError}
           setWebLoading={setWebLoading}
           retryLoad={retryLoad}
-          closeDashboard={closeDashboard}
+          session={session}
+          status={status}
+          onOpenEvento={() => setEventoOpen(true)}
+          eventoOpen={eventoOpen}
+          onCloseEvento={() => setEventoOpen(false)}
+          onActivateCredit={() => void activateCredit()}
+          onLogout={() => void logout()}
+          activating={activating}
         />
       </SafeAreaProvider>
     );
@@ -274,53 +477,59 @@ export function App() {
           <Text style={styles.kicker}>Love Roulette</Text>
           <Text style={styles.title}>Plancia animatore</Text>
           <Text style={styles.lead}>
-            Stesso host di proiettore e telefoni. Poi il PIN dell'evento.
+            Accedi con le stesse credenziali animatore di APP Eventi.
           </Text>
 
-          <Text style={styles.label}>Codice evento</Text>
+          <Text style={styles.label}>Utente</Text>
           <TextInput
-            value={code}
-            onChangeText={(value) => setCode(normalizeCode(value))}
-            autoCapitalize="characters"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
             autoCorrect={false}
-            autoComplete="off"
-            textContentType="none"
-            passwordRules=""
-            importantForAutofill="no"
-            placeholder="DEMO01"
+            autoComplete="username"
+            textContentType="username"
+            placeholder="admin"
+            placeholderTextColor="#6b6b7a"
+            style={styles.input}
+            returnKeyType="next"
+            editable={!loggingIn}
+          />
+
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="password"
+            textContentType="password"
+            secureTextEntry
+            placeholder="••••••••"
             placeholderTextColor="#6b6b7a"
             style={styles.input}
             returnKeyType="go"
-            onSubmitEditing={() => void openDashboard()}
+            onSubmitEditing={() => void submitLogin()}
             blurOnSubmit
+            editable={!loggingIn}
           />
 
-          <Text style={styles.label}>Host web</Text>
-          <TextInput
-            value={host}
-            onChangeText={setHost}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="off"
-            textContentType="URL"
-            keyboardType="url"
-            placeholder={DEFAULT_HOST}
-            placeholderTextColor="#6b6b7a"
-            style={styles.input}
-            onSubmitEditing={() => void openDashboard()}
-            blurOnSubmit
-          />
+          {loginError ? (
+            <Text style={styles.errorText}>{loginError}</Text>
+          ) : null}
 
           <Pressable
-            onPress={() => void openDashboard()}
-            disabled={normalizeCode(code).length < 3}
+            onPress={() => void submitLogin()}
+            disabled={loggingIn || !username.trim() || !password.trim()}
             style={({ pressed }) => [
               styles.cta,
-              normalizeCode(code).length < 3 && styles.ctaDisabled,
+              (loggingIn || !username.trim() || !password.trim()) &&
+                styles.ctaDisabled,
               pressed && styles.ctaPressed,
             ]}
           >
-            <Text style={styles.ctaText}>Apri plancia</Text>
+            <Text style={styles.ctaText}>
+              {loggingIn ? "Accesso…" : "Entra"}
+            </Text>
           </Pressable>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -360,6 +569,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 18,
     fontWeight: "600",
+  },
+  errorText: {
+    color: "#FF8FAB",
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 4,
   },
   cta: {
     marginTop: 14,
@@ -413,6 +628,7 @@ const styles = StyleSheet.create({
   chrome: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: CASA_BG,
     paddingBottom: 6,
   },
@@ -425,4 +641,68 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   backText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
+  chromeCredit: {
+    color: "#A0A0B0",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  sheetCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "#16181f",
+    padding: 22,
+    gap: 10,
+  },
+  sheetKicker: {
+    color: "#E91E8C",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  sheetTitle: { color: "#FFFFFF", fontSize: 24, fontWeight: "800" },
+  sheetMeta: { color: "#A0A0B0", fontSize: 15, lineHeight: 21 },
+  sheetFine: { color: "#6b6b7a", fontSize: 13, lineHeight: 18, marginTop: 2 },
+  sheetHint: {
+    marginTop: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  sheetHintText: { color: "#A0A0B0", fontSize: 14, lineHeight: 20 },
+  sheetPrimary: {
+    marginTop: 8,
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: "#E91E8C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetPrimaryText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  sheetSecondary: {
+    minHeight: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetSecondaryText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  sheetDanger: {
+    minHeight: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetDangerText: { color: "#FF8FAB", fontSize: 15, fontWeight: "700" },
 });
