@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avantiLabel, stepAvanti } from "./casa-avanti";
+import { avantiLabel, shouldUseLiveGo, stepAvanti } from "./casa-avanti";
 
 describe("AVANTI flow", () => {
   it("casa starts sigla warn, not hold", () => {
@@ -47,6 +47,21 @@ describe("AVANTI flow", () => {
     expect(stepAvanti({ beat: "stasera", sigla: "idle", roll: 0, guestCount: 4 }).beat).toBe(
       "presenti",
     );
+  });
+
+  it("uses live GO after opening, or if the session already left lobby", () => {
+    expect(
+      shouldUseLiveGo({ live: false, beat: "quiz", runtimeState: "lobby" }),
+    ).toBe(false);
+    expect(
+      shouldUseLiveGo({ live: true, beat: "sigla", runtimeState: "lobby" }),
+    ).toBe(false);
+    expect(
+      shouldUseLiveGo({ live: true, beat: "quiz", runtimeState: "lobby" }),
+    ).toBe(true);
+    expect(
+      shouldUseLiveGo({ live: true, beat: "casa", runtimeState: "quiz" }),
+    ).toBe(true);
   });
 
   it("presenti advances then starts stacco", () => {

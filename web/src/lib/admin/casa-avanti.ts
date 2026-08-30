@@ -56,6 +56,17 @@ export function stepAvanti(input: {
   return { beat: next, sigla, roll: next === "presenti" ? 0 : roll };
 }
 
+/** After opening beats, the same GO drives the live session (quiz → close). */
+export function shouldUseLiveGo(input: {
+  live: boolean;
+  beat: CasaBeat;
+  runtimeState: string;
+}): boolean {
+  if (!input.live) return false;
+  if (input.runtimeState !== "lobby") return true;
+  return input.beat === "quiz";
+}
+
 export function avantiLabel(input: {
   beat: CasaBeat;
   sigla: SiglaGate;

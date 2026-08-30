@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -12,7 +19,11 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
 import { useKeepAwake } from "expo-keep-awake";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
 const DEFAULT_HOST = "https://loveroulette.vercel.app";
@@ -29,6 +40,121 @@ function normalizeHost(raw: string): string {
 
 function normalizeCode(raw: string): string {
   return raw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
+}
+
+function safeAreaScript(insets: {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}): string {
+  return `(function(){
+    var r=document.documentElement;
+    r.style.setProperty('--lr-sat','${Math.round(insets.top)}px');
+    r.style.setProperty('--lr-sar','${Math.round(insets.right)}px');
+    r.style.setProperty('--lr-sab','${Math.round(insets.bottom)}px');
+    r.style.setProperty('--lr-sal','${Math.round(insets.left)}px');
+  })();true;`;
+}
+
+function WebPlancia({
+  adminUrl,
+  webRef,
+  webError,
+  webLoading,
+  setWebError,
+  setWebLoading,
+  retryLoad,
+  closeDashboard,
+}: {
+  adminUrl: string;
+  webRef: RefObject<WebView | null>;
+  webError: string | null;
+  webLoading: boolean;
+  setWebError: (value: string | null) => void;
+  setWebLoading: (value: boolean) => void;
+  retryLoad: () => void;
+  closeDashboard: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const insetJs = useMemo(() => safeAreaScript(insets), [insets]);
+
+  return (
+    <View style={styles.webRoot}>
+      <StatusBar hidden={false} style="light" />
+      <WebView
+        ref={webRef}
+        source={{ uri: adminUrl }}
+        style={styles.web}
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
+        allowsBackForwardNavigationGestures
+        setSupportMultipleWindows={false}
+        javaScriptEnabled
+        domStorageEnabled
+        allowsFullscreenVideo
+        cacheEnabled={false}
+        decelerationRate="normal"
+        hideKeyboardAccessoryView
+        keyboardDisplayRequiresUserAction={false}
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        injectedJavaScriptBeforeContentLoaded={insetJs}
+        injectedJavaScript={insetJs}
+        startInLoadingState
+        renderLoading={() => (
+          <View style={styles.webCover} pointerEvents="none">
+            <Text style={styles.webCoverText}>Apro la plancia…</Text>
+          </View>
+        )}
+        onLoadEnd={() => setWebLoading(false)}
+        onError={(event) => {
+          const failedUrl = event.nativeEvent.url || adminUrl;
+          setWebLoading(false);
+          setWebError(`Non riesco ad aprire la plancia.\n${failedUrl}`);
+        }}
+        onHttpError={(event) => {
+          const { statusCode, url } = event.nativeEvent;
+          const failedUrl = url || adminUrl;
+          const isPlancia =
+            failedUrl === adminUrl || /\/admin\/[^/]+\/serata/.test(failedUrl);
+          if (!isPlancia) return;
+          setWebLoading(false);
+          setWebError(
+            `Errore HTTP ${statusCode}. Non riesco ad aprire la plancia.\n${failedUrl}`,
+          );
+        }}
+      />
+      {webError ? (
+        <View style={styles.webCover}>
+          <Text style={styles.webCoverText}>{webError}</Text>
+          <Pressable
+            onPress={retryLoad}
+            style={styles.retry}
+            accessibilityRole="button"
+            accessibilityLabel="Riprova"
+          >
+            <Text style={styles.retryText}>Riprova</Text>
+          </Pressable>
+        </View>
+      ) : webLoading ? (
+        <View style={styles.webCover} pointerEvents="none">
+          <Text style={styles.webCoverText}>Apro la plancia…</Text>
+        </View>
+      ) : null}
+      <Pressable
+        onPress={closeDashboard}
+        style={[
+          styles.back,
+          { top: insets.top + 8, left: insets.left + 8 },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Cambia serata"
+      >
+        <Text style={styles.backText}>Serata</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 function waitForKeyboardDown(): Promise<void> {
@@ -107,75 +233,18 @@ export function App() {
 
   if (adminUrl) {
     return (
-      <View style={styles.webRoot}>
-        <StatusBar hidden style="light" />
-        <WebView
-          ref={webRef}
-          source={{ uri: adminUrl }}
-          style={styles.web}
-          allowsInlineMediaPlayback
-          mediaPlaybackRequiresUserAction={false}
-          allowsBackForwardNavigationGestures
-          setSupportMultipleWindows={false}
-          javaScriptEnabled
-          domStorageEnabled
-          allowsFullscreenVideo
-          cacheEnabled={false}
-          decelerationRate="normal"
-          hideKeyboardAccessoryView
-          keyboardDisplayRequiresUserAction={false}
-          automaticallyAdjustContentInsets={false}
-          contentInsetAdjustmentBehavior="never"
-          startInLoadingState
-          renderLoading={() => (
-            <View style={styles.webCover} pointerEvents="none">
-              <Text style={styles.webCoverText}>Apro la plancia…</Text>
-            </View>
-          )}
-          onLoadEnd={() => setWebLoading(false)}
-          onError={(event) => {
-            const failedUrl = event.nativeEvent.url || adminUrl;
-            setWebLoading(false);
-            setWebError(`Non riesco ad aprire la plancia.\n${failedUrl}`);
-          }}
-          onHttpError={(event) => {
-            const { statusCode, url } = event.nativeEvent;
-            const failedUrl = url || adminUrl;
-            const isPlancia =
-              failedUrl === adminUrl || /\/admin\/[^/]+\/serata/.test(failedUrl);
-            if (!isPlancia) return;
-            setWebLoading(false);
-            setWebError(
-              `Errore HTTP ${statusCode}. Non riesco ad aprire la plancia.\n${failedUrl}`,
-            );
-          }}
+      <SafeAreaProvider>
+        <WebPlancia
+          adminUrl={adminUrl}
+          webRef={webRef}
+          webError={webError}
+          webLoading={webLoading}
+          setWebError={setWebError}
+          setWebLoading={setWebLoading}
+          retryLoad={retryLoad}
+          closeDashboard={closeDashboard}
         />
-        {webError ? (
-          <View style={styles.webCover}>
-            <Text style={styles.webCoverText}>{webError}</Text>
-            <Pressable
-              onPress={retryLoad}
-              style={styles.retry}
-              accessibilityRole="button"
-              accessibilityLabel="Riprova"
-            >
-              <Text style={styles.retryText}>Riprova</Text>
-            </Pressable>
-          </View>
-        ) : webLoading ? (
-          <View style={styles.webCover} pointerEvents="none">
-            <Text style={styles.webCoverText}>Apro la plancia…</Text>
-          </View>
-        ) : null}
-        <Pressable
-          onPress={closeDashboard}
-          style={styles.back}
-          accessibilityRole="button"
-          accessibilityLabel="Cambia serata"
-        >
-          <Text style={styles.backText}>Serata</Text>
-        </Pressable>
-      </View>
+      </SafeAreaProvider>
     );
   }
 

@@ -15,7 +15,12 @@
   min-height: 100dvh;
   min-height: -webkit-fill-available;
   min-height: 100svh;
-  width: 100vw;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: max(env(safe-area-inset-top, 0px), var(--lr-sat, 0px));
+  padding-right: max(env(safe-area-inset-right, 0px), var(--lr-sar, 0px));
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--lr-sab, 0px));
+  padding-left: max(env(safe-area-inset-left, 0px), var(--lr-sal, 0px));
   overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -2199,10 +2204,14 @@
 .casa-pin-wait {
   height: 100dvh;
   min-height: 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: max(24px, env(safe-area-inset-top, 0px), var(--lr-sat, 0px))
+    max(24px, env(safe-area-inset-right, 0px), var(--lr-sar, 0px))
+    max(24px, env(safe-area-inset-bottom, 0px), var(--lr-sab, 0px))
+    max(24px, env(safe-area-inset-left, 0px), var(--lr-sal, 0px));
   background: #1a1d24;
   color: #f4f6fa;
   font: 700 16px/1.4 ui-sans-serif, system-ui, sans-serif;

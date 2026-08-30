@@ -15,15 +15,19 @@ import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
  * Transport live — AdminTransportBar (GO fase) + STOP (spegne Auto quiz).
  * Contesto: runtimeState, quizState, finalsShow, voting, extractionMode, pin…
  */
-export function WidgetTransport() {
+export function WidgetTransport({
+  variant = "panel",
+}: {
+  variant?: "panel" | "go";
+}) {
   return (
     <CasaWidgetSessionGate>
-      <WidgetTransportBody />
+      <WidgetTransportBody variant={variant} />
     </CasaWidgetSessionGate>
   );
 }
 
-function WidgetTransportBody() {
+function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
   const {
     eventCode,
     event,
@@ -88,8 +92,7 @@ function WidgetTransportBody() {
 
   const autoplayOn = quizState?.autoplayEnabled === true;
 
-  return (
-    <div className="casa-w-live-stack">
+  const bar = (
       <AdminTransportBar
         eventCode={eventCode}
         runtimeState={runtimeState}
@@ -109,9 +112,18 @@ function WidgetTransportBody() {
           runtimeState === "lobby" ? () => void startQuiz() : undefined
         }
         startQuizDisabled={startBusy || !event}
-        variant="panel"
+        variant={variant}
         className="casa-w-live-transport"
       />
+  );
+
+  if (variant === "go") {
+    return bar;
+  }
+
+  return (
+    <div className="casa-w-live-stack">
+      {bar}
 
       <AdminButton
         type="button"

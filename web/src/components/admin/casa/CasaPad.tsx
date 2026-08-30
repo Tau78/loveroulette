@@ -1315,6 +1315,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         return (
           <div className={liveOff}>
             <WidgetConductor
+              beat={beat}
               localLabel={goLabel}
               onLocalGo={() => {
                 stopGongAtmo();

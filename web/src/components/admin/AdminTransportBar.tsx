@@ -65,8 +65,8 @@ interface AdminTransportBarProps {
   onRefreshProgress?: () => Promise<unknown>;
   onStartQuiz?: () => void;
   startQuizDisabled?: boolean;
-  /** `panel` = inline deck block; `footer` = legacy bottom bar (deprecated). */
-  variant?: "panel" | "footer";
+  /** `panel` = deck chrome; `go` = single Casa pulsantone; `footer` = legacy. */
+  variant?: "panel" | "footer" | "go";
   className?: string;
 }
 
@@ -403,6 +403,26 @@ export function AdminTransportBar({
       ) : null}
     </div>
   );
+
+  if (variant === "go") {
+    return (
+      <div className={cn("casa-conductor-local", className)}>
+        <button
+          type="button"
+          className="casa-go"
+          disabled={primaryDisabled || !primaryAction}
+          onClick={() => primaryAction?.()}
+        >
+          {primaryAction ? primaryLabel : "Serata chiusa"}
+        </button>
+        {error ? (
+          <p className="casa-sub casa-conductor-note" title={error}>
+            {error}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   const primaryButton = primaryAction ? (
     <AdminButton
