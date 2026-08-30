@@ -12,9 +12,18 @@ import {
   rectsOverlap,
   scaleToFit,
   canvasToFillView,
+  isCompactPlanciaView,
   SNAP_MAGNET_PX,
   snap,
 } from "./layout-math";
+
+describe("isCompactPlanciaView", () => {
+  it("treats iPhone landscape as compact", () => {
+    expect(isCompactPlanciaView(852, 258)).toBe(true);
+    expect(isCompactPlanciaView(390, 844)).toBe(true);
+    expect(isCompactPlanciaView(1180, 620)).toBe(false);
+  });
+});
 
 describe("layout-math", () => {
   it("snaps to an explicit grid", () => {

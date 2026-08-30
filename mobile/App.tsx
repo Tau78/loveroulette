@@ -50,7 +50,8 @@ function safeAreaScript(insets: {
 }): string {
   return `(function(){
     var r=document.documentElement;
-    r.style.setProperty('--lr-sat','${Math.round(insets.top)}px');
+    r.classList.add('casa-native-chrome');
+    r.style.setProperty('--lr-sat','0px');
     r.style.setProperty('--lr-sar','${Math.round(insets.right)}px');
     r.style.setProperty('--lr-sab','${Math.round(insets.bottom)}px');
     r.style.setProperty('--lr-sal','${Math.round(insets.left)}px');
@@ -82,6 +83,25 @@ function WebPlancia({
   return (
     <View style={styles.webRoot}>
       <StatusBar hidden={false} style="light" />
+      <View
+        style={[
+          styles.chrome,
+          {
+            paddingTop: insets.top,
+            paddingRight: insets.right + 8,
+            paddingLeft: insets.left + 8,
+          },
+        ]}
+      >
+        <Pressable
+          onPress={closeDashboard}
+          style={styles.back}
+          accessibilityRole="button"
+          accessibilityLabel="Cambia serata"
+        >
+          <Text style={styles.backText}>Serata</Text>
+        </Pressable>
+      </View>
       <WebView
         ref={webRef}
         source={{ uri: adminUrl }}
@@ -142,17 +162,6 @@ function WebPlancia({
           <Text style={styles.webCoverText}>Apro la plancia…</Text>
         </View>
       ) : null}
-      <Pressable
-        onPress={closeDashboard}
-        style={[
-          styles.back,
-          { top: insets.top + 8, left: insets.left + 8 },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel="Cambia serata"
-      >
-        <Text style={styles.backText}>Serata</Text>
-      </Pressable>
     </View>
   );
 }
@@ -359,6 +368,7 @@ const styles = StyleSheet.create({
   ctaText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
   webRoot: {
     flex: 1,
+    flexDirection: "column",
     width: "100%",
     height: "100%",
     backgroundColor: CASA_BG,
@@ -394,11 +404,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   retryText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  chrome: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: CASA_BG,
+    paddingBottom: 6,
+  },
   back: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    zIndex: 2,
     backgroundColor: "rgba(0,0,0,0.55)",
     borderColor: "rgba(255,255,255,0.15)",
     borderWidth: 1,

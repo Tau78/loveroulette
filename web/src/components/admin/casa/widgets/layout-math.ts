@@ -201,6 +201,12 @@ export function scaleToFit(
  * view (no letterbox). Widget coords stay in the original 1200×700 region;
  * extra space is usable in edit.
  */
+/** Phone / short landscape deck — use a compact factory instead of 1200×700. */
+export function isCompactPlanciaView(viewW: number, viewH: number): boolean {
+  if (viewW <= 0 || viewH <= 0) return false;
+  return Math.min(viewW, viewH) < 500 || viewH < 400;
+}
+
 export function canvasToFillView(
   baseW: number,
   baseH: number,

@@ -97,12 +97,14 @@ export async function postQuizAction(
 export async function postDisplayAudioStart(
   eventCode: string,
   pin: string | null,
+  enabled = true,
 ): Promise<Response> {
   return fetch(
     `/api/events/${encodeURIComponent(eventCode)}/display-audio`,
     {
       method: "POST",
       headers: animatorAuthHeaders(pin),
+      body: JSON.stringify({ enabled }),
     },
   );
 }

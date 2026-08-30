@@ -8,7 +8,10 @@ import { CasaQuestions } from "@/components/admin/casa/CasaQuestions";
 import { CasaLayoutBar } from "@/components/admin/casa/widgets/CasaLayoutBar";
 import { CasaWidgetDeck } from "@/components/admin/casa/widgets/CasaWidgetDeck";
 import { CasaWidgetGallery } from "@/components/admin/casa/widgets/CasaWidgetGallery";
-import { findAddPlacement } from "@/components/admin/casa/widgets/layout-math";
+import {
+  findAddPlacement,
+  isCompactPlanciaView,
+} from "@/components/admin/casa/widgets/layout-math";
 import { widgetMeta } from "@/components/admin/casa/widgets/widget-registry";
 import { WidgetConductor } from "@/components/admin/casa/widgets/WidgetConductor";
 import { WidgetTransport } from "@/components/admin/casa/widgets/WidgetTransport";
@@ -19,7 +22,10 @@ import { WidgetLeaderboard } from "@/components/admin/casa/widgets/WidgetLeaderb
 import { WidgetPanic } from "@/components/admin/casa/widgets/WidgetPanic";
 import { WidgetPreflight } from "@/components/admin/casa/widgets/WidgetPreflight";
 import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
-import { patchEventConfig } from "@/lib/admin/animator-api";
+import {
+  patchEventConfig,
+  postDisplayAudioStart,
+} from "@/lib/admin/animator-api";
 import { useCasaLiveSession } from "@/components/admin/casa/casa-live-session-context";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
@@ -37,12 +43,31 @@ import {
   toggleCasaPadHit,
   type CasaPadHitId,
 } from "@/lib/admin/casa-pad-sfx";
+import {
+  applyAudioSink,
+  canPickCasaLocalAudioOutput,
+  casaAudioOptionId,
+  DEFAULT_CASA_AUDIO_ROUTE,
+  PROJECTOR_AUDIO_ROUTE,
+  VERCEL_AUDIO_ROUTE,
+  isRemoteAudioRoute,
+  listCasaAudioOutputs,
+  loadCasaAudioRoute,
+  pickCasaLocalAudioOutput,
+  saveCasaAudioRoute,
+  type CasaAudioOutputOption,
+  type CasaAudioRoute,
+} from "@/lib/admin/casa-audio-route";
 import { avantiLabel, stepAvanti } from "@/lib/admin/casa-avanti";
 import { casaAutoBedLabel, resolveCasaBed } from "@/lib/admin/casa-beds";
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
+  COMPACT_CANVAS_HEIGHT,
+  COMPACT_CANVAS_WIDTH,
+  DEFAULT_PROFILE_ID,
   createDefaultState,
+  getFactoryCompactWidgets,
   createId,
   getActiveProfile,
   loadLayouts,
@@ -598,6 +623,15 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const [masterVol, setMasterVol] = useState(100);
   const [layoutEdit, setLayoutEdit] = useState(false);
   const [layouts, setLayouts] = useState<CasaLayoutsState>(createDefaultState);
+  const [deckView, setDeckView] = useState({ w: CANVAS_WIDTH, h: CANVAS_HEIGHT });
+  const [audioRoute, setAudioRoute] = useState<CasaAudioRoute>(
+    DEFAULT_CASA_AUDIO_ROUTE,
+  );
+  const [audioOutputs, setAudioOutputs] = useState<CasaAudioOutputOption[]>([
+    { id: "local:default", route: DEFAULT_CASA_AUDIO_ROUTE },
+    { id: "projector", route: PROJECTOR_AUDIO_ROUTE },
+    { id: "vercel", route: VERCEL_AUDIO_ROUTE },
+  ]);
   const [notes, setNotes] = useState<CasaNotesState>(() =>
     typeof window === "undefined" ? { byInstanceId: {} } : loadNotes(),
   );
@@ -616,6 +650,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const bedFilesInput = useRef<HTMLInputElement>(null);
   const gongInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
+  const deckWrapRef = useRef<HTMLDivElement>(null);
   const videoTapRef = useRef<{ url: string; at: number } | null>(null);
 
   const index = BEATS.findIndex((b) => b.id === beat);
@@ -625,7 +660,15 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const asked = Math.max(0, manche - left);
   const currentQ = pack[asked] ?? pack[pack.length - 1] ?? DEFAULT_CASA_QUESTIONS[0];
   const activeProfile = getActiveProfile(layouts);
-  const activeWidgets = activeProfile.widgets;
+  const compactDeck = isCompactPlanciaView(deckView.w, deckView.h);
+  const useCompactDeck =
+    compactDeck && layouts.activeId === DEFAULT_PROFILE_ID && !layoutEdit;
+  const activeWidgets = useCompactDeck
+    ? getFactoryCompactWidgets()
+    : activeProfile.widgets;
+  const deckCanvasW = useCompactDeck ? COMPACT_CANVAS_WIDTH : CANVAS_WIDTH;
+  const deckCanvasH = useCompactDeck ? COMPACT_CANVAS_HEIGHT : CANVAS_HEIGHT;
+  const remoteAudio = isRemoteAudioRoute(audioRoute);
   const masterScale = masterVol / 100;
   const effVol = (id: (typeof FADERS)[number]["id"]) =>
     mute[id] ? 0 : (vols[id] / 100) * masterScale;
@@ -668,6 +711,46 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   useEffect(() => {
     prefetchCasaPadHits();
   }, []);
+
+  useEffect(() => {
+    setAudioRoute(loadCasaAudioRoute());
+    const refreshOutputs = () => {
+      void listCasaAudioOutputs().then(setAudioOutputs);
+    };
+    refreshOutputs();
+    const devices = navigator.mediaDevices;
+    if (!devices?.addEventListener) return;
+    devices.addEventListener("devicechange", refreshOutputs);
+    return () => devices.removeEventListener("devicechange", refreshOutputs);
+  }, []);
+
+  useEffect(() => {
+    const el = deckWrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setDeckView({ w: r.width, h: r.height });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (open !== "audio") return;
+    void listCasaAudioOutputs().then(setAudioOutputs);
+  }, [open]);
+
+  useEffect(() => {
+    void applyAudioSink(bedAudio.current, audioRoute);
+    void applyAudioSink(gongAudioRef.current, audioRoute);
+  }, [audioRoute]);
+
+  useEffect(() => {
+    if (live.controlsDisabled || !live.pin) return;
+    void postDisplayAudioStart(eventCode, live.pin, remoteAudio);
+  }, [remoteAudio, eventCode, live.pin, live.controlsDisabled]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -764,12 +847,12 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     }
     // Auto-phase bed always loops; playlist uses onEnded + nextIndex except "one".
     el.loop = !bedFolder || bedRepeat === "one";
-    if (bedPlaying) {
+    if (bedPlaying && !remoteAudio) {
       void el.play().catch(() => {});
     } else {
       el.pause();
     }
-  }, [activeBed, bedFolder, bedRepeat, bedPlaying]);
+  }, [activeBed, bedFolder, bedRepeat, bedPlaying, remoteAudio]);
 
   useEffect(() => {
     if (!showPct) {
@@ -784,15 +867,20 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     el.src = gongAtmo.track.url;
     el.loop = true;
     el.volume = effVol("bed");
+    if (remoteAudio) {
+      el.pause();
+      return;
+    }
     void el.play().catch(() => {});
-  }, [showPct, gongAtmo.enabled, gongAtmo.track]);
+  }, [showPct, gongAtmo.enabled, gongAtmo.track, remoteAudio]);
 
   useEffect(() => {
     if (showPct && gongAtmo.enabled && gongAtmo.track) return;
     const el = bedAudio.current;
     if (!el || !activeBed || !bedPlaying) return;
+    if (remoteAudio) return;
     void el.play().catch(() => {});
-  }, [showPct, gongAtmo.enabled, gongAtmo.track, activeBed, bedPlaying]);
+  }, [showPct, gongAtmo.enabled, gongAtmo.track, activeBed, bedPlaying, remoteAudio]);
 
   function applyBedFiles(name: string, files: File[]) {
     revokeTracks(bedList);
@@ -810,6 +898,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       return;
     }
     bedInput.current?.click();
+  }
+
+  function commitAudioRoute(route: CasaAudioRoute) {
+    setAudioRoute(route);
+    saveCasaAudioRoute(route);
   }
 
   function clearBedFolder() {
@@ -993,6 +1086,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }
 
   function togglePad(id: CasaPadHitId) {
+    if (remoteAudio) return;
     const on = toggleCasaPadHit(id, effVol("fx"), () => {
       setHits((cur) => {
         const nextHits = new Set(cur);
@@ -1283,26 +1377,57 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       case "audio":
         return (
           <div className={liveOff}>
-            {FADERS.map((f) => (
-              <div className="casa-mix" key={f.id}>
-                <span>{f.label}</span>
-                <i className="casa-mix-bar">
-                  <b
-                    style={{
-                      width: `${mute[f.id] ? 0 : vols[f.id] * masterScale}%`,
-                    }}
-                  />
-                </i>
-                <button
-                  type="button"
-                  className="casa-mute"
-                  data-on={mute[f.id] ? "1" : undefined}
-                  onClick={() => setMute((m) => ({ ...m, [f.id]: !m[f.id] }))}
-                >
-                  M
-                </button>
-              </div>
-            ))}
+            <label className="casa-audio-route">
+              <span>Uscita</span>
+              <select
+                value={casaAudioOptionId(audioRoute)}
+                onChange={(event) => {
+                  const option = audioOutputs.find(
+                    (item) => item.id === event.target.value,
+                  );
+                  if (option) commitAudioRoute(option.route);
+                }}
+                onFocus={() => {
+                  void listCasaAudioOutputs().then(setAudioOutputs);
+                }}
+              >
+                {(audioOutputs.length
+                  ? audioOutputs
+                  : [
+                      {
+                        id: casaAudioOptionId(audioRoute),
+                        route: audioRoute,
+                      },
+                    ]
+                ).map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.route.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {useCompactDeck
+              ? null
+              : FADERS.map((f) => (
+                  <div className="casa-mix" key={f.id}>
+                    <span>{f.label}</span>
+                    <i className="casa-mix-bar">
+                      <b
+                        style={{
+                          width: `${mute[f.id] ? 0 : vols[f.id] * masterScale}%`,
+                        }}
+                      />
+                    </i>
+                    <button
+                      type="button"
+                      className="casa-mute"
+                      data-on={mute[f.id] ? "1" : undefined}
+                      onClick={() => setMute((m) => ({ ...m, [f.id]: !m[f.id] }))}
+                    >
+                      M
+                    </button>
+                  </div>
+                ))}
           </div>
         );
       case "pad":
@@ -1712,7 +1837,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         </button>
       </header>
 
-      <div className="casa-deck-wrap">
+      <div className="casa-deck-wrap" ref={deckWrapRef} data-compact={useCompactDeck ? "1" : undefined}>
         {showMissingWarn ? (
           <div className="casa-layout-warn" role="status">
             <span>
@@ -1738,11 +1863,14 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           />
         ) : null}
         <CasaWidgetDeck
-          edit={layoutEdit}
+          edit={layoutEdit && !useCompactDeck}
           widgets={activeWidgets}
-          onChange={(widgets) =>
-            commitLayouts(updateActiveWidgets(layouts, widgets))
-          }
+          canvasWidth={deckCanvasW}
+          canvasHeight={deckCanvasH}
+          onChange={(widgets) => {
+            if (useCompactDeck) return;
+            commitLayouts(updateActiveWidgets(layouts, widgets));
+          }}
           onAddRequest={() => setLayoutEdit(true)}
           onWidgetTitleClick={openPanelForWidget}
           renderWidget={renderWidget}
@@ -1956,6 +2084,51 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
             {open === "audio" ? (
               <>
+                <p className="casa-kicker">Uscita audio</p>
+                <div className="casa-audio-dest">
+                  {(audioOutputs.length
+                    ? audioOutputs
+                    : [
+                        {
+                          id: casaAudioOptionId(audioRoute),
+                          route: audioRoute,
+                        },
+                      ]
+                  ).map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className="casa-hit"
+                      data-on={
+                        casaAudioOptionId(audioRoute) === option.id
+                          ? "1"
+                          : undefined
+                      }
+                      onClick={() => commitAudioRoute(option.route)}
+                    >
+                      {option.route.label}
+                    </button>
+                  ))}
+                </div>
+                {canPickCasaLocalAudioOutput() ? (
+                  <button
+                    type="button"
+                    className="casa-hit"
+                    onClick={() => {
+                      void pickCasaLocalAudioOutput().then((route) => {
+                        if (route) commitAudioRoute(route);
+                        void listCasaAudioOutputs().then(setAudioOutputs);
+                      });
+                    }}
+                  >
+                    Scegli uscita locale…
+                  </button>
+                ) : null}
+                <p className="casa-sub">
+                  {remoteAudio
+                    ? "Colonna sul proiettore / Vercel. Questo telefono è muto."
+                    : "Audio su questo dispositivo. Cuffie e speaker si scelgono anche dalle uscite di sistema."}
+                </p>
                 {FADERS.map((f) => (
                   <label className="casa-fader" key={f.id}>
                     <span>{f.label}</span>

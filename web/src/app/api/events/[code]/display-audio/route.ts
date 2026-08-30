@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { setDisplayAudioCue } from "@/lib/musicpro/display-audio";
 import { verifyAnimatorPin } from "@/lib/musicpro/session";
 import { getLoveRouletteEvent } from "@/lib/musicpro/resolve-event";
 import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
+
+const bodySchema = z.object({
+  enabled: z.boolean().optional(),
+});
 
 export async function POST(
   request: Request,
@@ -40,7 +45,21 @@ export async function POST(
       return NextResponse.json({ error: "Invalid animator PIN" }, { status: 401 });
     }
 
-    const displayAudioCue = await setDisplayAudioCue(supabase, event.id);
+    let enabled = true;
+    try {
+      const parsed = bodySchema.safeParse(await request.json());
+      if (parsed.success && parsed.data.enabled !== undefined) {
+        enabled = parsed.data.enabled;
+      }
+    } catch {
+      enabled = true;
+    }
+
+    const displayAudioCue = await setDisplayAudioCue(
+      supabase,
+      event.id,
+      enabled,
+    );
 
     return NextResponse.json({ displayAudioCue, eventSlug: event.slug });
   } catch (err) {

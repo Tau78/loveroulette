@@ -1,3 +1,7 @@
+html.casa-native-chrome .casa {
+  padding-top: 0;
+}
+
 .casa {
   --bg: #1a1d24;
   --card: #252830;
@@ -111,6 +115,28 @@
 .casa-top-time-sep {
   color: var(--line);
   font-weight: 800;
+}
+
+@media (max-height: 430px) {
+  .casa-top {
+    gap: 6px;
+    padding: 4px 8px;
+  }
+
+  .casa-top-mod {
+    min-height: 28px;
+    padding: 2px 8px;
+    font-size: 10px;
+  }
+
+  .casa-top-event {
+    font-size: 11px;
+  }
+
+  /* Vecchia app: overlay nativo "Serata" in alto a sinistra. */
+  html:not(.casa-native-chrome) .casa-top-sala {
+    padding-left: 76px;
+  }
 }
 
 .casa-pill {
@@ -1084,6 +1110,46 @@
 .casa-slide-edit .casa-field {
   width: 100%;
   height: 36px;
+}
+
+.casa-audio-route {
+  display: grid;
+  grid-template-columns: 5.6rem 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dim);
+}
+
+.casa-audio-route select {
+  width: 100%;
+  min-height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #1a1d24;
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 8px;
+}
+
+.casa-deck-wrap[data-compact="1"] .casa-audio-route {
+  grid-template-columns: 3.6rem 1fr;
+  margin-top: 0;
+}
+
+.casa-deck-wrap[data-compact="1"] .casa-audio-route select {
+  min-height: 36px;
+}
+
+.casa-audio-dest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
 }
 
 .casa-mix {

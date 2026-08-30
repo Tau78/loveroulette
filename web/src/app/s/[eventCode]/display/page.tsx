@@ -31,6 +31,7 @@ import { DisplayFixedCanvas } from "@/components/display/DisplayFixedCanvas";
 import { DisplayChallengeBackdrop } from "@/components/display/DisplayChallengeBackdrop";
 import { DisplayLocalMediaLayer } from "@/components/display/DisplayLocalMediaLayer";
 import { useRegiaLocalMediaReceiver } from "@/hooks/useRegiaLocalMediaReceiver";
+import { SoundtrackPlayer } from "@/components/audio/SoundtrackPlayer";
 
 function absoluteUrl(pathOrUrl: string): string {
   if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
@@ -80,6 +81,7 @@ export default function DisplayPage() {
     finalists,
     voting,
     finalsShow,
+    displayAudioCue,
     applyQuizUpdate,
     applyFinalsUpdate,
     syncStatus,
@@ -177,6 +179,17 @@ export default function DisplayPage() {
             height: PROJECTOR_CANVAS.height,
           }}
         >
+      <SoundtrackPlayer
+        runtimeState={runtimeState}
+        quizDisplayPhase={isQuiz ? quizState!.displayPhase : null}
+        quizThemeCategory={currentQuestion?.category ?? null}
+        viewerMode
+        embedMode={embedMode || displayAudioCue?.enabled !== true}
+        externalUnlockAt={
+          displayAudioCue?.enabled ? displayAudioCue.updatedAt : null
+        }
+      />
+
       <DisplayStageBackground
         logoScale={isLobby ? "full" : "compact"}
         quizPhase={isQuiz ? quizState!.displayPhase : null}

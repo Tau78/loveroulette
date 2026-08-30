@@ -60,6 +60,9 @@ export const NAME_MAX = 24;
 export const DEFAULT_PROFILE_ID = "default";
 export const CANVAS_WIDTH = 1200;
 export const CANVAS_HEIGHT = 700;
+/** Logical canvas for iPhone landscape / short decks. */
+export const COMPACT_CANVAS_WIDTH = 900;
+export const COMPACT_CANVAS_HEIGHT = 320;
 export const WIDGET_MIN_W = 120;
 export const WIDGET_MIN_H = 80;
 /** Header-only height when a widget is collapsed. */
@@ -163,6 +166,22 @@ export const FACTORY_DEFAULT_WIDGETS: Omit<CasaWidgetInstance, "id">[] = [
   { type: "pad", x: 912, y: 288, size: "L", w: 280, h: 280 },
   { type: "avanti", x: 912, y: 576, size: "S", w: 280, h: 116 },
 ];
+
+/** Packed for iPhone landscape: projector + mixer + pad + AVANTI, no letterbox. */
+export const FACTORY_COMPACT_WIDGETS: Omit<CasaWidgetInstance, "id">[] = [
+  { type: "projector", x: 8, y: 8, size: "L", w: 388, h: 304 },
+  { type: "audio", x: 404, y: 8, size: "S", w: 248, h: 88 },
+  { type: "audio_bed", x: 404, y: 104, size: "S", w: 248, h: 80 },
+  { type: "avanti", x: 404, y: 192, size: "S", w: 248, h: 120 },
+  { type: "pad", x: 660, y: 8, size: "L", w: 232, h: 304 },
+];
+
+export function getFactoryCompactWidgets(): CasaWidgetInstance[] {
+  return FACTORY_COMPACT_WIDGETS.map((w) => ({
+    ...w,
+    id: `compact-${w.type}`,
+  }));
+}
 
 const SIZE_PX: Record<CasaWidgetSize, { w: number; h: number }> = {
   S: { w: 180, h: 120 },

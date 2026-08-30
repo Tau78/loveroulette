@@ -11,6 +11,9 @@ import {
   createProfileFromCurrent,
   deleteProfile,
   getActiveProfile,
+  COMPACT_CANVAS_HEIGHT,
+  COMPACT_CANVAS_WIDTH,
+  getFactoryCompactWidgets,
   getFactoryDefaultWidgets,
   loadLayouts,
   nearestSize,
@@ -92,6 +95,28 @@ describe("casa layouts", () => {
       widgetLayoutPx({ size: "XL", w: 608, h: 684, collapsed: true }),
     ).toEqual({ w: 608, h: WIDGET_COLLAPSED_H });
     expect(widgetLayoutPx({ size: "M" }).h).toBe(180);
+  });
+
+  it("compact factory fills the iPhone canvas", () => {
+    const widgets = getFactoryCompactWidgets();
+    expect(widgets.map((w) => w.type)).toEqual([
+      "projector",
+      "audio",
+      "audio_bed",
+      "avanti",
+      "pad",
+    ]);
+    let maxX = 0;
+    let maxY = 0;
+    for (const w of widgets) {
+      const px = widgetPx(w);
+      maxX = Math.max(maxX, w.x + px.w);
+      maxY = Math.max(maxY, w.y + px.h);
+      expect(w.x + px.w).toBeLessThanOrEqual(COMPACT_CANVAS_WIDTH);
+      expect(w.y + px.h).toBeLessThanOrEqual(COMPACT_CANVAS_HEIGHT);
+    }
+    expect(maxX).toBeGreaterThanOrEqual(COMPACT_CANVAS_WIDTH - 16);
+    expect(maxY).toBeGreaterThanOrEqual(COMPACT_CANVAS_HEIGHT - 16);
   });
 
   it("factory widgets pack the canvas without huge gaps", () => {

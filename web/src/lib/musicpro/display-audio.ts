@@ -28,9 +28,10 @@ export function getDisplayAudioCue(
 export async function setDisplayAudioCue(
   supabase: SupabaseClient,
   eventId: string,
+  enabled = true,
 ): Promise<DisplayAudioCue> {
   const cue: DisplayAudioCue = {
-    enabled: true,
+    enabled,
     updatedAt: new Date().toISOString(),
   };
 

@@ -1,10 +1,13 @@
 "use client";
 
 import type { EventState } from "@/lib/types";
+import type { QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
 import { useLoveRouletteSoundtrack } from "@/hooks/useLoveRouletteSoundtrack";
 
 interface SoundtrackPlayerProps {
   runtimeState: EventState;
+  quizDisplayPhase?: QuizDisplayPhase | null;
+  quizThemeCategory?: string | null;
   stingerId?: string | null;
   stingerToken?: number;
   stingerDedupKey?: string | null;
@@ -18,6 +21,8 @@ interface SoundtrackPlayerProps {
 /** Player audio invisibile (proiettore) o con controlli (dashboard futura). */
 export function SoundtrackPlayer({
   runtimeState,
+  quizDisplayPhase = null,
+  quizThemeCategory = null,
   stingerId = null,
   stingerToken = 0,
   stingerDedupKey = null,
@@ -27,6 +32,8 @@ export function SoundtrackPlayer({
 }: SoundtrackPlayerProps) {
   useLoveRouletteSoundtrack({
     runtimeState,
+    quizDisplayPhase,
+    quizThemeCategory,
     enabled: !embedMode,
     stingerId,
     stingerToken,
