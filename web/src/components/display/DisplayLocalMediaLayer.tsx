@@ -41,6 +41,9 @@ export function DisplayLocalMediaLayer({
     video.muted = state.muted;
     video.loop = !playlistLoop;
     void video.play().catch(() => {});
+    return () => {
+      video.pause();
+    };
   }, [index, item, playlistLoop, state.muted]);
 
   if (!active || !item) return null;
@@ -60,6 +63,7 @@ export function DisplayLocalMediaLayer({
           playsInline
           muted={state.muted}
           loop={!playlistLoop}
+          preload="metadata"
           onEnded={playlistLoop ? goNext : undefined}
           onError={playlistLoop ? goNext : undefined}
         />

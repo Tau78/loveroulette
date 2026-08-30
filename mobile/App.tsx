@@ -262,6 +262,17 @@ function WebPlancia({
             </View>
           )}
           onLoadEnd={() => setWebLoading(false)}
+          onContentProcessDidTerminate={() => {
+            // iOS uccide il content process (spesso su video) → schermo nero + solo «Evento».
+            setWebError(null);
+            setWebLoading(true);
+            webRef.current?.reload();
+          }}
+          onRenderProcessGone={() => {
+            setWebError(null);
+            setWebLoading(true);
+            webRef.current?.reload();
+          }}
           onError={(event) => {
             const failedUrl = event.nativeEvent.url || adminUrl;
             setWebLoading(false);

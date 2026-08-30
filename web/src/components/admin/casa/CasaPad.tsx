@@ -10,6 +10,7 @@ import type { CasaSpotlight } from "@/components/admin/casa/CasaPlayerSpotlight"
 import { CasaPrep } from "@/components/admin/casa/CasaPrep";
 import { CasaQuestions } from "@/components/admin/casa/CasaQuestions";
 import { CasaSocialPanel } from "@/components/admin/casa/social/CasaSocialPanel";
+import { CasaSoftBoundary } from "@/components/admin/casa/CasaSoftBoundary";
 import { CasaLayoutBar } from "@/components/admin/casa/widgets/CasaLayoutBar";
 import { CasaWidgetDeck } from "@/components/admin/casa/widgets/CasaWidgetDeck";
 import { CasaWidgetGallery } from "@/components/admin/casa/widgets/CasaWidgetGallery";
@@ -825,11 +826,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     return () => window.clearTimeout(id);
   }, [spotlight, prep.luciFlashSec]);
 
-  useEffect(() => {
-    if (sigla !== "warn") return;
-    const id = window.setTimeout(() => setSigla("on"), 2000);
-    return () => window.clearTimeout(id);
-  }, [sigla]);
+  // Sigla: restiamo su «warn» finché AVANTI («Parte ora») — niente auto-start.
+  // Su iOS WKWebView play() senza gesto utente fallisce e due video insieme
+  // possono killare il content process (schermo nero + solo «Evento»).
 
   useEffect(() => {
     if (beat !== "stacco" || count == null) return;
@@ -1393,7 +1392,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             {open === "preview" ? (
               <div className="casa-screen casa-screen-ghost" />
             ) : (
-              <CasaProjector {...projectorProps} />
+              <CasaSoftBoundary label="Proiettore">
+                <CasaProjector {...projectorProps} />
+              </CasaSoftBoundary>
             )}
           </div>
         );
@@ -2001,7 +2002,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             ) : null}
 
             {open === "preview" ? (
-              <CasaProjector {...projectorProps} enlarge />
+              <CasaSoftBoundary label="Proiettore">
+                <CasaProjector {...projectorProps} enlarge />
+              </CasaSoftBoundary>
             ) : null}
 
             {open === "setup" ? (
@@ -2051,7 +2054,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             ) : null}
             {open === "prep" ? <CasaPrep prep={prep} onChange={patchPrep} /> : null}
             {open === "social" ? (
-              <CasaSocialPanel prep={prep} slides={slides} />
+              <CasaSoftBoundary label="Social">
+                <CasaSocialPanel prep={prep} slides={slides} />
+              </CasaSoftBoundary>
             ) : null}
 
             {open === "clock" ? (
