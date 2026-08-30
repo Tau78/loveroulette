@@ -26,7 +26,7 @@ import {
   magnetSnapPos,
   overlapsAny,
   pushApart,
-  scaleToFit,
+  canvasToFillView,
   type Rect,
 } from "@/components/admin/casa/widgets/layout-math";
 
@@ -96,7 +96,10 @@ export function CasaWidgetDeck({
     return () => ro.disconnect();
   }, []);
 
-  const scale = scaleToFit(canvasWidth, canvasHeight, view.w, view.h);
+  const filled = canvasToFillView(canvasWidth, canvasHeight, view.w, view.h);
+  const boardW = filled.canvasW;
+  const boardH = filled.canvasH;
+  const scale = filled.scale;
 
   function othersRects(exceptId: string): Rect[] {
     return widgetsRef.current
@@ -109,8 +112,8 @@ export function CasaWidgetDeck({
 
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
-  const canvasRef = useRef({ canvasWidth, canvasHeight });
-  canvasRef.current = { canvasWidth, canvasHeight };
+  const canvasRef = useRef({ canvasWidth: boardW, canvasHeight: boardH });
+  canvasRef.current = { canvasWidth: boardW, canvasHeight: boardH };
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -307,8 +310,8 @@ export function CasaWidgetDeck({
     );
   }
 
-  const stageW = canvasWidth * scale;
-  const stageH = canvasHeight * scale;
+  const stageW = boardW * scale;
+  const stageH = boardH * scale;
 
   return (
     <div
@@ -324,8 +327,8 @@ export function CasaWidgetDeck({
         <div
           className="casa-deck-stage"
           style={{
-            width: canvasWidth,
-            height: canvasHeight,
+            width: boardW,
+            height: boardH,
             transform: `scale(${scale})`,
             transformOrigin: "top left",
           }}

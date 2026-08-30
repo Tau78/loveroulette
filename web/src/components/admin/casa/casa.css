@@ -74,7 +74,7 @@
 
 .casa-top-layout {
   padding: 2px 6px;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .casa-top-event {
@@ -2196,18 +2196,73 @@
   outline: 1px solid var(--green);
 }
 
+.casa-pin-wait {
+  height: 100dvh;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #1a1d24;
+  color: #f4f6fa;
+  font: 700 16px/1.4 ui-sans-serif, system-ui, sans-serif;
+  text-align: center;
+}
+
+.casa-gallery-dock {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: min(28vh, 220px);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+
+.casa-gallery-dock .casa-gallery-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+
+.casa-gallery-dock .casa-gallery-list li {
+  flex: 0 0 auto;
+}
+
+.casa-gallery-dock .casa-gallery-item {
+  width: auto;
+  min-width: 148px;
+  min-height: 44px;
+}
+
+.casa-gallery-hint {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
 .casa-layout-add {
   margin: 0;
-  width: 28px;
+  min-width: 64px;
   height: 28px;
-  padding: 0;
+  padding: 0 10px;
   border: 1px dashed var(--line);
   border-radius: 99px;
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   line-height: 1;
   cursor: pointer;
 }
@@ -2256,7 +2311,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 0 12px 12px;
+  padding: 0;
 }
 
 .casa-layout-warn {

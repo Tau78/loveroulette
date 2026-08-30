@@ -187,10 +187,10 @@ export function CasaLayoutBar({
           <button
             type="button"
             className="casa-layout-add"
-            aria-label="Aggiungi widget"
+            aria-label="Lista widget"
             onClick={onOpenGallery}
           >
-            +
+            Lista
           </button>
           <button
             type="button"

@@ -11,6 +11,7 @@ import { CasaWidgetGallery } from "@/components/admin/casa/widgets/CasaWidgetGal
 import { findAddPlacement } from "@/components/admin/casa/widgets/layout-math";
 import { widgetMeta } from "@/components/admin/casa/widgets/widget-registry";
 import { WidgetConductor } from "@/components/admin/casa/widgets/WidgetConductor";
+import { WidgetTransport } from "@/components/admin/casa/widgets/WidgetTransport";
 import { WidgetCue } from "@/components/admin/casa/widgets/WidgetCue";
 import { WidgetExtraction } from "@/components/admin/casa/widgets/WidgetExtraction";
 import { WidgetFinals } from "@/components/admin/casa/widgets/WidgetFinals";
@@ -597,7 +598,6 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const [masterVol, setMasterVol] = useState(100);
   const [layoutEdit, setLayoutEdit] = useState(false);
   const [layouts, setLayouts] = useState<CasaLayoutsState>(createDefaultState);
-  const [galleryOpen, setGalleryOpen] = useState(false);
   const [notes, setNotes] = useState<CasaNotesState>(() =>
     typeof window === "undefined" ? { byInstanceId: {} } : loadNotes(),
   );
@@ -1112,13 +1112,6 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     if (UNIQUE_WIDGET_TYPES.has(type) && activeWidgets.some((w) => w.type === type)) {
       return;
     }
-    // Avanti e Transport sono lo stesso conductor.
-    if (
-      (type === "avanti" || type === "transport") &&
-      activeWidgets.some((w) => w.type === "avanti" || w.type === "transport")
-    ) {
-      return;
-    }
     const meta = widgetMeta(type);
     const preferred = sizeToPx(meta.defaultSize);
     const others = activeWidgets.map((w) => {
@@ -1201,9 +1194,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }
 
   const missingProjector = !activeWidgets.some((w) => w.type === "projector");
-  const missingAvanti = !activeWidgets.some(
-    (w) => w.type === "avanti" || w.type === "transport",
-  );
+  const missingAvanti = !activeWidgets.some((w) => w.type === "avanti");
   const showMissingWarn = !layoutEdit && (missingProjector || missingAvanti);
 
   const projectorProps = {
@@ -1321,7 +1312,6 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           </div>
         );
       case "avanti":
-      case "transport":
         return (
           <div className={liveOff}>
             <WidgetConductor
@@ -1331,6 +1321,12 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                 go();
               }}
             />
+          </div>
+        );
+      case "transport":
+        return (
+          <div className={liveOff}>
+            <WidgetTransport />
           </div>
         );
       case "clock":
@@ -1673,7 +1669,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             onEditChange={setLayoutEdit}
             layouts={layouts}
             onLayoutsChange={commitLayouts}
-            onOpenGallery={() => setGalleryOpen(true)}
+            onOpenGallery={() => {
+              document.getElementById("casa-gallery-dock")?.scrollIntoView({
+                block: "nearest",
+              });
+            }}
           />
         </div>
 
@@ -1727,24 +1727,26 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             </button>
           </div>
         ) : null}
+        {layoutEdit ? (
+          <CasaWidgetGallery
+            open
+            docked
+            onClose={() => setLayoutEdit(false)}
+            present={activeWidgets.map((w) => w.type)}
+            onAdd={addWidget}
+          />
+        ) : null}
         <CasaWidgetDeck
           edit={layoutEdit}
           widgets={activeWidgets}
           onChange={(widgets) =>
             commitLayouts(updateActiveWidgets(layouts, widgets))
           }
-          onAddRequest={() => setGalleryOpen(true)}
+          onAddRequest={() => setLayoutEdit(true)}
           onWidgetTitleClick={openPanelForWidget}
           renderWidget={renderWidget}
         />
       </div>
-
-      <CasaWidgetGallery
-        open={galleryOpen}
-        onClose={() => setGalleryOpen(false)}
-        present={activeWidgets.map((w) => w.type)}
-        onAdd={addWidget}
-      />
 
       {open ? (
         <>

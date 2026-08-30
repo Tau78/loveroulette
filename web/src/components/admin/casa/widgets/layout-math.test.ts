@@ -11,6 +11,7 @@ import {
   pushApart,
   rectsOverlap,
   scaleToFit,
+  canvasToFillView,
   SNAP_MAGNET_PX,
   snap,
 } from "./layout-math";
@@ -165,6 +166,21 @@ describe("layout-math", () => {
     expect(scaleToFit(0, 100, 200, 200)).toBe(1);
     expect(scaleToFit(100, 0, 200, 200)).toBe(1);
     expect(scaleToFit(100, 100, 0, 200)).toBe(1);
+  });
+
+  it("expands logical canvas so a uniform scale fills the view", () => {
+    const phone = canvasToFillView(1200, 700, 844, 390);
+    expect(phone.scale).toBeCloseTo(390 / 700);
+    expect(phone.canvasH).toBe(700);
+    expect(phone.canvasW).toBeGreaterThan(1200);
+    expect(phone.canvasW * phone.scale).toBeCloseTo(844, 0);
+    expect(phone.canvasH * phone.scale).toBeCloseTo(390, 0);
+
+    const tall = canvasToFillView(1200, 700, 1180, 820);
+    expect(tall.canvasW).toBe(1200);
+    expect(tall.canvasH).toBeGreaterThan(700);
+    expect(tall.canvasW * tall.scale).toBeCloseTo(1180, 0);
+    expect(tall.canvasH * tall.scale).toBeCloseTo(820, 0);
   });
 
   it("clamps resize to free pixels and min size", () => {

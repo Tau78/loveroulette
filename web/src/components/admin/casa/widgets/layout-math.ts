@@ -197,6 +197,38 @@ export function scaleToFit(
 }
 
 /**
+ * Grow the logical canvas on the leftover axis so a uniform scale fills the
+ * view (no letterbox). Widget coords stay in the original 1200×700 region;
+ * extra space is usable in edit.
+ */
+export function canvasToFillView(
+  baseW: number,
+  baseH: number,
+  viewW: number,
+  viewH: number,
+): { canvasW: number; canvasH: number; scale: number } {
+  if (baseW <= 0 || baseH <= 0 || viewW <= 0 || viewH <= 0) {
+    return { canvasW: Math.max(0, baseW), canvasH: Math.max(0, baseH), scale: 1 };
+  }
+  const scaleX = viewW / baseW;
+  const scaleY = viewH / baseH;
+  if (scaleY <= scaleX) {
+    const scale = scaleY;
+    return {
+      canvasW: Math.max(baseW, Math.round(viewW / scale)),
+      canvasH: baseH,
+      scale,
+    };
+  }
+  const scale = scaleX;
+  return {
+    canvasW: baseW,
+    canvasH: Math.max(baseH, Math.round(viewH / scale)),
+    scale,
+  };
+}
+
+/**
  * Clamp a resized box: min size, stay inside canvas.
  * Default grid=1 → free pixel resize (no hard 8px snap).
  */

@@ -13,6 +13,8 @@ type Props = {
   onClose: () => void;
   present: CasaWidgetType[];
   onAdd: (type: CasaWidgetType) => void;
+  /** Persistent strip in edit mode (no veil). */
+  docked?: boolean;
 };
 
 function isTaken(
@@ -20,13 +22,16 @@ function isTaken(
   presentSet: Set<CasaWidgetType>,
   unique: boolean,
 ): boolean {
-  if (type === "avanti" || type === "transport") {
-    return presentSet.has("avanti") || presentSet.has("transport");
-  }
   return unique && UNIQUE_WIDGET_TYPES.has(type) && presentSet.has(type);
 }
 
-export function CasaWidgetGallery({ open, onClose, present, onAdd }: Props) {
+export function CasaWidgetGallery({
+  open,
+  onClose,
+  present,
+  onAdd,
+  docked = false,
+}: Props) {
   const presentSet = useMemo(() => new Set(present), [present]);
 
   const items = useMemo(() => {
@@ -34,21 +39,61 @@ export function CasaWidgetGallery({ open, onClose, present, onAdd }: Props) {
       meta,
       taken: isTaken(meta.type, presentSet, meta.unique),
     }));
-    // Available first so new types are immediately tappable.
     ranked.sort((a, b) => Number(a.taken) - Number(b.taken));
     return ranked;
   }, [presentSet]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || docked) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, docked]);
 
   if (!open) return null;
+
+  const list = (
+    <ul className="casa-gallery-list">
+      {items.map(({ meta, taken }) => (
+        <li key={meta.type}>
+          <button
+            type="button"
+            className="casa-gallery-item"
+            disabled={taken}
+            data-taken={taken ? "1" : "0"}
+            data-widget-type={meta.type}
+            onClick={() => {
+              if (taken) return;
+              onAdd(meta.type);
+              if (!docked) onClose();
+            }}
+          >
+            <span>{meta.label}</span>
+            <em>{taken ? "Già in plancia" : meta.defaultSize}</em>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
+  if (docked) {
+    return (
+      <aside
+        id="casa-gallery-dock"
+        className="casa-gallery-dock"
+        aria-label="Lista widget"
+      >
+        <header className="casa-gallery-head">
+          <strong>Lista widget</strong>
+          <span className="casa-gallery-hint">Tocca per aggiungere</span>
+        </header>
+        {list}
+      </aside>
+    );
+  }
+
   if (typeof document === "undefined") return null;
 
   return createPortal(
@@ -63,35 +108,15 @@ export function CasaWidgetGallery({ open, onClose, present, onAdd }: Props) {
         className="casa-gallery-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="Aggiungi widget"
+        aria-label="Lista widget"
       >
         <header className="casa-gallery-head">
-          <strong>Aggiungi widget</strong>
+          <strong>Lista widget</strong>
           <button type="button" className="casa-gallery-close" onClick={onClose}>
             Chiudi
           </button>
         </header>
-        <ul className="casa-gallery-list">
-          {items.map(({ meta, taken }) => (
-            <li key={meta.type}>
-              <button
-                type="button"
-                className="casa-gallery-item"
-                disabled={taken}
-                data-taken={taken ? "1" : "0"}
-                data-widget-type={meta.type}
-                onClick={() => {
-                  if (taken) return;
-                  onAdd(meta.type);
-                  onClose();
-                }}
-              >
-                <span>{meta.label}</span>
-                <em>{taken ? "Già in plancia" : meta.defaultSize}</em>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {list}
       </div>
     </div>,
     document.body,
