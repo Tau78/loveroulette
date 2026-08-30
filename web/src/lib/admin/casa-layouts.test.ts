@@ -11,12 +11,10 @@ import {
   createProfileFromCurrent,
   deleteProfile,
   getActiveProfile,
-  COMPACT_CANVAS_HEIGHT,
-  COMPACT_CANVAS_WIDTH,
-  getFactoryCompactWidgets,
-  packCompactPlancia,
-  scaleCompactWidgets,
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
   getFactoryDefaultWidgets,
+  mapWidgetsBetweenCanvas,
   loadLayouts,
   nearestSize,
   renameProfile,
@@ -99,51 +97,51 @@ describe("casa layouts", () => {
     expect(widgetLayoutPx({ size: "M" }).h).toBe(180);
   });
 
-  it("compact factory fills the iPhone canvas", () => {
-    const widgets = getFactoryCompactWidgets();
+  it("keeps the Default factory as the original 9-widget packing", () => {
+    const widgets = getFactoryDefaultWidgets();
     expect(widgets.map((w) => w.type)).toEqual([
+      "settings",
+      "players",
+      "messages",
+      "clock",
       "projector",
       "audio",
       "audio_bed",
-      "avanti",
       "pad",
+      "avanti",
     ]);
-    let maxX = 0;
-    let maxY = 0;
-    for (const w of widgets) {
-      const px = widgetPx(w);
-      maxX = Math.max(maxX, w.x + px.w);
-      maxY = Math.max(maxY, w.y + px.h);
-      expect(w.x + px.w).toBeLessThanOrEqual(COMPACT_CANVAS_WIDTH);
-      expect(w.y + px.h).toBeLessThanOrEqual(COMPACT_CANVAS_HEIGHT);
-    }
-    expect(maxX).toBeGreaterThanOrEqual(COMPACT_CANVAS_WIDTH - 16);
-    expect(maxY).toBeGreaterThanOrEqual(COMPACT_CANVAS_HEIGHT - 16);
+    expect(widgets.find((w) => w.type === "projector")).toMatchObject({
+      x: 296,
+      y: 8,
+      w: 608,
+      h: 684,
+    });
   });
 
-  it("packs compact widgets to the measured iPhone view", () => {
-    const viewW = 852;
-    const viewH = 310;
-    const widgets = packCompactPlancia(viewW, viewH);
-    expect(widgets).toHaveLength(5);
-    let maxX = 0;
-    let maxY = 0;
-    for (const w of widgets) {
-      const px = widgetPx(w);
-      maxX = Math.max(maxX, w.x + px.w);
-      maxY = Math.max(maxY, w.y + px.h);
-      expect(w.x + px.w).toBeLessThanOrEqual(viewW);
-      expect(w.y + px.h).toBeLessThanOrEqual(viewH);
-    }
-    expect(maxX).toBeGreaterThanOrEqual(viewW - 16);
-    expect(maxY).toBeGreaterThanOrEqual(viewH - 16);
-  });
-
-  it("scales a compact layout to a new view", () => {
-    const packed = packCompactPlancia(800, 300);
-    const scaled = scaleCompactWidgets(packed, 800, 300, 1000, 375);
-    expect(scaled).toHaveLength(5);
-    expect(scaled[0]?.w).toBeGreaterThan(packed[0]?.w ?? 0);
+  it("maps Default widgets onto a phone canvas and back", () => {
+    const factory = getFactoryDefaultWidgets();
+    const phone = mapWidgetsBetweenCanvas(
+      factory,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+      852,
+      310,
+    );
+    expect(phone).toHaveLength(9);
+    expect(phone.map((w) => w.type)).toEqual(factory.map((w) => w.type));
+    expect(phone.find((w) => w.type === "projector")?.x).toBeGreaterThan(
+      phone.find((w) => w.type === "settings")?.x ?? 0,
+    );
+    const back = mapWidgetsBetweenCanvas(
+      phone,
+      852,
+      310,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+    );
+    const proj = back.find((w) => w.type === "projector");
+    expect(proj?.x).toBeCloseTo(296, 0);
+    expect(proj?.w).toBeCloseTo(608, 0);
   });
 
   it("factory widgets pack the canvas without huge gaps", () => {

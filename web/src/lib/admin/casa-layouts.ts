@@ -60,9 +60,6 @@ export const NAME_MAX = 24;
 export const DEFAULT_PROFILE_ID = "default";
 export const CANVAS_WIDTH = 1200;
 export const CANVAS_HEIGHT = 700;
-/** Logical canvas for iPhone landscape / short decks. */
-export const COMPACT_CANVAS_WIDTH = 900;
-export const COMPACT_CANVAS_HEIGHT = 320;
 export const WIDGET_MIN_W = 120;
 export const WIDGET_MIN_H = 80;
 /** Header-only height when a widget is collapsed. */
@@ -167,107 +164,18 @@ export const FACTORY_DEFAULT_WIDGETS: Omit<CasaWidgetInstance, "id">[] = [
   { type: "avanti", x: 912, y: 576, size: "S", w: 280, h: 116 },
 ];
 
-const COMPACT_GAP = 8;
-
-/**
- * Pack the iPhone deck so projector / mixer / pad fill the measured view.
- * Coordinates are in view pixels (scale 1) — no letterbox.
- */
-export function packCompactPlancia(
-  viewW: number,
-  viewH: number,
-): CasaWidgetInstance[] {
-  const width = Math.max(360, Math.round(viewW));
-  const height = Math.max(200, Math.round(viewH));
-  const m = COMPACT_GAP;
-  const g = COMPACT_GAP;
-  const innerW = Math.max(width - m * 2, 120);
-  const innerH = Math.max(height - m * 2, 120);
-  const usable = Math.max(innerW - g * 2, 120);
-  const minCol = Math.min(120, Math.floor(usable / 3));
-  let projW = Math.round(usable * 0.42);
-  let padW = Math.round(usable * 0.3);
-  let midW = usable - projW - padW;
-  if (projW < minCol || midW < minCol || padW < minCol) {
-    projW = Math.floor(usable / 3);
-    padW = Math.floor(usable / 3);
-    midW = usable - projW - padW;
-  }
-  const x0 = m;
-  const x1 = m + projW + g;
-  const x2 = x1 + midW + g;
-  const minStack = WIDGET_COLLAPSED_H + 20;
-  let mixH = Math.max(minStack, Math.round(innerH * 0.24));
-  let bedH = Math.max(minStack, Math.round(innerH * 0.22));
-  let goH = innerH - mixH - bedH - g * 2;
-  if (goH < minStack) {
-    const stack = Math.max(minStack, Math.floor((innerH - g * 2) / 3));
-    mixH = stack;
-    bedH = stack;
-    goH = innerH - mixH - bedH - g * 2;
-  }
-  return [
-    {
-      id: "compact-projector",
-      type: "projector",
-      x: x0,
-      y: m,
-      size: "L",
-      w: projW,
-      h: innerH,
-    },
-    {
-      id: "compact-audio",
-      type: "audio",
-      x: x1,
-      y: m,
-      size: "S",
-      w: midW,
-      h: mixH,
-    },
-    {
-      id: "compact-audio_bed",
-      type: "audio_bed",
-      x: x1,
-      y: m + mixH + g,
-      size: "S",
-      w: midW,
-      h: bedH,
-    },
-    {
-      id: "compact-avanti",
-      type: "avanti",
-      x: x1,
-      y: m + mixH + g + bedH + g,
-      size: "S",
-      w: midW,
-      h: Math.max(minStack, goH),
-    },
-    {
-      id: "compact-pad",
-      type: "pad",
-      x: x2,
-      y: m,
-      size: "L",
-      w: padW,
-      h: innerH,
-    },
-  ];
-}
-
-export function scaleCompactWidgets(
+/** Stretch Default 1200×700 widgets onto another canvas, keeping the same arrangement. */
+export function mapWidgetsBetweenCanvas(
   widgets: CasaWidgetInstance[],
   fromW: number,
   fromH: number,
   toW: number,
   toH: number,
 ): CasaWidgetInstance[] {
-  if (fromW <= 0 || fromH <= 0 || toW <= 0 || toH <= 0) {
-    return packCompactPlancia(toW, toH);
-  }
+  if (fromW <= 0 || fromH <= 0 || toW <= 0 || toH <= 0) return widgets;
+  if (fromW === toW && fromH === toH) return widgets;
   const sx = toW / fromW;
   const sy = toH / fromH;
-  if (Math.abs(sx - 1) < 0.01 && Math.abs(sy - 1) < 0.01) return widgets;
   return widgets.map((w) => ({
     ...w,
     x: Math.round(w.x * sx),
@@ -275,46 +183,6 @@ export function scaleCompactWidgets(
     w: typeof w.w === "number" ? Math.round(w.w * sx) : w.w,
     h: typeof w.h === "number" ? Math.round(w.h * sy) : w.h,
   }));
-}
-
-export function getFactoryCompactWidgets(
-  viewW = COMPACT_CANVAS_WIDTH,
-  viewH = COMPACT_CANVAS_HEIGHT,
-): CasaWidgetInstance[] {
-  return packCompactPlancia(viewW, viewH);
-}
-
-export const COMPACT_STORAGE_KEY = "lr_casa_compact_layout";
-
-export type CasaCompactLayoutSave = {
-  version: 1;
-  widgets: CasaWidgetInstance[];
-  canvasW: number;
-  canvasH: number;
-};
-
-export function loadCompactLayout(): CasaCompactLayoutSave | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(COMPACT_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as CasaCompactLayoutSave;
-    if (parsed.version !== 1 || !Array.isArray(parsed.widgets)) return null;
-    if (parsed.widgets.length === 0) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export function saveCompactLayout(save: CasaCompactLayoutSave): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(COMPACT_STORAGE_KEY, JSON.stringify(save));
-}
-
-export function clearCompactLayout(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(COMPACT_STORAGE_KEY);
 }
 
 const SIZE_PX: Record<CasaWidgetSize, { w: number; h: number }> = {

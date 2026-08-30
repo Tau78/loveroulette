@@ -52,6 +52,7 @@ html.casa-native-chrome .casa {
   gap: 8px;
   padding: 8px 10px;
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .casa-top-mod {
@@ -2268,8 +2269,10 @@ html.casa-native-chrome .casa {
 }
 
 .casa-pin-wait {
-  height: 100dvh;
+  height: 100%;
+  height: -webkit-fill-available;
   min-height: 100%;
+  min-height: -webkit-fill-available;
   box-sizing: border-box;
   display: flex;
   align-items: center;

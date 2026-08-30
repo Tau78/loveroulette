@@ -13,6 +13,8 @@ import {
   scaleToFit,
   canvasToFillView,
   isCompactPlanciaView,
+  isUsablePlanciaView,
+  nextStableDeckView,
   SNAP_MAGNET_PX,
   snap,
 } from "./layout-math";
@@ -22,6 +24,23 @@ describe("isCompactPlanciaView", () => {
     expect(isCompactPlanciaView(852, 258)).toBe(true);
     expect(isCompactPlanciaView(390, 844)).toBe(true);
     expect(isCompactPlanciaView(1180, 620)).toBe(false);
+  });
+
+  it("rejects collapsed WKWebView sizes (PIN / Edit regression)", () => {
+    expect(isUsablePlanciaView(0, 0)).toBe(false);
+    expect(isUsablePlanciaView(852, 8)).toBe(false);
+    expect(isUsablePlanciaView(40, 40)).toBe(false);
+    expect(isCompactPlanciaView(852, 0)).toBe(false);
+    expect(isCompactPlanciaView(852, 8)).toBe(false);
+    expect(
+      nextStableDeckView({ w: 852, h: 310 }, { w: 852, h: 0 }),
+    ).toBeNull();
+    expect(
+      nextStableDeckView({ w: 852, h: 310 }, { w: 852, h: 310 }),
+    ).toBeNull();
+    expect(
+      nextStableDeckView({ w: 852, h: 310 }, { w: 852, h: 280 }),
+    ).toEqual({ w: 852, h: 280 });
   });
 });
 

@@ -201,10 +201,33 @@ export function scaleToFit(
  * view (no letterbox). Widget coords stay in the original 1200×700 region;
  * extra space is usable in edit.
  */
-/** Phone / short landscape deck — use a compact factory instead of 1200×700. */
+/** Below this the iOS WKWebView is collapsing (PIN keyboard / Edit reflow). */
+export const MIN_USABLE_PLANCIA_W = 160;
+export const MIN_USABLE_PLANCIA_H = 120;
+
+export function isUsablePlanciaView(viewW: number, viewH: number): boolean {
+  return viewW >= MIN_USABLE_PLANCIA_W && viewH >= MIN_USABLE_PLANCIA_H;
+}
+
+/** Phone / short landscape deck — scale the Default 1200×700 onto the view. */
 export function isCompactPlanciaView(viewW: number, viewH: number): boolean {
-  if (viewW <= 0 || viewH <= 0) return false;
+  if (!isUsablePlanciaView(viewW, viewH)) return false;
   return Math.min(viewW, viewH) < 500 || viewH < 400;
+}
+
+/**
+ * Ignore collapsed / jittery measurements so Casa cannot fall to 0×0
+ * (same failure as the PIN gate on iOS WKWebView).
+ */
+export function nextStableDeckView(
+  prev: { w: number; h: number },
+  next: { w: number; h: number },
+): { w: number; h: number } | null {
+  if (!isUsablePlanciaView(next.w, next.h)) return null;
+  if (Math.abs(next.w - prev.w) < 1 && Math.abs(next.h - prev.h) < 1) {
+    return null;
+  }
+  return { w: next.w, h: next.h };
 }
 
 export function canvasToFillView(

@@ -22,7 +22,6 @@ type Props = {
   layouts: CasaLayoutsState;
   onLayoutsChange: (next: CasaLayoutsState) => void;
   onOpenGallery: () => void;
-  onFactoryReset?: () => void;
 };
 
 type MenuTarget = {
@@ -40,7 +39,6 @@ export function CasaLayoutBar({
   layouts,
   onLayoutsChange,
   onOpenGallery,
-  onFactoryReset,
 }: Props) {
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const pressRef = useRef<{
@@ -135,7 +133,6 @@ export function CasaLayoutBar({
   function doResetFactory() {
     if (!window.confirm("Ripristinare il layout Default di fabbrica?")) return;
     onLayoutsChange(resetDefaultToFactory(layouts));
-    onFactoryReset?.();
     setMenu(null);
   }
 
