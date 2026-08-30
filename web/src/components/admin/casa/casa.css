@@ -771,6 +771,14 @@ html.casa-native-chrome .casa {
   padding: 80px;
 }
 
+.casa-proj-theme {
+  position: absolute;
+  inset: 48px 64px 152px;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: 1.25rem;
+}
+
 .casa-proj-plate {
   display: flex;
   flex-direction: column;

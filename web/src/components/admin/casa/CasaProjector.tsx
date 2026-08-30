@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
+import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { PROJECTOR_CANVAS } from "@/lib/display/projector-canvas";
 import {
@@ -208,13 +209,12 @@ export function CasaProjector({
         ) : beat === "stacco" && count != null ? (
           <div className="casa-proj-count">{count}</div>
         ) : beat === "quiz" && quizGate === "tema" ? (
-          <div className="casa-proj-center">
-            <DisplayPhaseHero
+          <div className="casa-proj-theme">
+            <DisplayThemeSlide
+              title={theme.title}
+              subtitle={theme.subtitle}
+              category={quizQuestion?.category ?? FALLBACK_QUIZ.category}
               kicker="Manche"
-              headline={theme.title}
-              subline={theme.subtitle}
-              pulse
-              uppercase
             />
           </div>
         ) : beat === "quiz" ? (

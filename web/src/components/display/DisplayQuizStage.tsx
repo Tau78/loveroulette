@@ -15,13 +15,13 @@ import {
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
 import { DisplayQuizLaunchSpectacle } from "@/components/display/DisplayQuizLaunchSpectacle";
+import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
 import {
   QUIZ_ANSWER_LETTER_CLASS,
   QUIZ_ANSWER_TEXT_CLASS,
   QUIZ_QUESTION_TEXT_CLASS,
   QUIZ_RESULT_LABEL_CLASS,
   QUIZ_RESULT_PERCENT_CLASS,
-  QUIZ_THEME_TITLE_CLASS,
 } from "@/lib/display/quiz-display-typography";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { cn } from "@/lib/utils";
@@ -130,19 +130,17 @@ function ThemeHeaderPanel({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-8 py-3 backdrop-blur-md">
-      <p className="mb-2 text-sm uppercase tracking-[0.22em] text-primary/90">
+      <p className="mb-1 text-sm uppercase tracking-[0.22em] text-primary/90">
         {progressLabel ?? "Prossima manche"}
       </p>
-      {subtitle ? (
-        <p
-          className={cn(
-            QUIZ_READABLE,
-            "line-clamp-2 text-[24px] text-white/80",
-          )}
-        >
-          {subtitle}
-        </p>
-      ) : null}
+      <p
+        className={cn(
+          QUIZ_READABLE,
+          "line-clamp-2 text-[22px] text-white/75",
+        )}
+      >
+        {subtitle ?? "Nuova manche"}
+      </p>
     </div>
   );
 }
@@ -287,36 +285,23 @@ function AnswerOptions({
   );
 }
 
-function ThemeCenter({ title }: { title: string }) {
+function ThemeCenter({
+  title,
+  subtitle,
+  category,
+}: {
+  title: string;
+  subtitle?: string;
+  category?: string | null;
+}) {
   return (
-    <div className="relative flex h-full min-h-0 items-center justify-center px-4">
-      {[0, 1, 2].map((ring) => (
-        <motion.div
-          key={ring}
-          className="pointer-events-none absolute left-1/2 top-1/2 size-[min(70%,420px)] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary/35"
-          initial={{ scale: 0.5, opacity: 0.65 }}
-          animate={{ scale: 1.65, opacity: 0 }}
-          transition={{
-            duration: 2.6,
-            repeat: Infinity,
-            delay: ring * 0.7,
-            ease: "easeOut",
-          }}
-          aria-hidden
-        />
-      ))}
-      <div className="relative z-10 w-full max-w-4xl rounded-2xl border border-white/15 bg-black/55 px-10 py-14 text-center backdrop-blur-md shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
-        <motion.p
-          className={cn(QUIZ_THEME_TITLE_CLASS, "text-center")}
-          style={{ textShadow: "0 2px 24px rgba(0,0,0,0.9)" }}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-        >
-          {title}
-        </motion.p>
-      </div>
-    </div>
+    <DisplayThemeSlide
+      title={title}
+      subtitle={subtitle}
+      category={category}
+      kicker="Manche"
+      className="h-full"
+    />
   );
 }
 
@@ -565,12 +550,15 @@ export function DisplayQuizStage({
       <DisplayQuizGameLayout
         centerKey={`theme-${quizState.currentIndex}`}
         header={
-          <ThemeHeaderPanel
-            progressLabel={progressLabel}
+          <ThemeHeaderPanel progressLabel={progressLabel} />
+        }
+        center={
+          <ThemeCenter
+            title={theme.title}
             subtitle={theme.subtitle}
+            category={currentQuestion?.category}
           />
         }
-        center={<ThemeCenter title={theme.title} />}
         footerCountdown={null}
         heartProgress={heartProgress}
       />
