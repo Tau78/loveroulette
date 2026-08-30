@@ -5,6 +5,7 @@ import { CasaProjector } from "@/components/admin/casa/CasaProjector";
 import type { CasaSpotlight } from "@/components/admin/casa/CasaPlayerSpotlight";
 import { CasaPrep } from "@/components/admin/casa/CasaPrep";
 import { CasaQuestions } from "@/components/admin/casa/CasaQuestions";
+import { CasaSocialPanel } from "@/components/admin/casa/social/CasaSocialPanel";
 import { CasaLayoutBar } from "@/components/admin/casa/widgets/CasaLayoutBar";
 import { CasaWidgetDeck } from "@/components/admin/casa/widgets/CasaWidgetDeck";
 import { CasaWidgetGallery } from "@/components/admin/casa/widgets/CasaWidgetGallery";
@@ -163,6 +164,7 @@ type Panel =
   | "screen"
   | "gear"
   | "clock"
+  | "social"
   | null;
 
 const AVATAR_M = "/grafiche/avatar-m.png";
@@ -1933,6 +1935,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                             ? "Domande"
                             : open === "prep"
                               ? "Preparazione evento"
+                            : open === "social"
+                              ? "Contenuti social"
                             : open === "msg"
                             ? "Messaggi"
                             : open === "screen"
@@ -2014,6 +2018,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                     <button type="button" className="casa-hit" onClick={() => setOpen("gear")}>
                       Slide e sigla
                     </button>
+                    <button type="button" className="casa-hit" onClick={() => setOpen("social")}>
+                      Contenuti social
+                    </button>
                     <button type="button" className="casa-hit" onClick={() => setOpen("screen")}>
                       Schermi
                     </button>
@@ -2029,6 +2036,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
             {open === "questions" ? <CasaQuestions eventCode={eventCode} /> : null}
             {open === "prep" ? <CasaPrep prep={prep} onChange={patchPrep} /> : null}
+            {open === "social" ? (
+              <CasaSocialPanel prep={prep} slides={slides} />
+            ) : null}
 
             {open === "clock" ? (
               <div className="casa-clock-panel">

@@ -2989,3 +2989,136 @@ html.casa-native-chrome .casa {
   color: var(--green);
   font-variant-numeric: tabular-nums;
 }
+
+/* Contenuti social */
+.casa-social {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 8px;
+}
+
+.casa-social-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.casa-social-toast {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.casa-social-err {
+  color: #ff8a9a;
+}
+
+.casa-social-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.casa-social-row {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 12px;
+}
+
+.casa-social-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.casa-social-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.casa-social-miss {
+  color: #ffb86c;
+}
+
+.casa-social-aspects {
+  display: flex;
+  gap: 6px;
+}
+
+.casa-social-aspect-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.casa-social-row-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .casa-social-row-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.casa-social-preview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0d0d12;
+  flex-shrink: 0;
+}
+
+.casa-social-preview-empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--dim);
+}
+
+.casa-social-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.casa-social-caption {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.casa-social-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
