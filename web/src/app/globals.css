@@ -235,6 +235,20 @@
   color: var(--muted-foreground);
 }
 
+/* Admin console: WKWebView containing block so Casa cannot collapse to 0. */
+html.admin-console-root {
+  height: 100%;
+  height: -webkit-fill-available;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
+}
+
+html.admin-console-root body.admin-console {
+  height: 100%;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
+}
+
 /* ── Pannello animatore: Geist (stesso stack di Cursor) ── */
 .admin-console {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,

@@ -8,7 +8,13 @@
   --yellow: #f5c84b;
   --red: #ff5a5f;
   --blue: #4da3ff;
-  height: 100dvh;
+  /* Viewport floor: 100dvh can be 0/tiny in iOS WKWebView (keyboard / first layout). */
+  height: 100%;
+  height: -webkit-fill-available;
+  min-height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  min-height: 100svh;
   width: 100vw;
   overflow: hidden;
   display: grid;

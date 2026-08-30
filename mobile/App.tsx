@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +18,7 @@ import { WebView } from "react-native-webview";
 const DEFAULT_HOST = "https://loveroulette.vercel.app";
 const STORAGE_HOST = "lr.plancia.host";
 const STORAGE_CODE = "lr.plancia.code";
+const CASA_BG = "#1a1d24";
 
 function normalizeHost(raw: string): string {
   const trimmed = raw.trim().replace(/\/$/, "");
@@ -29,11 +31,22 @@ function normalizeCode(raw: string): string {
   return raw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
 }
 
+function waitForKeyboardDown(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      setTimeout(resolve, 80);
+    });
+  });
+}
+
 export function App() {
   const [host, setHost] = useState(DEFAULT_HOST);
   const [code, setCode] = useState("");
   const [opened, setOpened] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [webError, setWebError] = useState<string | null>(null);
+  const [webLoading, setWebLoading] = useState(true);
+  const webRef = useRef<WebView>(null);
   useKeepAwake();
 
   useEffect(() => {
@@ -63,14 +76,30 @@ export function App() {
     const nextHost = normalizeHost(host);
     const nextCode = normalizeCode(code);
     if (nextCode.length < 3) return;
+    Keyboard.dismiss();
     setHost(nextHost);
     setCode(nextCode);
     await AsyncStorage.multiSet([
       [STORAGE_HOST, nextHost],
       [STORAGE_CODE, nextCode],
     ]);
+    await waitForKeyboardDown();
+    setWebError(null);
+    setWebLoading(true);
     setOpened(`${nextHost}\0${nextCode}`);
   }, [code, host]);
+
+  const retryLoad = useCallback(() => {
+    setWebError(null);
+    setWebLoading(true);
+    webRef.current?.reload();
+  }, []);
+
+  const closeDashboard = useCallback(() => {
+    setOpened(null);
+    setWebError(null);
+    setWebLoading(true);
+  }, []);
 
   if (!ready) {
     return <View style={styles.boot} />;
@@ -81,6 +110,7 @@ export function App() {
       <View style={styles.webRoot}>
         <StatusBar hidden style="light" />
         <WebView
+          ref={webRef}
           source={{ uri: adminUrl }}
           style={styles.web}
           allowsInlineMediaPlayback
@@ -92,9 +122,53 @@ export function App() {
           allowsFullscreenVideo
           cacheEnabled={false}
           decelerationRate="normal"
+          hideKeyboardAccessoryView
+          keyboardDisplayRequiresUserAction={false}
+          automaticallyAdjustContentInsets={false}
+          contentInsetAdjustmentBehavior="never"
+          startInLoadingState
+          renderLoading={() => (
+            <View style={styles.webCover} pointerEvents="none">
+              <Text style={styles.webCoverText}>Apro la plancia…</Text>
+            </View>
+          )}
+          onLoadEnd={() => setWebLoading(false)}
+          onError={(event) => {
+            const failedUrl = event.nativeEvent.url || adminUrl;
+            setWebLoading(false);
+            setWebError(`Non riesco ad aprire la plancia.\n${failedUrl}`);
+          }}
+          onHttpError={(event) => {
+            const { statusCode, url } = event.nativeEvent;
+            const failedUrl = url || adminUrl;
+            const isPlancia =
+              failedUrl === adminUrl || /\/admin\/[^/]+\/serata/.test(failedUrl);
+            if (!isPlancia) return;
+            setWebLoading(false);
+            setWebError(
+              `Errore HTTP ${statusCode}. Non riesco ad aprire la plancia.\n${failedUrl}`,
+            );
+          }}
         />
+        {webError ? (
+          <View style={styles.webCover}>
+            <Text style={styles.webCoverText}>{webError}</Text>
+            <Pressable
+              onPress={retryLoad}
+              style={styles.retry}
+              accessibilityRole="button"
+              accessibilityLabel="Riprova"
+            >
+              <Text style={styles.retryText}>Riprova</Text>
+            </Pressable>
+          </View>
+        ) : webLoading ? (
+          <View style={styles.webCover} pointerEvents="none">
+            <Text style={styles.webCoverText}>Apro la plancia…</Text>
+          </View>
+        ) : null}
         <Pressable
-          onPress={() => setOpened(null)}
+          onPress={closeDashboard}
           style={styles.back}
           accessibilityRole="button"
           accessibilityLabel="Cambia serata"
@@ -134,6 +208,7 @@ export function App() {
             style={styles.input}
             returnKeyType="go"
             onSubmitEditing={() => void openDashboard()}
+            blurOnSubmit
           />
 
           <Text style={styles.label}>Host web</Text>
@@ -148,6 +223,8 @@ export function App() {
             placeholder={DEFAULT_HOST}
             placeholderTextColor="#6b6b7a"
             style={styles.input}
+            onSubmitEditing={() => void openDashboard()}
+            blurOnSubmit
           />
 
           <Pressable
@@ -211,8 +288,43 @@ const styles = StyleSheet.create({
   ctaDisabled: { opacity: 0.4 },
   ctaPressed: { opacity: 0.85 },
   ctaText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
-  webRoot: { flex: 1, backgroundColor: "#0D0D12" },
-  web: { flex: 1, backgroundColor: "#0D0D12" },
+  webRoot: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    backgroundColor: CASA_BG,
+  },
+  web: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    backgroundColor: CASA_BG,
+  },
+  webCover: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: CASA_BG,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+    gap: 16,
+  },
+  webCoverText: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  retry: {
+    minHeight: 48,
+    minWidth: 160,
+    borderRadius: 16,
+    backgroundColor: "#E91E8C",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  retryText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
   back: {
     position: "absolute",
     top: 10,

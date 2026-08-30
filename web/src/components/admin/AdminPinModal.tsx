@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AdminButton } from "@/components/admin/AdminButton";
 import {
@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  useVisualViewportRect,
+  visualViewportOverlayStyle,
+} from "@/hooks/useVisualViewportRect";
 
 interface AdminPinModalProps {
   open: boolean;
@@ -28,6 +32,8 @@ export function AdminPinModal({
 }: AdminPinModalProps) {
   const [value, setValue] = useState("");
   const titleId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const viewport = useVisualViewportRect(open);
 
   useEffect(() => {
     if (!open) return;
@@ -40,19 +46,43 @@ export function AdminPinModal({
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    let timeoutId = 0;
+    const raf = requestAnimationFrame(() => {
+      timeoutId = window.setTimeout(() => {
+        const field =
+          inputRef.current ??
+          document.getElementById("animator-pin");
+        if (field instanceof HTMLInputElement) {
+          field.focus({ preventScroll: true });
+        }
+      }, 80);
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timeoutId);
+    };
+  }, [open]);
+
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center">
+    <div
+      className="z-[120] box-border flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm"
+      style={visualViewportOverlayStyle(viewport)}
+    >
       <Card
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-sm border-primary/20 bg-card/95 shadow-2xl shadow-primary/10"
+        className="w-full max-w-sm max-h-full overflow-y-auto border-primary/20 bg-card text-white shadow-2xl shadow-primary/10"
       >
         <CardHeader>
           <CardTitle id={titleId}>Accesso animatore</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-white/80">
             Inserisci il PIN della serata per gestire fasi e proiettore.
           </CardDescription>
         </CardHeader>
@@ -67,14 +97,15 @@ export function AdminPinModal({
             <div className="space-y-2">
               <Label htmlFor="animator-pin">PIN animatore</Label>
               <Input
+                ref={inputRef}
                 id="animator-pin"
                 type="password"
                 inputMode="numeric"
                 autoComplete="off"
-                autoFocus
                 placeholder="••••••"
                 value={value}
                 disabled={verifying}
+                className="bg-white/10 text-white"
                 onChange={(event) => setValue(event.target.value)}
               />
             </div>

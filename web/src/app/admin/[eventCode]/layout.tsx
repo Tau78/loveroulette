@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useLayoutEffect, type ReactNode } from "react";
 
 /** Regia animatore: viewport fisso, zero scroll pagina. */
 export default function AdminEventLayout({ children }: { children: ReactNode }) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     const html = document.documentElement;
     const body = document.body;
     html.classList.add("admin-console-root");
