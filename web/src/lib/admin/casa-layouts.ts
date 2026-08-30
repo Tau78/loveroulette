@@ -62,8 +62,8 @@ export const CANVAS_WIDTH = 1200;
 export const CANVAS_HEIGHT = 700;
 export const WIDGET_MIN_W = 120;
 export const WIDGET_MIN_H = 80;
-/** Header-only height when a widget is collapsed. */
-export const WIDGET_COLLAPSED_H = 36;
+/** Header-only height when a widget is collapsed (fascia caption). */
+export const WIDGET_COLLAPSED_H = 22;
 
 /** Canonical list — gallery / registry must cover every entry. */
 export const ALL_WIDGET_TYPES: readonly CasaWidgetType[] = [

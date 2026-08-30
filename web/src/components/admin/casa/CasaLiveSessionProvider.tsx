@@ -107,7 +107,7 @@ export function CasaLiveSessionProvider({
         );
 
         if (!response.ok) {
-          throw new Error("Serata non trovata.");
+          throw new Error("Evento non trovato.");
         }
 
         const payload = (await response.json()) as LoveRouletteEvent;

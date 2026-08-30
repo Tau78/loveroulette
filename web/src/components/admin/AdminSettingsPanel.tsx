@@ -111,7 +111,7 @@ export function AdminSettingsPanel({
     <AdminPanelShell
       variant={variant}
       title="Impostazioni"
-      cardDescription="Preferenze serata visibili ai giocatori in tempo reale."
+      cardDescription="Preferenze evento visibili ai giocatori in tempo reale."
       panelId="impostazioni-serata"
     >
       <SettingsSwitch

@@ -40,7 +40,7 @@ export default function Home() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Sparkles className="size-4 text-primary" />
-              Demo serata
+              Demo evento
             </CardTitle>
             <CardDescription>
               Prototipo UI — stesso Supabase MusicPro in convergenza
@@ -64,7 +64,7 @@ export default function Home() {
             </Link>
             <Link href="/admin/DEMO01/serata">
               <Button size="lg" className="w-full h-12 text-base">
-                Plancia serata
+                Plancia evento
               </Button>
             </Link>
             <Link href="/admin/plancia">

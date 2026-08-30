@@ -134,7 +134,7 @@ html.casa-native-chrome .casa {
     font-size: 11px;
   }
 
-  /* Vecchia app: overlay nativo "Serata" in alto a sinistra. */
+  /* Vecchia app: overlay nativo "Evento" in alto a sinistra. */
   html:not(.casa-native-chrome) .casa-top-sala {
     padding-left: 76px;
   }
@@ -1920,9 +1920,13 @@ html.casa-native-chrome .casa {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  flex: 0 0 auto;
-  padding: 10px 12px 4px;
+  gap: 4px;
+  flex: 0 0 20px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0 4px 0 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
   cursor: inherit;
   user-select: none;
   -webkit-user-select: none;
@@ -1931,16 +1935,17 @@ html.casa-native-chrome .casa {
 
 .casa-w[data-collapsed="1"] .casa-w-head {
   height: 100%;
-  padding: 0 8px 0 12px;
-  box-sizing: border-box;
+  flex-basis: 100%;
+  padding: 0 6px 0 8px;
+  border-bottom: 0;
 }
 
 .casa-w[data-edit="1"] .casa-w-head {
-  padding-left: 36px;
+  padding-left: 26px;
 }
 
 .casa-w[data-edit="1"][data-collapsed="1"] .casa-w-head {
-  padding-left: 36px;
+  padding-left: 26px;
 }
 
 .casa-w-head-actions {
@@ -1954,8 +1959,8 @@ html.casa-native-chrome .casa {
 .casa-w-collapse {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -1990,9 +1995,14 @@ html.casa-native-chrome .casa {
 }
 
 .casa-w-title {
-  font-size: 10px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
+  line-height: 20px;
   text-transform: uppercase;
   color: var(--dim);
   user-select: none;
@@ -2005,9 +2015,9 @@ html.casa-native-chrome .casa {
   border: 0;
   background: none;
   font: inherit;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--dim);
   cursor: pointer;
@@ -2037,12 +2047,22 @@ html.casa-native-chrome .casa {
 
 .casa-w-body {
   flex: 1;
+  min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 4px 12px 12px;
+  padding: 4px 6px 6px;
   scrollbar-width: thin;
+  container-type: size;
+  display: flex;
+  flex-direction: column;
+}
+
+.casa-w-body > * {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
 }
 
 .casa-w-body::-webkit-scrollbar {
@@ -2057,6 +2077,97 @@ html.casa-native-chrome .casa {
 
 .casa-w-body::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.36);
+}
+
+.casa-w-grip {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  z-index: 4;
+  width: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0 8px 8px 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.16),
+    rgba(255, 255, 255, 0.02)
+  );
+  cursor: grab;
+  touch-action: none;
+}
+
+.casa-w-grip:active {
+  cursor: grabbing;
+}
+
+.casa-w[data-bare="1"] {
+  background: transparent;
+}
+
+.casa-w[data-bare="1"] .casa-w-body {
+  padding: 0;
+  overflow: hidden;
+}
+
+.casa-w[data-bare="1"] .casa-go {
+  margin: 0;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  border-radius: 14px;
+  font-size: clamp(13px, 28cqh, 34px);
+}
+
+.casa-w-body .casa-mix,
+.casa-w-body .casa-audio-route {
+  flex: 1 1 0;
+  min-height: 0;
+  font-size: clamp(8px, 12cqh, 11px);
+}
+
+.casa-w-body .casa-mix {
+  min-height: 18px;
+  gap: 6px;
+  grid-template-columns: minmax(3.2rem, 5.6rem) 1fr 22px;
+}
+
+.casa-w-body .casa-pad {
+  height: 100%;
+  gap: clamp(4px, 2cqh, 8px);
+}
+
+.casa-w-body .casa-pad-btn {
+  font-size: clamp(7px, 9cqh, 12px);
+  padding: clamp(2px, 1.5cqh, 6px);
+  border-radius: clamp(6px, 2cqh, 12px);
+}
+
+.casa-w-body .casa-roster {
+  height: 100%;
+  align-content: stretch;
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+.casa-w-body .casa-roster .casa-face {
+  width: clamp(22px, 28cqh, 40px);
+  height: clamp(22px, 28cqh, 40px);
+}
+
+.casa-w-body .casa-slot-nick {
+  font-size: clamp(8px, 8cqh, 12px);
+}
+
+.casa-w-body .casa-list,
+.casa-w-body .casa-people,
+.casa-w-body .casa-clock-widget {
+  overflow: auto;
+}
+
+.casa-w-body .casa-clock-widget {
+  font-size: clamp(10px, 14cqh, 16px);
 }
 
 .casa-w-jiggle {
@@ -2082,10 +2193,10 @@ html.casa-native-chrome .casa {
 .casa-w-remove {
   position: absolute;
   z-index: 4;
-  top: 6px;
-  left: 6px;
-  width: 26px;
-  height: 26px;
+  top: 1px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
   border: 0;
   border-radius: 99px;
   font: inherit;
@@ -2592,7 +2703,7 @@ html.casa-native-chrome .casa {
 .casa-w-body .casa-go {
   width: 100%;
   height: 100%;
-  min-height: 56px;
+  min-height: 0;
 }
 
 /* —— live widgets quiz/transport —— */
@@ -2844,7 +2955,7 @@ html.casa-native-chrome .casa {
 }
 .casa-conductor-local .casa-go {
   flex: 1;
-  min-height: 48px;
+  min-height: 0;
 }
 .casa-conductor-pin {
   width: 100%;

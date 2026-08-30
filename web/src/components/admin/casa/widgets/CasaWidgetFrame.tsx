@@ -15,6 +15,8 @@ type Props = {
   onPointerDownResize?: (e: PointerEvent<HTMLElement>) => void;
   /** Live mode: tap title to open expand panel */
   onTitleClick?: () => void;
+  /** AVANTI: no chrome, the whole card is the action. */
+  hideHeader?: boolean;
   children: ReactNode;
   className?: string;
   warning?: string;
@@ -31,10 +33,12 @@ export function CasaWidgetFrame({
   onPointerDownDrag,
   onPointerDownResize,
   onTitleClick,
+  hideHeader = false,
   children,
   className,
   warning,
 }: Props) {
+  const bare = hideHeader && !collapsed;
   const classes = [
     "casa-w",
     edit && !resizing ? "casa-w-jiggle" : null,
@@ -51,6 +55,7 @@ export function CasaWidgetFrame({
       data-size={size}
       data-collapsed={collapsed ? "1" : "0"}
       data-resizing={resizing ? "1" : undefined}
+      data-bare={bare ? "1" : undefined}
     >
       {edit ? (
         <button
@@ -65,6 +70,20 @@ export function CasaWidgetFrame({
         >
           −
         </button>
+      ) : null}
+
+      {edit && bare ? (
+        <button
+          type="button"
+          className="casa-w-grip"
+          aria-label={`Sposta ${title}`}
+          title="Trascina per spostare"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onPointerDownDrag?.(e);
+          }}
+        />
       ) : null}
 
       {edit && !collapsed ? (
@@ -98,6 +117,7 @@ export function CasaWidgetFrame({
         </button>
       ) : null}
 
+      {bare ? null : (
       <header
         className="casa-w-head"
         onPointerDown={edit ? onPointerDownDrag : undefined}
@@ -147,6 +167,7 @@ export function CasaWidgetFrame({
           </button>
         </div>
       </header>
+      )}
 
       {!collapsed ? (
         <div className="casa-w-body">{children}</div>

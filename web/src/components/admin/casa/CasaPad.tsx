@@ -1530,7 +1530,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             className={`casa-notes-field ${liveOff ?? ""}`}
             value={getNote(notes, w.id)}
             onChange={(e) => commitNotes(setNote(notes, w.id, e.target.value))}
-            placeholder="Note per la serata…"
+            placeholder="Note per l'evento…"
           />
         );
       case "qr_help":
@@ -2379,7 +2379,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             </div>
             {killAsk ? (
               <div className="casa-pop-kill">
-                <p className="casa-sub">Eliminare {picked.nick} dalla serata?</p>
+                <p className="casa-sub">Eliminare {picked.nick} dall'evento?</p>
                 <button type="button" className="casa-hit" onClick={() => setKillAsk(false)}>
                   Annulla
                 </button>

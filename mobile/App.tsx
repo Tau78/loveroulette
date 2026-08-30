@@ -103,9 +103,9 @@ function WebPlancia({
           }}
           style={styles.back}
           accessibilityRole="button"
-          accessibilityLabel="Cambia serata"
+          accessibilityLabel="Cambia evento"
         >
-          <Text style={styles.backText}>Serata</Text>
+          <Text style={styles.backText}>Evento</Text>
         </Pressable>
       </View>
       <WebView
@@ -274,10 +274,10 @@ export function App() {
           <Text style={styles.kicker}>Love Roulette</Text>
           <Text style={styles.title}>Plancia animatore</Text>
           <Text style={styles.lead}>
-            Stesso host di proiettore e telefoni. Poi il PIN della serata.
+            Stesso host di proiettore e telefoni. Poi il PIN dell'evento.
           </Text>
 
-          <Text style={styles.label}>Codice serata</Text>
+          <Text style={styles.label}>Codice evento</Text>
           <TextInput
             value={code}
             onChangeText={(value) => setCode(normalizeCode(value))}

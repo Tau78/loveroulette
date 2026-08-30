@@ -317,7 +317,7 @@ export function AdminPlayersManager({
         title="Elimina giocatore"
         description={
           pendingDeletePlayer
-            ? `Rimuovere ${pendingDeletePlayer.nickname} dalla serata? L'azione non è reversibile.`
+            ? `Rimuovere ${pendingDeletePlayer.nickname} dall'evento? L'azione non è reversibile.`
             : ""
         }
         confirmLabel="Elimina"

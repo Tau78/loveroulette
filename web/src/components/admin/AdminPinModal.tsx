@@ -83,7 +83,7 @@ export function AdminPinModal({
         <CardHeader>
           <CardTitle id={titleId}>Accesso animatore</CardTitle>
           <CardDescription className="text-white/80">
-            Inserisci il PIN della serata per gestire fasi e proiettore.
+            Inserisci il PIN dell'evento per gestire fasi e proiettore.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

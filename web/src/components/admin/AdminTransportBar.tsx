@@ -413,7 +413,7 @@ export function AdminTransportBar({
           disabled={primaryDisabled || !primaryAction}
           onClick={() => primaryAction?.()}
         >
-          {primaryAction ? primaryLabel : "Serata chiusa"}
+          {primaryAction ? primaryLabel : "Evento chiuso"}
         </button>
         {error ? (
           <p className="casa-sub casa-conductor-note" title={error}>
@@ -436,7 +436,7 @@ export function AdminTransportBar({
       {primaryLabel}
     </AdminButton>
   ) : (
-    <span className={cn(ADMIN_UI.caption, "font-medium")}>Serata chiusa</span>
+    <span className={cn(ADMIN_UI.caption, "font-medium")}>Evento chiuso</span>
   );
 
   if (variant === "footer") {

@@ -22,7 +22,7 @@ export default function PrivacyPage() {
         <p className="text-[#A0A0B0]">Ultimo aggiornamento: 27 agosto 2026</p>
 
         <p>
-          Love Roulette è una plancia per l’animatore di una serata live in
+          Love Roulette è una plancia per l’animatore di un evento live in
           sala. Non è un casinò e non è un gioco d’azzardo. Comanda quiz,
           proiettore e telefoni dei partecipanti.
         </p>
@@ -35,18 +35,18 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-semibold text-white pt-2">App iPhone e iPad</h2>
         <p>
-          L’app apre la dashboard web della serata. Sul dispositivo restano
-          solo il codice serata e l’indirizzo del sito, per non riscriverli
+          L’app apre la dashboard web dell’evento. Sul dispositivo restano
+          solo il codice evento e l’indirizzo del sito, per non riscriverli
           ogni volta. Non creiamo un account Apple o un profilo utente
           nell’app. Non c’è registrazione, non c’è “Elimina account”.
         </p>
 
-        <h2 className="text-xl font-semibold text-white pt-2">Sito della serata</h2>
+        <h2 className="text-xl font-semibold text-white pt-2">Sito dell'evento</h2>
         <p>
           Proiettore e telefoni usano lo stesso sito. L’animatore sblocca la
-          dashboard con il PIN della serata. I partecipanti che entrano dal
+          dashboard con il PIN dell'evento. I partecipanti che entrano dal
           telefono possono lasciare un soprannome e le risposte al quiz di
-          quella serata. Servono solo a far girare il gioco in sala.
+          quell'evento. Servono solo a far girare il gioco in sala.
         </p>
 
         <h2 className="text-xl font-semibold text-white pt-2">Cosa non facciamo</h2>
@@ -60,8 +60,8 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-semibold text-white pt-2">Conservazione</h2>
         <p>
-          Codice serata e host restano sul dispositivo finché non li cambi o
-          disinstalli l’app. I dati della serata restano sul backend finché
+          Codice evento e host restano sul dispositivo finché non li cambi o
+          disinstalli l’app. I dati dell'evento restano sul backend finché
           l’organizzatore tiene aperto l’evento.
         </p>
 
@@ -73,7 +73,7 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-semibold text-white pt-2">Bambini</h2>
         <p>
-          L’app è per chi conduce una serata per adulti. Non raccogliamo
+          L’app è per chi conduce un evento per adulti. Non raccogliamo
           dati di minori di proposito.
         </p>
 

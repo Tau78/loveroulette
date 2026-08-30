@@ -144,7 +144,7 @@ export function CasaPrep({ prep, onChange }: Props) {
         ) : null}
       </div>
       <div className="casa-setup-row">
-        <span>Stile serata</span>
+        <span>Stile evento</span>
         <div className="casa-secs">
           {STILE.map((s) => (
             <button

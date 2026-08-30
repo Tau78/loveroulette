@@ -60,7 +60,7 @@ export default async function EventJoinPage({
             Love Roulette
           </p>
           <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-            {event?.title ?? "Serata non trovata"}
+            {event?.title ?? "Evento non trovato"}
           </h1>
           {event ? (
             <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
@@ -78,7 +78,7 @@ export default async function EventJoinPage({
             <p className="text-muted-foreground text-base leading-relaxed max-w-sm mx-auto">
               Il codice{" "}
               <span className="font-mono text-foreground/90">{displayCode}</span>{" "}
-              non corrisponde a nessuna serata attiva.
+              non corrisponde a nessun evento attivo.
             </p>
           )}
         </div>
@@ -91,7 +91,7 @@ export default async function EventJoinPage({
                 Sei pronto?
               </CardTitle>
               <CardDescription className="text-base">
-                Entra in sala o pre-registrati prima della serata.
+                Entra in sala o pre-registrati prima dell'evento.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">

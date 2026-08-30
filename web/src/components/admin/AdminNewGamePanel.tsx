@@ -114,8 +114,8 @@ export function AdminNewGamePanel({
         title="Confermi reset?"
         description={
           clearParticipants
-            ? "La serata torna in lobby e tutti gli iscritti verranno rimossi."
-            : "La serata torna in lobby. I giocatori restano in lista ma segnati offline."
+            ? "L'evento torna in lobby e tutti gli iscritti verranno rimossi."
+            : "L'evento torna in lobby. I giocatori restano in lista ma segnati offline."
         }
         confirmLabel="Reset"
         variant="warning"

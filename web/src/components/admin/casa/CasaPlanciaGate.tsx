@@ -19,7 +19,7 @@ export function CasaPlanciaGate({ eventCode }: { eventCode: string }) {
       ) : (
         <div className="casa-pin-wait" aria-busy="true">
           {loading
-            ? "Carico la serata…"
+            ? "Carico l'evento…"
             : "Inserisci il PIN per aprire la plancia."}
         </div>
       )}

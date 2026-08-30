@@ -121,7 +121,7 @@ export function AdminPreflightPanel({
     <AdminPanelShell
       variant={variant}
       title="Preflight"
-      cardTitle="Checklist pre-serata"
+      cardTitle="Checklist pre-evento"
       cardDescription={
         allGreen
           ? "Tutti i check verdi — pronto per iniziare"

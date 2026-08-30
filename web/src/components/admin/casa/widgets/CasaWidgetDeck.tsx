@@ -358,6 +358,7 @@ export function CasaWidgetDeck({
                   title={WIDGET_LABELS[w.type]}
                   size={w.size}
                   collapsed={Boolean(w.collapsed)}
+                  hideHeader={w.type === "avanti"}
                   resizing={isResizing}
                   onRemove={() => removeWidget(w.id)}
                   onToggleCollapse={() => toggleCollapse(w.id)}
