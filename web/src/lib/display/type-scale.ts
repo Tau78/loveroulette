@@ -1,15 +1,19 @@
 /**
  * Scale tipografiche Schermo (proiettore) e Plancia (Casa).
- * Default schermo 1.2 (= +20% rispetto al design).
+ * Default schermo 1.8 (= +50% rispetto al default precedente 1.2).
+ * Default plancia 1.5 (= +50% rispetto a 1).
  * Cambiare i default qui oppure dalle Impostazioni.
  */
 
-export const DISPLAY_TYPE_SCALE_DEFAULT = 1.2 as const;
-export const PLANCIA_TYPE_SCALE_DEFAULT = 1 as const;
+export const DISPLAY_TYPE_SCALE_DEFAULT = 1.8 as const;
+export const PLANCIA_TYPE_SCALE_DEFAULT = 1.5 as const;
+
+export const TYPE_SCALE_MIN = 0.8 as const;
+export const TYPE_SCALE_MAX = 2 as const;
 
 /** Valori selezionabili nello stepper impostazioni. */
 export const TYPE_SCALE_PRESETS = [
-  0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5,
+  0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2,
 ] as const;
 
 export type TypeScalePreset = (typeof TYPE_SCALE_PRESETS)[number];
@@ -28,12 +32,12 @@ export const DEFAULT_TYPE_SCALE_PREFS: TypeScalePrefs = {
 };
 
 const storageKey = (eventCode: string) =>
-  `lr_type_scale_${eventCode.toUpperCase()}`;
+  `lr_type_scale_v2_${eventCode.toUpperCase()}`;
 
 export function clampTypeScale(value: number): number {
   if (!Number.isFinite(value)) return DISPLAY_TYPE_SCALE_DEFAULT;
   const rounded = Math.round(value * 10) / 10;
-  return Math.min(1.5, Math.max(0.8, rounded));
+  return Math.min(TYPE_SCALE_MAX, Math.max(TYPE_SCALE_MIN, rounded));
 }
 
 export function snapTypeScale(value: number): TypeScalePreset {

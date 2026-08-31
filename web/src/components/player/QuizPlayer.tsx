@@ -199,10 +199,10 @@ export function QuizPlayer({
     phaseContent = (
       <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardContent className="py-10 text-center">
-          <p className="text-4xl font-bold tabular-nums text-primary">
+          <p className="text-6xl font-bold tabular-nums text-primary">
             {remaining}
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">Il quiz sta per iniziare</p>
+          <p className="mt-2 text-base text-muted-foreground">Il quiz sta per iniziare</p>
         </CardContent>
       </Card>
     );
@@ -218,7 +218,7 @@ export function QuizPlayer({
     phaseContent = (
       <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardContent className="py-10 text-center">
-          <p className="font-display text-lg font-semibold text-muted-foreground">
+          <p className="font-display text-[1.7rem] font-semibold text-muted-foreground">
             {PLAYER_NEXT_QUESTION}
           </p>
         </CardContent>
@@ -235,14 +235,14 @@ export function QuizPlayer({
     phaseContent = (
       <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardContent className="py-8 text-center space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">
+          <p className="text-sm uppercase tracking-[0.2em] text-primary font-semibold">
             {PLAYER_MANCHE_KICKER}
           </p>
-          <p className="text-2xl font-display font-bold text-foreground">
+          <p className="text-4xl font-display font-bold text-foreground">
             {theme?.title ?? PLAYER_MANCHE_KICKER}
           </p>
           {theme?.subtitle ? (
-            <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+            <p className="text-base text-muted-foreground max-w-xs mx-auto">
               {theme.subtitle}
             </p>
           ) : null}
@@ -293,7 +293,7 @@ export function QuizPlayer({
       <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardHeader className="pb-2">
           <CardDescription>{progressLabel}</CardDescription>
-          <CardTitle className="text-xl leading-snug">
+          <CardTitle className="text-3xl leading-snug">
             {currentQuestion.body}
           </CardTitle>
         </CardHeader>
@@ -348,7 +348,7 @@ export function QuizPlayer({
               {remaining}s
             </span>
           </div>
-          <CardTitle className="text-xl leading-snug">
+          <CardTitle className="text-3xl leading-snug">
             {currentQuestion.body}
           </CardTitle>
         </CardHeader>

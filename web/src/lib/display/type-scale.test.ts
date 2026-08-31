@@ -9,11 +9,11 @@ import {
 
 describe("type-scale prefs", () => {
   it("exposes distinct defaults for schermo and plancia", () => {
-    expect(DISPLAY_TYPE_SCALE_DEFAULT).toBe(1.2);
-    expect(PLANCIA_TYPE_SCALE_DEFAULT).toBe(1);
+    expect(DISPLAY_TYPE_SCALE_DEFAULT).toBe(1.8);
+    expect(PLANCIA_TYPE_SCALE_DEFAULT).toBe(1.5);
     expect(DEFAULT_TYPE_SCALE_PREFS).toEqual({
-      display: 1.2,
-      plancia: 1,
+      display: 1.8,
+      plancia: 1.5,
     });
   });
 

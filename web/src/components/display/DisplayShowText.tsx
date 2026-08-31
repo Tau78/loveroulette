@@ -97,8 +97,8 @@ export function DisplayPhaseHero({
             className={cn(
               "font-semibold uppercase text-white/90",
               challengeTitle
-                ? "text-3xl md:text-5xl tracking-[0.38em]"
-                : "text-base md:text-xl tracking-[0.45em]",
+                ? "text-5xl md:text-7xl tracking-[0.38em]"
+                : "text-xl md:text-3xl tracking-[0.45em]",
             )}
             style={{
               textShadow:
@@ -121,7 +121,7 @@ export function DisplayPhaseHero({
                   headlineClassName ?? DISPLAY_CHALLENGE_TITLE_CLASS,
                 )
               : cn(
-                  "text-5xl md:text-7xl lg:text-8xl leading-[1.08] text-transparent bg-clip-text bg-gradient-to-b from-white via-primary to-primary/85 max-w-5xl",
+                  "text-7xl md:text-[6.75rem] lg:text-[9rem] leading-[1.08] text-transparent bg-clip-text bg-gradient-to-b from-white via-primary to-primary/85 max-w-5xl",
                   uppercase && "uppercase",
                   headlineClassName,
                 ),
@@ -156,7 +156,7 @@ export function DisplayPhaseHero({
         {subline ? (
           <motion.p
             className={cn(
-              "text-xl md:text-3xl text-white/85 max-w-3xl leading-relaxed",
+              "text-3xl md:text-[2.8rem] text-white/85 max-w-3xl leading-relaxed",
               uppercase && "uppercase",
               sublineClassName,
             )}

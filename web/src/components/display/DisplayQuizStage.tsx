@@ -206,28 +206,13 @@ function CountdownHeaderPanel() {
 function AnswerRowShell({
   index,
   children,
-  skeleton = false,
 }: {
   index: number;
   children?: ReactNode;
-  skeleton?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "flex min-h-0 items-center rounded-xl border px-5 font-sans backdrop-blur-sm",
-        skeleton
-          ? "border-dashed border-white/20 bg-black/25"
-          : "border-white/15 bg-black/50 text-white",
-      )}
-    >
-      <span
-        className={cn(
-          QUIZ_ANSWER_LETTER_CLASS,
-          "mr-3",
-          skeleton && "text-primary/55",
-        )}
-      >
+    <div className="flex min-h-0 items-center rounded-xl border border-white/15 bg-black/50 px-5 font-sans text-white backdrop-blur-sm">
+      <span className={cn(QUIZ_ANSWER_LETTER_CLASS, "mr-3")}>
         {String.fromCharCode(65 + index)}.
       </span>
       {children}
@@ -235,27 +220,9 @@ function AnswerRowShell({
   );
 }
 
-/** Scheletro A–D vuoto: la domanda è già leggibile, le risposte arrivano al prossimo AVANTI. */
-function AnswerSkeleton() {
-  return (
-    <ul className="grid h-full min-h-0 w-full grid-rows-4 gap-2" aria-hidden>
-      {[0, 1, 2, 3].map((index) => (
-        <li key={index} className="min-h-0">
-          <AnswerRowShell index={index} skeleton>
-            <span className="h-3 w-[42%] rounded-full bg-white/10" />
-          </AnswerRowShell>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
+/** Fase domanda: solo il testo in header. Le A–D arrivano al prossimo AVANTI. */
 function QuestionPhaseCenter() {
-  return (
-    <div className="flex h-full min-h-0 flex-col px-2">
-      <AnswerSkeleton />
-    </div>
-  );
+  return <div className="h-full min-h-0" aria-hidden />;
 }
 
 function AnswerOptions({
