@@ -4,13 +4,14 @@ import { updateLoveRouletteConfig } from "@/lib/musicpro/event-config";
 import { getLoveRouletteEvent } from "@/lib/musicpro/resolve-event";
 import { verifyAnimatorPin } from "@/lib/musicpro/session";
 import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
+import { TYPE_SCALE_MAX, TYPE_SCALE_MIN } from "@/lib/display/type-scale";
 
 const bodySchema = z.object({
   badgeRequired: z.boolean().optional(),
   extractionCount: z.number().int().min(1).max(20).nullable().optional(),
   salvaSec: z.number().int().min(5).max(120).nullable().optional(),
-  displayTypeScale: z.number().min(0.8).max(1.5).nullable().optional(),
-  planciaTypeScale: z.number().min(0.8).max(1.5).nullable().optional(),
+  displayTypeScale: z.number().min(TYPE_SCALE_MIN).max(TYPE_SCALE_MAX).nullable().optional(),
+  planciaTypeScale: z.number().min(TYPE_SCALE_MIN).max(TYPE_SCALE_MAX).nullable().optional(),
 });
 
 export async function PATCH(

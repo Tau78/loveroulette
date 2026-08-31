@@ -41,6 +41,7 @@ import {
   formatRemaining,
   type CreditStatus,
 } from "./src/credits";
+import { shouldAutoReloadAfterCrash } from "./src/webview-crash";
 
 const DEFAULT_HOST = "https://loveroulette.vercel.app";
 const DEFAULT_EVENT_CODE = "DEMO01";
@@ -204,6 +205,27 @@ function WebPlancia({
   const insets = useSafeAreaInsets();
   const insetJs = useMemo(() => safeAreaScript(insets), [insets]);
   const allowed = canRunPlancia(status);
+  const crashReloadsRef = useRef(0);
+
+  const recoverFromCrash = () => {
+    const next = crashReloadsRef.current + 1;
+    crashReloadsRef.current = next;
+    if (!shouldAutoReloadAfterCrash(next - 1)) {
+      setWebLoading(false);
+      setWebError(
+        "La plancia si è chiusa. Tocca Riprova — non ricarico in loop.",
+      );
+      return;
+    }
+    setWebError(null);
+    setWebLoading(true);
+    setTimeout(() => webRef.current?.reload(), 400);
+  };
+
+  const retryFromCover = () => {
+    crashReloadsRef.current = 0;
+    retryLoad();
+  };
 
   return (
     <View style={styles.webRoot}>
@@ -262,17 +284,8 @@ function WebPlancia({
             </View>
           )}
           onLoadEnd={() => setWebLoading(false)}
-          onContentProcessDidTerminate={() => {
-            // iOS uccide il content process (spesso su video) → schermo nero + solo «Evento».
-            setWebError(null);
-            setWebLoading(true);
-            webRef.current?.reload();
-          }}
-          onRenderProcessGone={() => {
-            setWebError(null);
-            setWebLoading(true);
-            webRef.current?.reload();
-          }}
+          onContentProcessDidTerminate={recoverFromCrash}
+          onRenderProcessGone={recoverFromCrash}
           onError={(event) => {
             const failedUrl = event.nativeEvent.url || adminUrl;
             setWebLoading(false);
@@ -310,7 +323,7 @@ function WebPlancia({
         <View style={styles.webCover}>
           <Text style={styles.webCoverText}>{webError}</Text>
           <Pressable
-            onPress={retryLoad}
+            onPress={retryFromCover}
             style={styles.retry}
             accessibilityRole="button"
             accessibilityLabel="Riprova"

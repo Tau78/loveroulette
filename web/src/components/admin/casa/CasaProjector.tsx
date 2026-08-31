@@ -147,9 +147,6 @@ export function CasaProjector({
   const siglaFullscreen = beat === "sigla" && (sigla === "on" || sigla === "hold");
   const mountSigla = siglaFullscreen && shouldMountSiglaVideo(siglaSrc, siglaMissing);
   const mediaVideoOn = Boolean(mediaOnScreen && isVideoMedia(mediaOnScreen));
-  /** Never keep the ambient loop while another video is the hero. */
-  const heroVideoOn = mountSigla || mediaVideoOn;
-  const [bgVideoHeld, setBgVideoHeld] = useState(false);
   const theme = categoryThemeLabel(quizQuestion?.category ?? FALLBACK_QUIZ.category);
   const previewQuizPhase: QuizDisplayPhase | null =
     beat === "quiz"
@@ -166,17 +163,6 @@ export function CasaProjector({
       cancelled = true;
     };
   }, [siglaSrc]);
-
-  useEffect(() => {
-    if (heroVideoOn || beat === "stacco") {
-      setBgVideoHeld(true);
-      return;
-    }
-    const id = window.setTimeout(() => setBgVideoHeld(false), 480);
-    return () => window.clearTimeout(id);
-  }, [heroVideoOn, beat]);
-
-  const suspendBgVideo = heroVideoOn || beat === "stacco" || bgVideoHeld;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -231,7 +217,8 @@ export function CasaProjector({
           hideBackgroundRoulette={
             siglaFullscreen || beat === "stacco" || beat === "quiz" || mediaVideoOn
           }
-          suspendVideo={suspendBgVideo}
+          /* Preview: no ambient mp4. The loop + CSS zoom jetsams iOS WKWebView. */
+          suspendVideo
         />
 
         {help ? (

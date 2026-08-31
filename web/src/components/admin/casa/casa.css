@@ -1,5 +1,10 @@
 html.casa-native-chrome .casa {
   padding-top: 0;
+  /* WKWebView: CSS zoom + layer 150vh uccide il content process (loop TestFlight). */
+  zoom: 1;
+  width: 100%;
+  height: 100%;
+  transform: none;
 }
 
 /* Viewport host (no zoom). Fullscreen target. Always fills the window. */
@@ -88,8 +93,12 @@ html.casa-native-chrome .casa {
   flex-shrink: 0;
 }
 
-.casa-top:has(.casa-top-fs) {
+.casa-top:has(.casa-top-size) {
   grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+}
+
+.casa-top:has(.casa-top-size):has(.casa-top-fs) {
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
 }
 
 .casa-top-mod {
@@ -160,6 +169,34 @@ html.casa-native-chrome .casa {
   text-align: right;
 }
 
+.casa-top-size {
+  gap: 8px;
+  min-width: 132px;
+  max-width: 200px;
+  padding-right: 10px;
+  cursor: default;
+}
+
+.casa-top-size-kicker {
+  flex: 0 0 auto;
+  letter-spacing: 0.06em;
+}
+
+.casa-top-size input[type="range"] {
+  width: 88px;
+  min-width: 72px;
+  flex: 1 1 auto;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+.casa-top-size b {
+  flex: 0 0 3.2ch;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink);
+}
+
 .casa-top-fs {
   width: 36px;
   padding: 4px;
@@ -200,6 +237,16 @@ html.casa-native-chrome .casa {
 
   .casa-top-event {
     font-size: 11px;
+  }
+
+  .casa-top-size {
+    min-width: 110px;
+    max-width: 160px;
+    gap: 6px;
+  }
+
+  .casa-top-size input[type="range"] {
+    width: 64px;
   }
 
   /* Vecchia app: overlay nativo "Evento" in alto a sinistra. */

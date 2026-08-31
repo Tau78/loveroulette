@@ -41,7 +41,10 @@ export function DisplayStageBackground({
   const videoRef = useRef<HTMLVideoElement>(null);
   const reduceMotion = useReducedMotion();
   const phaseConfig = quizPhase ? QUIZ_PHASE_BACKGROUNDS[quizPhase] : null;
-  const showLoopVideo = !reduceMotion && !suspendVideo;
+  const nativeChrome =
+    typeof document !== "undefined" &&
+    document.documentElement.classList.contains("casa-native-chrome");
+  const showLoopVideo = !reduceMotion && !suspendVideo && !nativeChrome;
 
   useEffect(() => {
     const video = videoRef.current;

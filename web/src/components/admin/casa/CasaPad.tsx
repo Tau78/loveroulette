@@ -47,7 +47,11 @@ import {
 } from "@/lib/player/nickname-save";
 import { useTypeScalePrefs } from "@/hooks/useTypeScalePrefs";
 import { useFullscreen } from "@/hooks/useFullscreen";
-import { clampTypeScale } from "@/lib/display/type-scale";
+import {
+  TYPE_SCALE_MAX,
+  TYPE_SCALE_MIN,
+  clampTypeScale,
+} from "@/lib/display/type-scale";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
   DEFAULT_CASA_CLOCK,
@@ -629,6 +633,41 @@ function PadHits({
         </button>
       ))}
     </div>
+  );
+}
+
+function CasaSizeSlider({
+  value,
+  onLive,
+  onCommit,
+}: {
+  value: number;
+  onLive: (n: number) => void;
+  onCommit: (n: number) => void;
+}) {
+  const pct = Math.round(clampTypeScale(value) * 100);
+  return (
+    <label className="casa-top-mod casa-top-size">
+      <span className="casa-top-size-kicker">Dim</span>
+      <input
+        type="range"
+        min={Math.round(TYPE_SCALE_MIN * 100)}
+        max={Math.round(TYPE_SCALE_MAX * 100)}
+        step={10}
+        value={pct}
+        onChange={(e) => onLive(Number(e.target.value) / 100)}
+        onPointerUp={(e) =>
+          onCommit(Number((e.currentTarget as HTMLInputElement).value) / 100)
+        }
+        onKeyUp={() => onCommit(value)}
+        aria-valuemin={Math.round(TYPE_SCALE_MIN * 100)}
+        aria-valuemax={Math.round(TYPE_SCALE_MAX * 100)}
+        aria-valuenow={pct}
+        aria-label="Dimensioni plancia"
+        title="Dimensioni plancia — resta sempre dentro lo schermo"
+      />
+      <b>{pct}%</b>
+    </label>
   );
 }
 
@@ -2251,6 +2290,22 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             <span>Tempo</span>
           ) : null}
         </button>
+
+        <CasaSizeSlider
+          value={typeScale.prefs.plancia}
+          onLive={(n) => typeScale.updatePrefs({ plancia: clampTypeScale(n) })}
+          onCommit={(n) => {
+            const plancia = clampTypeScale(n);
+            typeScale.updatePrefs({ plancia });
+            if (live.pinReady && live.pin) {
+              void patchEventConfig(
+                eventCode,
+                { planciaTypeScale: plancia },
+                live.pin,
+              );
+            }
+          }}
+        />
 
         {fullscreenSupported ? (
           <button
