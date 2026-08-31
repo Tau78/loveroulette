@@ -1005,6 +1005,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     if (beat !== "quiz") setGoBusy(false);
   }, [beat]);
 
+  useEffect(() => {
+    if (open === "questions") return;
+    setPack(loadQuestions(eventCode));
+  }, [open, eventCode]);
+
   const flash = msgQueue[0] ?? null;
 
   useEffect(() => {
