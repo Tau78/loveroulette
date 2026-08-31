@@ -674,12 +674,12 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
   const liveQuizActive =
     live.runtimeState === "quiz" && Boolean(live.quizState);
+  // Backup tick: solo se Auto è acceso in regia (hold restano su AVANTI).
   const { displayPhase: liveQuizPhase, remaining: liveQuizRemaining } =
     useQuizPhaseSync({
       eventSlug: eventCode,
       quizState: live.quizState,
       enabled: liveQuizActive && !live.controlsDisabled,
-      // Backup tick driver (TransportBar also drives when autoplay is on).
       driveTicks:
         liveQuizActive &&
         !live.controlsDisabled &&
@@ -1024,19 +1024,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     if (beat !== "quiz") setGoBusy(false);
   }, [beat]);
 
-  // Serata già in quiz con autoplay spento → riaccendi il countdown fasi.
-  useEffect(() => {
-    if (!live.pinReady || live.controlsDisabled) return;
-    if (live.runtimeState !== "quiz" || !live.quizState) return;
-    if (live.quizState.autoplayEnabled) return;
-    void live.runQuizAction("setAutoplayEnabled", { enabled: true });
-  }, [
-    live.controlsDisabled,
-    live.pinReady,
-    live.quizState,
-    live.runtimeState,
-    live.runQuizAction,
-  ]);
+  // Serata già in quiz: hold fasi restano su AVANTI (niente autoplay forzato).
 
   useEffect(() => {
     if (open === "questions") return;
@@ -1260,13 +1248,6 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           if (!result.ok) {
             setGoError(result.error);
             return;
-          }
-          // Countdown fasi live: senza autoplay il quiz resta fermo.
-          const auto = await live.runQuizAction("setAutoplayEnabled", {
-            enabled: true,
-          });
-          if (!auto.ok) {
-            setGoError(auto.error);
           }
           void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
         } catch (err) {
@@ -1624,6 +1605,13 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     flash,
     spotlight,
     quizGate: projectorQuizGate,
+    quizPhase: liveQuizActive ? liveQuizPhase : null,
+    quizRemaining: liveQuizActive
+      ? liveQuizRemaining
+      : beat === "quiz" && quizGate === "play"
+        ? quizLeftSec
+        : null,
+    quizSecondsTotal: live.quizState?.timing.questionSeconds ?? seconds,
     quizQuestion: projectorQuestion,
     mediaOnScreen:
       videoState.onScreenUrl && videoState.onScreenName
@@ -1810,7 +1798,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         return (
           <div className={`casa-timer-widget ${liveOff ?? ""}`}>
             {beat === "quiz" && quizGate === "play" ? (
-              <p className="casa-timer-readout">{quizLeftSec}s</p>
+              <p className="casa-timer-readout">
+                {liveQuizActive ? liveQuizRemaining : quizLeftSec}s
+              </p>
             ) : (
               <>
                 <p className="casa-timer-readout">{formatMmSs(freeTimerSec)}</p>
