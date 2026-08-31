@@ -40,9 +40,11 @@ export const QUIZ_ANSWER_LETTER_CLASS =
 export const QUIZ_RESULT_PERCENT_CLASS =
   "shrink-0 font-sans font-bold tabular-nums text-primary text-[40px]";
 
-/** Tema al centro. */
+/** Tema al centro — impatto proiettore (1920×1080). */
 export const QUIZ_THEME_TITLE_CLASS = cn(
   QUIZ_DISPLAY_SANS,
-  "font-bold text-white text-[48px]",
+  "font-black text-white",
+  "text-[clamp(4.5rem,9vw,7.5rem)]",
+  "leading-[0.92]",
   "line-clamp-2",
 );
