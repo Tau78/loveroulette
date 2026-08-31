@@ -7,6 +7,8 @@ import {
   DisplayRevealSplash,
 } from "@/components/display/DisplayShowText";
 import { DisplayPlayerPresent } from "@/components/display/DisplayPlayerPresent";
+import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
+import { isSiglaWarnSlide } from "@/lib/display/sigla-warn";
 import { JoinQrCode } from "./JoinQrCode";
 
 const CUSTOM_DURATION_MS = 8000;
@@ -79,6 +81,14 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
             gender={gender}
             photo={overlay.imageUrl}
           />
+        </div>
+      );
+    }
+
+    if (isSiglaWarnSlide(overlay)) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-10 animate-fade-in">
+          <DisplaySiglaWarn />
         </div>
       );
     }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
+import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
 import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
 import { DisplayPlayerPresent } from "@/components/display/DisplayPlayerPresent";
 import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
@@ -231,7 +232,7 @@ export function CasaProjector({
           </div>
         ) : beat === "sigla" && sigla === "warn" ? (
           <div className="casa-proj-center">
-            <DisplayPhaseHero kicker="Tra un attimo" headline="SIGLA" uppercase />
+            <DisplaySiglaWarn />
           </div>
         ) : siglaFullscreen && (!mountSigla || siglaMissing) ? (
           <div className="casa-proj-center">

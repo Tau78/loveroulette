@@ -145,6 +145,7 @@ import {
   type CasaSlide,
   type CasaSlideId,
 } from "@/lib/admin/casa-slides";
+import { SIGLA_WARN_SLIDE } from "@/lib/display/sigla-warn";
 import "@/components/admin/casa/casa.css";
 
 type Beat =
@@ -994,11 +995,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             return;
           }
           if (beat === "sigla" && sigla === "warn") {
-            await postDisplayCommand(
-              eventCode,
-              { type: "slide", kicker: "Tra un attimo", title: "SIGLA" },
-              live.pin,
-            );
+            await postDisplayCommand(eventCode, SIGLA_WARN_SLIDE, live.pin);
             return;
           }
           if (beat === "sigla") {
