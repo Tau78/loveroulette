@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import type { DisplayOverlay as DisplayOverlayData } from "@/lib/musicpro/display-overlay";
-import { DisplayRevealSplash } from "@/components/display/DisplayShowText";
+import {
+  DisplayPhaseHero,
+  DisplayRevealSplash,
+} from "@/components/display/DisplayShowText";
 import { JoinQrCode } from "./JoinQrCode";
 
 const CUSTOM_DURATION_MS = 8000;
@@ -21,7 +24,7 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
       return;
     }
 
-    if (overlay.type === "show_qr") {
+    if (overlay.type === "show_qr" || overlay.type === "slide") {
       setVisible(true);
       return;
     }
@@ -52,6 +55,19 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
         <p className="mt-8 text-xl md:text-2xl text-white/75">
           Scansiona per unirti al gioco
         </p>
+      </div>
+    );
+  }
+
+  if (overlay.type === "slide") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-10 animate-fade-in">
+        <DisplayPhaseHero
+          kicker={overlay.kicker}
+          headline={overlay.title ?? ""}
+          subline={overlay.body}
+          uppercase
+        />
       </div>
     );
   }

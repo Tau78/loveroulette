@@ -7,15 +7,19 @@ import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
 const bodySchema = z
   .object({
-    type: z.enum(["show_qr", "custom", "clear"]),
+    type: z.enum(["show_qr", "custom", "clear", "slide"]),
     title: z.string().trim().max(120).optional(),
     body: z.string().trim().max(280).optional(),
+    kicker: z.string().trim().max(80).optional(),
   })
   .superRefine((value, ctx) => {
-    if (value.type === "custom" && !value.title?.trim()) {
+    if (
+      (value.type === "custom" || value.type === "slide") &&
+      !value.title?.trim()
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "title is required when type is custom",
+        message: "title is required when type is custom or slide",
         path: ["title"],
       });
     }
@@ -111,6 +115,7 @@ export async function POST(
       type: body.type,
       ...(body.title !== undefined ? { title: body.title } : {}),
       ...(body.body !== undefined ? { body: body.body } : {}),
+      ...(body.kicker !== undefined ? { kicker: body.kicker } : {}),
     });
 
     return NextResponse.json({ displayOverlay, eventSlug: event.slug });

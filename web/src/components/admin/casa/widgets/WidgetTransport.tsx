@@ -61,15 +61,26 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
     if (controlsDisabled || startBusy) return;
     setStartBusy(true);
     try {
-      await runQuizAction("start", {
+      // Ensure Generatore auto-import runs before start.
+      await fetch(`/api/events/${encodeURIComponent(eventCode)}/questions`);
+      const result = await runQuizAction("start", {
         questionCount: event?.quizSetup.questionCount ?? undefined,
         questionSeconds: event?.quizSetup.questionSeconds ?? undefined,
         hideRankingLastN: event?.quizSetup.hideRankingLastN,
       });
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
     } finally {
       setStartBusy(false);
     }
-  }, [controlsDisabled, event?.quizSetup, runQuizAction, startBusy]);
+  }, [
+    controlsDisabled,
+    event?.quizSetup,
+    eventCode,
+    runQuizAction,
+    startBusy,
+  ]);
 
   const stopAutoplay = useCallback(async () => {
     if (controlsDisabled || stopBusy) return;
@@ -110,7 +121,7 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
         onFinalsChange={applyFinalsUpdate}
         onRefreshProgress={refreshSessionStats}
         onStartQuiz={
-          runtimeState === "lobby" ? () => void startQuiz() : undefined
+          runtimeState === "lobby" ? () => startQuiz() : undefined
         }
         startQuizDisabled={startBusy || !event}
         variant={variant}

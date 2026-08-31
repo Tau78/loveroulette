@@ -63,7 +63,7 @@ interface AdminTransportBarProps {
     runtimeState?: EventState;
   }) => void;
   onRefreshProgress?: () => Promise<unknown>;
-  onStartQuiz?: () => void;
+  onStartQuiz?: () => void | Promise<void>;
   startQuizDisabled?: boolean;
   /** `panel` = deck chrome; `go` = single Casa pulsantone; `footer` = legacy. */
   variant?: "panel" | "footer" | "go";
@@ -242,7 +242,12 @@ export function AdminTransportBar({
     case "lobby":
       primaryLabel = "Avvia quiz";
       primaryIcon = Play;
-      primaryAction = onStartQuiz ? () => onStartQuiz() : null;
+      primaryAction = onStartQuiz
+        ? () =>
+            void runWithBusy(async () => {
+              await onStartQuiz();
+            })
+        : null;
       primaryDisabled = primaryDisabled || startQuizDisabled || !onStartQuiz;
       break;
     case "quiz":

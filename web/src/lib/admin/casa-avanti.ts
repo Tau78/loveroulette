@@ -56,15 +56,19 @@ export function stepAvanti(input: {
   return { beat: next, sigla, roll: next === "presenti" ? 0 : roll };
 }
 
-/** After opening beats, the same GO drives the live session (quiz → close). */
+/**
+ * Live GO only after opening is done AND the live session left lobby.
+ * Opening beats (casa → stacco) always stay on local AVANTI, even if a
+ * previous serata left runtimeState on quiz/matching/etc.
+ */
 export function shouldUseLiveGo(input: {
   live: boolean;
   beat: CasaBeat;
   runtimeState: string;
 }): boolean {
   if (!input.live) return false;
-  if (input.runtimeState !== "lobby") return true;
-  return input.beat === "quiz";
+  if (input.beat !== "quiz") return false;
+  return input.runtimeState !== "lobby";
 }
 
 export function avantiLabel(input: {

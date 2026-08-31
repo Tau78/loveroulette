@@ -4,17 +4,23 @@ import { useCasaLiveSession } from "@/components/admin/casa/casa-live-session-co
 import { WidgetTransport } from "@/components/admin/casa/widgets/WidgetTransport";
 import { shouldUseLiveGo, type CasaBeat } from "@/lib/admin/casa-avanti";
 
-type Props = {
+/**
+ * One pulsantone: Casa opening beats stay local while lobby; after the live
+ * session leaves lobby the same button drives quiz → matching → close.
+ */
+export function WidgetConductor({
+  beat,
+  localLabel,
+  onLocalGo,
+  localBusy = false,
+  localError = null,
+}: {
   beat: CasaBeat;
   localLabel: string;
   onLocalGo: () => void;
-};
-
-/**
- * One pulsantone: Casa opening beats stay local; from quiz onward the same
- * button drives the live session (Avvia quiz → matching → close).
- */
-export function WidgetConductor({ beat, localLabel, onLocalGo }: Props) {
+  localBusy?: boolean;
+  localError?: string | null;
+}) {
   const { loading, pinReady, event, loadError, runtimeState } =
     useCasaLiveSession();
 
@@ -31,9 +37,19 @@ export function WidgetConductor({ beat, localLabel, onLocalGo }: Props) {
 
   return (
     <div className="casa-conductor-local">
-      <button type="button" className="casa-go" onClick={onLocalGo}>
-        {localLabel}
+      <button
+        type="button"
+        className="casa-go"
+        disabled={localBusy}
+        onClick={onLocalGo}
+      >
+        {localBusy ? "…" : localLabel}
       </button>
+      {localError ? (
+        <p className="casa-sub casa-conductor-note" title={localError}>
+          {localError}
+        </p>
+      ) : null}
     </div>
   );
 }

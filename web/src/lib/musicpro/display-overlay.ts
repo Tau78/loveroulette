@@ -1,15 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type DisplayOverlayType = "show_qr" | "custom" | "clear";
+export type DisplayOverlayType = "show_qr" | "custom" | "clear" | "slide";
 
 export interface DisplayOverlay {
   type: DisplayOverlayType;
   title?: string;
   body?: string;
+  /** Optional kicker above the headline (sticky slide overlays). */
+  kicker?: string;
   updatedAt: string;
 }
 
-const OVERLAY_TYPES = new Set<DisplayOverlayType>(["show_qr", "custom", "clear"]);
+const OVERLAY_TYPES = new Set<DisplayOverlayType>([
+  "show_qr",
+  "custom",
+  "clear",
+  "slide",
+]);
 
 export function getDisplayOverlay(
   metadata: Record<string, unknown> | null | undefined,
@@ -41,6 +48,9 @@ export function getDisplayOverlay(
   if (typeof record.body === "string" && record.body.trim()) {
     overlay.body = record.body.trim();
   }
+  if (typeof record.kicker === "string" && record.kicker.trim()) {
+    overlay.kicker = record.kicker.trim();
+  }
 
   return overlay;
 }
@@ -65,6 +75,9 @@ export async function setDisplayOverlay(
   }
   if (overlay.body !== undefined) {
     stored.body = overlay.body;
+  }
+  if (overlay.kicker !== undefined) {
+    stored.kicker = overlay.kicker;
   }
 
   const { data: row, error: fetchError } = await supabase
