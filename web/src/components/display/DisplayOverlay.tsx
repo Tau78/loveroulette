@@ -6,6 +6,7 @@ import {
   DisplayPhaseHero,
   DisplayRevealSplash,
 } from "@/components/display/DisplayShowText";
+import { DisplayPlayerPresent } from "@/components/display/DisplayPlayerPresent";
 import { JoinQrCode } from "./JoinQrCode";
 
 const CUSTOM_DURATION_MS = 8000;
@@ -13,6 +14,15 @@ const CUSTOM_DURATION_MS = 8000;
 interface DisplayOverlayProps {
   overlay: DisplayOverlayData | null;
   joinUrl: string;
+}
+
+function playerGenderFromOverlay(
+  overlay: DisplayOverlayData,
+): "M" | "F" | null {
+  const raw = (overlay.kicker ?? overlay.body ?? "").trim().toLowerCase();
+  if (raw === "f" || raw === "lei" || raw === "female") return "F";
+  if (raw === "m" || raw === "lui" || raw === "male") return "M";
+  return null;
 }
 
 export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
@@ -60,6 +70,19 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
   }
 
   if (overlay.type === "slide") {
+    const gender = playerGenderFromOverlay(overlay);
+    if (gender && overlay.title) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-10 animate-fade-in">
+          <DisplayPlayerPresent
+            nick={overlay.title}
+            gender={gender}
+            photo={overlay.imageUrl}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-10 animate-fade-in">
         <DisplayPhaseHero

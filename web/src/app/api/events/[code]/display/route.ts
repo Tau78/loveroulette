@@ -11,6 +11,7 @@ const bodySchema = z
     title: z.string().trim().max(120).optional(),
     body: z.string().trim().max(280).optional(),
     kicker: z.string().trim().max(80).optional(),
+    imageUrl: z.string().trim().max(500).optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -116,6 +117,7 @@ export async function POST(
       ...(body.title !== undefined ? { title: body.title } : {}),
       ...(body.body !== undefined ? { body: body.body } : {}),
       ...(body.kicker !== undefined ? { kicker: body.kicker } : {}),
+      ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
     });
 
     return NextResponse.json({ displayOverlay, eventSlug: event.slug });

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
+import { DisplayPlayerPresent } from "@/components/display/DisplayPlayerPresent";
 import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { PROJECTOR_CANVAS } from "@/lib/display/projector-canvas";
@@ -57,7 +58,7 @@ type Props = {
   sigla: "idle" | "warn" | "on" | "hold";
   help: boolean;
   count: number | null;
-  onStage: { nick: string; gender: "M" | "F" } | undefined;
+  onStage: { nick: string; gender: "M" | "F"; photo?: string } | undefined;
   showPct?: boolean;
   enlarge?: boolean;
   slides?: Record<CasaSlideId, CasaSlide>;
@@ -247,10 +248,10 @@ export function CasaProjector({
           />
         ) : beat === "presenti" && onStage ? (
           <div className="casa-proj-center">
-            <DisplayPhaseHero
-              kicker={onStage.gender}
-              headline={onStage.nick.toUpperCase()}
-              uppercase
+            <DisplayPlayerPresent
+              nick={onStage.nick}
+              gender={onStage.gender}
+              photo={onStage.photo}
             />
           </div>
         ) : beat === "stacco" && count != null ? (

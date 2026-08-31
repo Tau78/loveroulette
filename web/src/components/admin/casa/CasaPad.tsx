@@ -946,12 +946,23 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             return;
           }
           if (beat === "presenti" && onStage) {
+            const sex = onStage.gender === "F" ? "Lei" : "Lui";
+            const photo =
+              onStage.photo &&
+              !onStage.photo.startsWith("blob:") &&
+              !onStage.photo.startsWith("file:")
+                ? onStage.photo
+                : onStage.gender === "F"
+                  ? "/grafiche/avatar-f.png"
+                  : "/grafiche/avatar-m.png";
             await postDisplayCommand(
               eventCode,
               {
                 type: "slide",
-                kicker: onStage.gender,
                 title: onStage.nick.toUpperCase(),
+                body: sex,
+                kicker: onStage.gender,
+                imageUrl: photo,
               },
               live.pin,
             );

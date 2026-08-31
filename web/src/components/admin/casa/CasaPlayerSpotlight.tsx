@@ -63,11 +63,20 @@ export function CasaPlayerSpotlight({ spot }: { spot: CasaSpotlight | null }) {
           ) : null}
 
           <div className="casa-spot-card">
+            <motion.p
+              className="casa-spot-nick"
+              initial={reduce ? false : { opacity: 0, y: 48, filter: "blur(12px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ delay: reduce ? 0 : 0.12, duration: 0.55, ease: EASE }}
+            >
+              {spot.nick}
+            </motion.p>
+
             <motion.span
               className="casa-spot-face"
               initial={reduce ? false : { scale: 0.4, opacity: 0, rotate: -8 }}
               animate={{ scale: 1, opacity: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 220, damping: 16, delay: reduce ? 0 : 0.12 }}
+              transition={{ type: "spring", stiffness: 220, damping: 16, delay: reduce ? 0 : 0.28 }}
             >
               <img src={faceOf(spot)} alt="" />
             </motion.span>
@@ -76,18 +85,9 @@ export function CasaPlayerSpotlight({ spot }: { spot: CasaSpotlight | null }) {
               className="casa-spot-sex"
               initial={reduce ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: reduce ? 0 : 0.32, duration: 0.4, ease: EASE }}
+              transition={{ delay: reduce ? 0 : 0.42, duration: 0.4, ease: EASE }}
             >
               {spot.gender === "F" ? "Lei" : "Lui"}
-            </motion.p>
-
-            <motion.p
-              className="casa-spot-nick"
-              initial={reduce ? false : { opacity: 0, y: 48, filter: "blur(12px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ delay: reduce ? 0 : 0.4, duration: 0.55, ease: EASE }}
-            >
-              {spot.nick}
             </motion.p>
 
             <motion.p
@@ -96,7 +96,7 @@ export function CasaPlayerSpotlight({ spot }: { spot: CasaSpotlight | null }) {
               data-zero={spot.score === 0 ? "1" : undefined}
               initial={reduce ? false : { opacity: 0, scale: 1.6 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: reduce ? 0 : 0.62, type: "spring", stiffness: 260, damping: 14 }}
+              transition={{ delay: reduce ? 0 : 0.55, type: "spring", stiffness: 260, damping: 14 }}
             >
               {scoreLabel(spot.score)}
             </motion.p>
