@@ -164,7 +164,11 @@ export function isPhaseExpired(
   return remainingSeconds(phase, phaseStartedAt, timing, now) <= 0;
 }
 
-/** Prossima fase logica — condivisa tra server e client sync clock. */
+/**
+ * AVANTI-BINARY-LOCKED — prossima fase quiz (proiettore = anteprima = player).
+ * Non modificare senza autorizzazione espressa di Mauro.
+ * Vedi `.cursor/rules/avanti-binary.mdc`.
+ */
 export function nextQuizDisplayPhase(
   phase: QuizDisplayPhase,
   currentIndex: number,

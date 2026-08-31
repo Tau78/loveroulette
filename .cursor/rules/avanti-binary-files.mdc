@@ -1,0 +1,13 @@
+---
+description: Secondo guardrail — file della macchina a stati AVANTI
+globs: web/src/lib/admin/casa-avanti.ts,web/src/lib/admin/casa-avanti.test.ts,web/src/lib/musicpro/quiz-display.ts,web/src/lib/musicpro/quiz-state.ts,web/src/components/admin/casa/CasaPad.tsx,web/src/components/admin/casa/widgets/WidgetConductor.tsx
+alwaysApply: false
+---
+
+# STOP — stai toccando il binario AVANTI
+
+Prima di qualsiasi edit: serve in chat l’autorizzazione espressa di Mauro («autorizzo modifica binario AVANTI: …»).
+
+Senza quella frase: **non modificare** `stepAvanti`, `CASA_BEAT_ORDER`, `shouldUseLiveGo`, `nextQuizDisplayPhase`, hold phases, clock sync, né l’handler che avanza beat/fase.
+
+UI copy, layout, volume, testi slide = ok se non cambiano l’ordine dei passi.

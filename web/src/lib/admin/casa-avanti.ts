@@ -1,3 +1,8 @@
+/**
+ * AVANTI-BINARY-LOCKED — macchina a stati apertura serata (casa → quiz).
+ * Non modificare ordine/gate/label senza autorizzazione espressa di Mauro.
+ * Vedi `.cursor/rules/avanti-binary.mdc`.
+ */
 export type CasaBeat =
   | "casa"
   | "sigla"

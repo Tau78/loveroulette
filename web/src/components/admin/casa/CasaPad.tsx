@@ -70,6 +70,7 @@ import {
   type CasaAudioRoute,
 } from "@/lib/admin/casa-audio-route";
 import { avantiLabel, stepAvanti } from "@/lib/admin/casa-avanti";
+import { logAvantiBinary } from "@/lib/admin/avanti-binary-log";
 import { categoryThemeLabel } from "@/lib/musicpro/quiz-display";
 import { casaAutoBedLabel, resolveCasaBed } from "@/lib/admin/casa-beds";
 import {
@@ -1308,7 +1309,12 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }
 
   function skipSlide() {
-    if (next) setBeat(next.id);
+    if (!next) return;
+    logAvantiBinary("skip", "opening slide skipped (Salta)", {
+      from: beat,
+      to: next.id,
+    });
+    setBeat(next.id);
   }
 
   function dropPresent() {
@@ -1317,11 +1323,20 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }
 
   function skipRoll() {
+    logAvantiBinary("skip", "presenti roll skipped → stacco", {
+      from: beat,
+      to: "stacco",
+      roll,
+    });
     setBeat("stacco");
     setCount(5);
   }
 
   function skipQuestion() {
+    logAvantiBinary("skip", "quiz question skipped (Salta domanda)", {
+      from: beat,
+      left,
+    });
     setLeft((n) => Math.max(0, n - 1));
     setQuizGate("tema");
   }

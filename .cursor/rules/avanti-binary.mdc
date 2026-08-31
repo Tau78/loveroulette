@@ -1,0 +1,44 @@
+---
+description: Binario AVANTI blindato — vietato toccare senza autorizzazione espressa di Mauro
+alwaysApply: true
+---
+
+# AVANTI — binario blindato (doppio guardrail)
+
+Il pulsante **AVANTI** guida una sequenza **atomica**: proiettore, anteprima admin e smartphone giocatore avanzano sullo **stesso passo**. UI/dettagli/flussi accessori sì; **il binario no**.
+
+## Guardrail 1 — regola sempre attiva
+
+**Vietato** modificare ordine, skip, gate, label di avanzamento, sync di fase o test golden del binario senza **autorizzazione espressa** di Mauro in chat (es. «autorizzo modifica binario AVANTI: …»).
+
+Non basta: «miglioriamo il flusso», refactor, bugfix adiacente, ONDA, VAI, PR review. Se serve un tocco → **fermati e chiedi**.
+
+## Guardrail 2 — file LOCKED
+
+Questi file sono il binario. Header `AVANTI-BINARY-LOCKED` = non editare senza autorizzazione:
+
+- `web/src/lib/admin/casa-avanti.ts` (+ `.test.ts`)
+- `web/src/lib/musicpro/quiz-display.ts` (`nextQuizDisplayPhase`, hold, clock sync)
+- `web/src/lib/musicpro/quiz-state.ts` (advance / phase transitions server)
+- handler AVANTI in `CasaPad` / `WidgetConductor` che chiamano `stepAvanti` / live GO
+
+Consentito senza auth: copy UI, polish, volume, testi slide, bug fuori dalla macchina a stati.
+
+## Allineamento atomico
+
+Un tap AVANTI = **un** passo di stato condiviso. Display `/display`, anteprima iframe, player mobile leggono lo stesso snapshot. Niente avanzamenti locali divergenti.
+
+## Skip non bloccante + log
+
+Se un passaggio previsto non avviene (slide saltata, ranking nascosto, client desync): **non bloccare** la serata. Scrivi un log leggibile (`[avanti-binary] skipped … from→to reason=…`) consultabile in console/regia. Skip intenzionali (premio/sponsor Salta, ultime N senza classifica) restano previsti dalla scaletta.
+
+## Scaletta canonica (non riordinare)
+
+1. **Lobby** (`casa`) — QR, nick, sala si siede.
+2. **Inizio → Sigla** — AVANTI «Sigla» → `sigla/warn`; AVANTI «Parte ora» → video+audio `on`; AVANTI → fuori sigla.
+3. **Apertura show** — `pres` → `regole` → `finale` → `premio`* → `sponsor`* → `stasera` → `presenti` (uno a uno) → `stacco` (5–4–3–2–1). \*saltabili.
+4. **Domande (quiz)** — countdown avvio → tema → domanda → risposte+timer → lock auto → % risultati → classifica* → prossima. \*no classifica sulle ultime N.
+5. **Prosecuzione** — fine quiz → matching → extraction → elimination.
+6. **Finale** — finals (prove) → winner → closed.
+
+Solo auto: countdown avvio sigla/stacco/quiz e timer risposte (lock tastiere). Reveal % e ogni hold = AVANTI (o Auto esplicito).

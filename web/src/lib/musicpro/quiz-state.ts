@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logAvantiBinary } from "@/lib/admin/avanti-binary-log";
 import type { EventState } from "@/lib/types";
 import { computeAndPersistPairs } from "./matching";
 import {
@@ -20,6 +21,11 @@ import {
 import type { LoveRouletteQuestionSource } from "./types";
 import { updateSessionRuntimeState } from "./session";
 
+/**
+ * AVANTI-BINARY-LOCKED — advance/tick quiz server.
+ * Non modificare le transizioni senza autorizzazione espressa di Mauro.
+ * Vedi `.cursor/rules/avanti-binary.mdc`.
+ */
 export interface QuizSessionState {
   questionIds: string[];
   currentIndex: number;
@@ -423,7 +429,31 @@ export async function tickQuizPhase(
   const maxSteps = 8;
 
   for (let step = 0; step < maxSteps; step++) {
+    const fromPhase = current.displayPhase;
+    const fromIndex = current.currentIndex;
     const next = nextDisplayPhase(current);
+
+    if (
+      fromPhase === "results" &&
+      next === "advance_index"
+    ) {
+      logAvantiBinary("skip", "ranking hold omitted (last-N or advance)", {
+        eventId,
+        from: fromPhase,
+        to: "advance_index",
+        index: fromIndex,
+        total: current.total,
+        hideRankingLastN: current.hideRankingLastN,
+        force,
+      });
+    } else if (force) {
+      logAvantiBinary("advance", "forced AVANTI / skip phase", {
+        eventId,
+        from: fromPhase,
+        to: next,
+        index: fromIndex,
+      });
+    }
 
     if (next === "finish") {
       await computeAndPersistPairs(supabase, eventId, {
