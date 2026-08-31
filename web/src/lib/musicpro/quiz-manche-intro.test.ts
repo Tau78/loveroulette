@@ -40,12 +40,15 @@ describe("isMancheThemeIntroForIndex", () => {
 });
 
 describe("resolvePhaseAfterQuestionAdvance", () => {
-  it("skips theme intro between questions in the same manche", () => {
+  it("always restarts from theme intro (slide argomento) for the next question", () => {
     expect(
       resolvePhaseAfterQuestionAdvance(["q01", "q02", "q03"], 1, MANCHE),
-    ).toBe("question");
+    ).toBe("theme_intro");
     expect(
       resolvePhaseAfterQuestionAdvance(["q01", "q02", "q04"], 2, MANCHE),
-    ).toBe("start_countdown");
+    ).toBe("theme_intro");
+    expect(resolvePhaseAfterQuestionAdvance(["a", "b"], 1, null)).toBe(
+      "theme_intro",
+    );
   });
 });

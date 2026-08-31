@@ -64,16 +64,16 @@ function FooterCountdown({
           className={cn(
             "pointer-events-none absolute inset-0 rounded-full",
             urgent
-              ? "bg-primary/35 shadow-[0_0_24px_rgba(236,72,153,0.65)]"
-              : "bg-primary/15 shadow-[0_0_18px_rgba(236,72,153,0.35)]",
+              ? "bg-primary/25 shadow-[0_0_20px_rgba(236,72,153,0.45)]"
+              : "bg-primary/12 shadow-[0_0_14px_rgba(236,72,153,0.28)]",
           )}
           animate={
             urgent
-              ? { opacity: [0.45, 0.95, 0.45], scale: [0.92, 1.08, 0.92] }
-              : { opacity: [0.35, 0.65, 0.35], scale: [0.96, 1.04, 0.96] }
+              ? { scale: [1, 1.04, 1] }
+              : { scale: [1, 1.02, 1] }
           }
           transition={{
-            duration: urgent ? 0.75 : 1.4,
+            duration: urgent ? 0.9 : 1.6,
             repeat: Infinity,
             ease: "easeInOut",
           }}
@@ -131,13 +131,13 @@ function FooterCountdown({
         initial={
           reduceMotion
             ? false
-            : { scale: ticked ? 1.28 : 1, opacity: ticked ? 0.7 : 1 }
+            : { scale: ticked ? 1.12 : 1 }
         }
         animate={{ scale: 1, opacity: 1 }}
         transition={{
           type: "spring",
-          stiffness: urgent ? 520 : 380,
-          damping: urgent ? 14 : 18,
+          stiffness: urgent ? 420 : 340,
+          damping: urgent ? 22 : 24,
         }}
       >
         {value}

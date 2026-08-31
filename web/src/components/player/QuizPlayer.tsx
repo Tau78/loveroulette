@@ -6,7 +6,6 @@ import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import { useCurrentQuizQuestion } from "@/hooks/useQuizQuestions";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import {
-  isMancheThemeIntroForIndex,
   resolveThemeForQuizIndex,
   resolveSyncedQuizClock,
 } from "@/lib/musicpro/quiz-display";
@@ -206,15 +205,7 @@ export function QuizPlayer({
         </CardContent>
       </Card>
     );
-  } else if (
-    displayPhase === "next_question" ||
-    (displayPhase === "theme_intro" &&
-      !isMancheThemeIntroForIndex(
-        quizState.questionIds,
-        quizState.currentIndex,
-        quizState.manche,
-      ))
-  ) {
+  } else if (displayPhase === "next_question") {
     phaseContent = (
       <Card className={cn(CARD_CLASS, "border-primary/30")}>
         <CardContent className="py-10 text-center">
@@ -339,12 +330,7 @@ export function QuizPlayer({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-2">
             <CardDescription>{progressLabel}</CardDescription>
-            <span
-              className={cn(
-                "text-sm font-bold tabular-nums text-primary",
-                remaining <= 5 && "animate-pulse",
-              )}
-            >
+            <span className="text-sm font-bold tabular-nums text-primary">
               {remaining}s
             </span>
           </div>

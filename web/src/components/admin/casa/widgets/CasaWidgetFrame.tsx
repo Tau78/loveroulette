@@ -56,6 +56,7 @@ export function CasaWidgetFrame({
       data-collapsed={collapsed ? "1" : "0"}
       data-resizing={resizing ? "1" : undefined}
       data-bare={bare ? "1" : undefined}
+      onPointerDown={edit && bare ? onPointerDownDrag : undefined}
     >
       {edit ? (
         <button

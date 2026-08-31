@@ -2417,16 +2417,21 @@ html.casa-native-chrome .casa {
   bottom: 8px;
   left: 0;
   z-index: 4;
-  width: 14px;
+  width: 28px;
   margin: 0;
   padding: 0;
   border: 0;
   border-radius: 0 8px 8px 0;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.16),
+    rgba(255, 255, 255, 0.22),
     rgba(255, 255, 255, 0.02)
   );
+  cursor: grab;
+  touch-action: none;
+}
+
+.casa-w[data-bare="1"][data-edit="1"] {
   cursor: grab;
   touch-action: none;
 }

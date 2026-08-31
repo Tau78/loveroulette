@@ -37,7 +37,7 @@ Se un passaggio previsto non avviene (slide saltata, ranking nascosto, client de
 1. **Lobby** (`casa`) — QR, nick, sala si siede.
 2. **Inizio → Sigla** — AVANTI «Sigla» → `sigla/warn`; AVANTI «Parte ora» → video+audio `on`; AVANTI → fuori sigla.
 3. **Apertura show** — `pres` → `regole` → `finale` → `premio`* → `sponsor`* → `stasera` → `presenti` (uno a uno) → `stacco` (5–4–3–2–1). \*saltabili.
-4. **Domande (quiz)** — countdown avvio → tema → domanda → risposte+timer → lock auto → % risultati → classifica* → prossima. \*no classifica sulle ultime N.
+4. **Domande (quiz)** — countdown avvio (solo all’inizio) → per ogni domanda: tema → domanda → risposte+timer → lock auto → % risultati → classifica* → riparte dal tema. \*no classifica sulle ultime N.
 5. **Prosecuzione** — fine quiz → matching → extraction → elimination.
 6. **Finale** — finals (prove) → winner → closed.
 

@@ -10,7 +10,6 @@ import type { PreviewPairRow } from "@/lib/musicpro/matching";
 import {
   resolveThemeForQuizIndex,
   type QuizDisplayPhase,
-  isMancheThemeIntroForIndex,
 } from "@/lib/musicpro/quiz-display";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
@@ -611,34 +610,6 @@ export function DisplayQuizStage({
   }
 
   if (phase === "theme_intro" && theme) {
-    if (
-      !isMancheThemeIntroForIndex(
-        quizState.questionIds,
-        quizState.currentIndex,
-        quizState.manche,
-      )
-    ) {
-      return (
-        <DisplayQuizGameLayout
-          centerKey={`next-${quizState.currentIndex}`}
-          header={
-            currentQuestion ? (
-              <QuestionHeaderPanel
-                body={currentQuestion.body}
-                progressLabel={progressLabel}
-                compact
-              />
-            ) : (
-              <CountdownHeaderPanel />
-            )
-          }
-          center={<NextQuestionCenter progressLabel={progressLabel} />}
-          footerCountdown={null}
-          heartProgress={heartProgress}
-        />
-      );
-    }
-
     return (
       <DisplayQuizGameLayout
         centerKey={`theme-${quizState.currentIndex}`}
