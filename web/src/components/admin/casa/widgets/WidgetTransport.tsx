@@ -71,6 +71,10 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
       if (!result.ok) {
         throw new Error(result.error);
       }
+      const auto = await runQuizAction("setAutoplayEnabled", { enabled: true });
+      if (!auto.ok) {
+        throw new Error(auto.error);
+      }
     } finally {
       setStartBusy(false);
     }

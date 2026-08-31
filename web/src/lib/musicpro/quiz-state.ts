@@ -351,7 +351,7 @@ export async function startQuizSession(
     total: questionIds.length,
     source: source === "pool" ? "event" : source,
     autoplaySeconds: timing.questionSeconds,
-    autoplayEnabled: false,
+    autoplayEnabled: true,
     updatedAt: at,
     displayPhase: "start_countdown",
     phaseStartedAt: at,
