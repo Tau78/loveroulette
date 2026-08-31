@@ -96,8 +96,9 @@ export function saveTypeScalePrefs(
 }
 
 /**
- * Percentuale del viewport da assegnare a `.casa` prima dello `zoom`.
- * `inverse × scale = 100` → la plancia riempie lo schermo senza uscire.
+ * Box inverso per il fallback `transform: scale` (motori senza `zoom`).
+ * Chromium non lo usa: lì `width/height: 100%` + `zoom` basta.
+ * `inverse × scale = 100`.
  */
 export function casaFitInversePercent(scale: number): number {
   return 100 / clampTypeScale(scale);
