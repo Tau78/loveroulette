@@ -6,7 +6,7 @@ import { DisplayStageBackground } from "@/components/display/DisplayStageBackgro
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
 import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
-import { DisplayPlayerPresent } from "@/components/display/DisplayPlayerPresent";
+import { DisplayPlayerPresentSwitch } from "@/components/display/DisplayPlayerPresent";
 import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { PROJECTOR_CANVAS } from "@/lib/display/projector-canvas";
@@ -256,7 +256,7 @@ export function CasaProjector({
           />
         ) : beat === "presenti" && onStage ? (
           <div className="casa-proj-center">
-            <DisplayPlayerPresent
+            <DisplayPlayerPresentSwitch
               nick={onStage.nick}
               gender={onStage.gender}
               photo={onStage.photo}

@@ -6,7 +6,7 @@ import {
   DisplayPhaseHero,
   DisplayRevealSplash,
 } from "@/components/display/DisplayShowText";
-import { DisplayPlayerPresent } from "@/components/display/DisplayPlayerPresent";
+import { DisplayPlayerPresentSwitch } from "@/components/display/DisplayPlayerPresent";
 import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
 import { isSiglaWarnSlide } from "@/lib/display/sigla-warn";
 import { JoinQrCode } from "./JoinQrCode";
@@ -75,8 +75,8 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
     const gender = playerGenderFromOverlay(overlay);
     if (gender && overlay.title) {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-10 animate-fade-in">
-          <DisplayPlayerPresent
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-10">
+          <DisplayPlayerPresentSwitch
             nick={overlay.title}
             gender={gender}
             photo={overlay.imageUrl}
