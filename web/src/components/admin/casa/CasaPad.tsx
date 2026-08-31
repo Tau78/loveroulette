@@ -674,7 +674,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
   const liveQuizActive =
     live.runtimeState === "quiz" && Boolean(live.quizState);
-  // Backup tick: solo se Auto è acceso in regia (hold restano su AVANTI).
+  // start_countdown tick sempre; hold solo se Auto acceso.
   const { displayPhase: liveQuizPhase, remaining: liveQuizRemaining } =
     useQuizPhaseSync({
       eventSlug: eventCode,
@@ -683,7 +683,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       driveTicks:
         liveQuizActive &&
         !live.controlsDisabled &&
-        live.quizState?.autoplayEnabled === true,
+        (live.quizState?.autoplayEnabled === true ||
+          live.quizState?.displayPhase === "start_countdown"),
       onTick: (quiz, runtime) => {
         live.applyQuizUpdate(quiz, runtime);
       },

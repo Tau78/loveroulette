@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
+import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { PROJECTOR_CANVAS } from "@/lib/display/projector-canvas";
 import {
@@ -139,6 +140,10 @@ export function CasaProjector({
   /** Never keep the ambient loop while another video is the hero. */
   const suspendBgVideo = mountSigla || mediaVideoOn || beat === "stacco";
   const theme = categoryThemeLabel(quizQuestion?.category ?? FALLBACK_QUIZ.category);
+  const previewQuizPhase: QuizDisplayPhase | null =
+    beat === "quiz"
+      ? quizPhase ?? (quizGate === "tema" ? "theme_intro" : "answers")
+      : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +200,7 @@ export function CasaProjector({
       >
         <DisplayStageBackground
           logoScale={lobby ? "full" : "compact"}
+          quizPhase={previewQuizPhase}
           hideBackgroundRoulette={
             siglaFullscreen || beat === "stacco" || beat === "quiz" || mediaVideoOn
           }
@@ -355,100 +361,111 @@ function QuizPreview({
 
   if (effective === "start_countdown") {
     return (
-      <div className="casa-proj-center" aria-live="polite">
-        <DisplayPhaseHero
-          kicker="Si parte"
-          headline={String(remaining ?? 0)}
-          subline="Countdown avvio"
-          uppercase
-        />
+      <div className="casa-proj-quiz-shell">
+        <div className="casa-proj-center" aria-live="polite">
+          <DisplayPhaseHero
+            kicker="Si parte"
+            headline={String(remaining ?? 0)}
+            subline="Countdown avvio"
+            uppercase
+          />
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.08} />
       </div>
     );
   }
 
   if (effective === "theme_intro") {
     return (
-      <div className="casa-proj-theme">
-        <DisplayThemeSlide
-          title={theme.title}
-          subtitle={theme.subtitle}
-          category={category}
-          kicker="Manche"
-        />
+      <div className="casa-proj-quiz-shell">
+        <div className="casa-proj-theme">
+          <DisplayThemeSlide
+            title={theme.title}
+            subtitle={theme.subtitle}
+            category={category}
+            kicker="Manche"
+          />
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.12} />
       </div>
     );
   }
 
   if (effective === "question") {
     return (
-      <div className="casa-proj-quiz" data-phase="question">
-        <p className={QUIZ_QUESTION_TEXT_CLASS}>{body}</p>
-        <p className="casa-proj-quiz-wait">Le risposte tra poco</p>
+      <div className="casa-proj-quiz-shell" data-phase="question">
+        <div className="casa-proj-quiz">
+          <p className={QUIZ_QUESTION_TEXT_CLASS}>{body}</p>
+          <p className="casa-proj-quiz-wait">Le risposte tra poco</p>
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.16} />
       </div>
     );
   }
 
   if (effective === "next_question") {
     return (
-      <div className="casa-proj-center">
-        <DisplayPhaseHero
-          kicker="Classifica"
-          headline="ACCOPPIAMENTO"
-          subline="Provvisoria"
-          uppercase
-        />
+      <div className="casa-proj-quiz-shell">
+        <div className="casa-proj-center">
+          <DisplayPhaseHero
+            kicker="Classifica"
+            headline="ACCOPPIAMENTO"
+            subline="Provvisoria"
+            uppercase
+          />
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.28} />
       </div>
     );
   }
 
   if (effective === "results") {
     return (
-      <div className="casa-proj-quiz" data-phase="results">
+      <div className="casa-proj-quiz-shell" data-phase="results">
+        <div className="casa-proj-quiz">
+          <p className={QUIZ_QUESTION_TEXT_CLASS}>{body}</p>
+          <div className="casa-proj-opts">
+            {options.map((opt, i) => (
+              <div key={`${opt}-${i}`} className="casa-proj-opt">
+                <span className={QUIZ_ANSWER_LETTER_CLASS}>
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className={QUIZ_ANSWER_TEXT_CLASS}>{opt.toUpperCase()}</span>
+                <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.24} />
+      </div>
+    );
+  }
+
+  // answers — countdown centro basso (pre-gong), stesso footer del /display
+  const locked = remaining != null && remaining <= 0;
+  const total = Math.max(1, secondsTotal);
+  const value = Math.max(0, remaining ?? total);
+
+  return (
+    <div className="casa-proj-quiz-shell" data-phase="answers" data-locked={locked ? "1" : undefined}>
+      <div className="casa-proj-quiz">
         <p className={QUIZ_QUESTION_TEXT_CLASS}>{body}</p>
-        <div className="casa-proj-opts">
+        <div className={locked ? "casa-proj-opts casa-proj-opts-dim" : "casa-proj-opts"}>
           {options.map((opt, i) => (
             <div key={`${opt}-${i}`} className="casa-proj-opt">
               <span className={QUIZ_ANSWER_LETTER_CLASS}>
                 {String.fromCharCode(65 + i)}
               </span>
               <span className={QUIZ_ANSWER_TEXT_CLASS}>{opt.toUpperCase()}</span>
-              <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span>
+              {showPct ? <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span> : null}
             </div>
           ))}
         </div>
       </div>
-    );
-  }
-
-  // answers (default play)
-  const locked = remaining != null && remaining <= 0;
-  const total = Math.max(1, secondsTotal);
-  const value = remaining ?? total;
-
-  return (
-    <div className="casa-proj-quiz" data-phase="answers" data-locked={locked ? "1" : undefined}>
-      <p className={QUIZ_QUESTION_TEXT_CLASS}>{body}</p>
-      <div className={locked ? "casa-proj-opts casa-proj-opts-dim" : "casa-proj-opts"}>
-        {options.map((opt, i) => (
-          <div key={`${opt}-${i}`} className="casa-proj-opt">
-            <span className={QUIZ_ANSWER_LETTER_CLASS}>
-              {String.fromCharCode(65 + i)}
-            </span>
-            <span className={QUIZ_ANSWER_TEXT_CLASS}>{opt.toUpperCase()}</span>
-            {showPct ? <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span> : null}
-          </div>
-        ))}
-      </div>
-      <div
-        className="casa-proj-answers-count"
-        aria-live="polite"
-        aria-label={`${value} secondi`}
-      >
-        <span className="casa-proj-answers-count-digit">{value}</span>
-        <span className="casa-proj-answers-count-label">
-          {locked ? "STOP" : `/${total}s`}
-        </span>
-      </div>
+      <DisplayQuizFooter
+        countdown={{ value, total }}
+        heartProgress={0.2}
+      />
     </div>
   );
 }
