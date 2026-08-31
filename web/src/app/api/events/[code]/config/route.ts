@@ -9,6 +9,8 @@ const bodySchema = z.object({
   badgeRequired: z.boolean().optional(),
   extractionCount: z.number().int().min(1).max(20).nullable().optional(),
   salvaSec: z.number().int().min(5).max(120).nullable().optional(),
+  displayTypeScale: z.number().min(0.8).max(1.5).nullable().optional(),
+  planciaTypeScale: z.number().min(0.8).max(1.5).nullable().optional(),
 });
 
 export async function PATCH(
@@ -39,7 +41,9 @@ export async function PATCH(
   if (
     body.badgeRequired === undefined &&
     body.extractionCount === undefined &&
-    body.salvaSec === undefined
+    body.salvaSec === undefined &&
+    body.displayTypeScale === undefined &&
+    body.planciaTypeScale === undefined
   ) {
     return NextResponse.json({ error: "No config fields to update" }, { status: 400 });
   }
@@ -77,6 +81,12 @@ export async function PATCH(
         ? { extraction_count: body.extractionCount }
         : {}),
       ...(body.salvaSec !== undefined ? { salva_sec: body.salvaSec } : {}),
+      ...(body.displayTypeScale !== undefined
+        ? { display_type_scale: body.displayTypeScale }
+        : {}),
+      ...(body.planciaTypeScale !== undefined
+        ? { plancia_type_scale: body.planciaTypeScale }
+        : {}),
     });
 
     return NextResponse.json({ config });

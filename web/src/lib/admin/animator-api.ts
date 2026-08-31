@@ -127,6 +127,8 @@ export async function patchEventConfig(
     badgeRequired?: boolean;
     extractionCount?: number | null;
     salvaSec?: number | null;
+    displayTypeScale?: number | null;
+    planciaTypeScale?: number | null;
   },
   pin: string | null,
 ): Promise<Response> {
@@ -217,6 +219,7 @@ export async function createParticipant(
   eventCode: string,
   body: {
     nickname: string;
+    realName?: string | null;
     gender: "male" | "female";
     badgeCode?: string | null;
   },
@@ -234,6 +237,7 @@ export async function updateParticipant(
   participantId: string,
   body: {
     nickname?: string;
+    realName?: string | null;
     gender?: "male" | "female";
     badgeCode?: string | null;
     forceOffline?: boolean;

@@ -11,6 +11,7 @@ import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
 const createSchema = z.object({
   nickname: z.string().min(1).max(40),
+  realName: z.string().trim().max(80).optional().nullable(),
   gender: z.enum(["male", "female"]),
   badgeCode: z.string().max(20).nullable().optional(),
   role: z
@@ -117,6 +118,7 @@ export async function POST(
     const participant = await createParticipantAdmin(supabase, {
       eventId: event.id,
       nickname: body.nickname,
+      realName: body.realName,
       gender: body.gender,
       badgeCode: body.badgeCode ?? null,
       role: body.role,

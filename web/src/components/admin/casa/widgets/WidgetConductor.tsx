@@ -41,6 +41,7 @@ export function WidgetConductor({
         type="button"
         className="casa-go"
         disabled={localBusy}
+        aria-disabled={localBusy}
         onClick={onLocalGo}
       >
         {localBusy ? "…" : localLabel}

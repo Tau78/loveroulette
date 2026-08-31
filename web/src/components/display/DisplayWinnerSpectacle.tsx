@@ -87,7 +87,7 @@ export function DisplayWinnerSpectacle({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 1.05 }}
             transition={{ duration: 0.12 }}
-            className="relative z-10 font-display text-4xl md:text-6xl font-bold text-center text-white drop-shadow-[0_0_48px_rgba(255,215,0,0.35)]"
+            className="relative z-10 font-display text-5xl md:text-7xl font-bold text-center text-white drop-shadow-[0_0_48px_rgba(255,215,0,0.35)]"
           >
             {coupleLabel(current)}
           </motion.h2>
@@ -130,10 +130,10 @@ export function DisplayWinnerSpectacle({
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-200">
           Vincitori
         </p>
-        <h2 className="font-display text-4xl md:text-6xl font-bold text-center text-white">
+        <h2 className="font-display text-5xl md:text-7xl font-bold text-center text-white">
           {coupleLabel(winner.finalist)}
         </h2>
-        <p className="text-2xl font-display text-amber-200 tabular-nums">
+        <p className="text-3xl font-display text-amber-200 tabular-nums">
           {winner.score} voti totali
         </p>
       </motion.div>

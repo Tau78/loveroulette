@@ -2,18 +2,16 @@
 
 Grafiche fullscreen **16:9** mostrate in fase `theme_intro` / gate Casa «tema», prima delle domande di ogni manche.
 
-Palette allineata al tema **Dark Fuchsia** (nero, magenta `#E91E8C`, coral `#FF4757`).
-Il titolo/sottotitolo resta overlay dinamico (manche Generatore); le art lasciano spazio centrale scuro.
+Palette allineata al tema **Dark Fuchsia**. Titolo/sottotitolo overlay dinamico.
+Motion (Framer, senza video): `theme-slide-motion.ts` — Ken Burns per categoria + ingresso titolo scenico.
 
-| File | Categoria | Mood |
-|------|-----------|------|
-| `lifestyle.jpg` | `lifestyle` | Cocktail, vinile, roulette lounge |
-| `romantic.jpg` | `romantic` | Cuori di luce, petali, candele |
-| `adventure.jpg` | `adventure` | Montagna, aurora magenta, bussola |
-| `values.jpg` | `values` | Bilance di luce, anelli, impegno |
-| `fun.jpg` | `fun` | Maschere, disco, champagne |
-| `intimacy.jpg` | `intimacy` | Nastri di seta, glow sensuale PG-18 |
+| File | Categoria | Motion art | Ingresso titolo |
+|------|-----------|------------|-----------------|
+| `lifestyle.jpg` | `lifestyle` | Zoom lento verso il drink | Slam da scale+blur |
+| `romantic.jpg` | `romantic` | Deriva verso l’alto | Sale dal basso |
+| `adventure.jpg` | `adventure` | Spinta dal basso-destra | Whip da sinistra |
+| `values.jpg` | `values` | Zoom-out solenne | Cade dall’alto |
+| `fun.jpg` | `fun` | Zoom + sway energico | Bounce/rotate |
+| `intimacy.jpg` | `intimacy` | Pan sulle nastri | Reveal soft+blur |
 
-Sorgente di lavoro (copia): `grafiche/theme-slides/` in root repo.
-
-Mapping runtime: `web/src/lib/display/quiz-theme-slides.ts` · UI: `DisplayThemeSlide`.
+Mapping: `quiz-theme-slides.ts` · UI: `DisplayThemeSlide`.

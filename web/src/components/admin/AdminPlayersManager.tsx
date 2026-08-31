@@ -35,6 +35,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAnimatorPin } from "@/hooks/useAnimatorPin";
 import { useFullscreen } from "@/hooks/useFullscreen";
+import {
+  NICKNAME_FROM_REAL_NAME_PROMPT,
+  nicknameSaveErrorMessage,
+  resolveNicknameOnSave,
+} from "@/lib/player/nickname-save";
 
 interface AdminPlayersManagerProps {
   eventCode: string;
@@ -65,12 +70,17 @@ export function AdminPlayersManager({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNick, setEditNick] = useState("");
+  const [editRealName, setEditRealName] = useState("");
   const [editBadge, setEditBadge] = useState("");
   const [editGender, setEditGender] = useState<"male" | "female">("male");
   const [showAdd, setShowAdd] = useState(false);
   const [newNick, setNewNick] = useState("");
+  const [newRealName, setNewRealName] = useState("");
   const [newBadge, setNewBadge] = useState("");
   const [newGender, setNewGender] = useState<"male" | "female">("male");
+  const [pendingNickConfirm, setPendingNickConfirm] = useState<
+    null | "create" | { playerId: string }
+  >(null);
   const [pendingDeletePlayer, setPendingDeletePlayer] = useState<{
     id: string;
     nickname: string;
@@ -135,15 +145,33 @@ export function AdminPlayersManager({
     rejectPin(message);
   }
 
-  async function handleCreate() {
-    if (disabled || !newNick.trim()) return;
+  async function handleCreate(opts?: { confirmUseRealName?: boolean }) {
+    if (disabled) return;
+
+    const resolved = resolveNicknameOnSave({
+      realName: newRealName,
+      nickname: newNick,
+      confirmUseRealName: opts?.confirmUseRealName,
+    });
+
+    if (!resolved.ok) {
+      if (resolved.reason === "NEED_CONFIRM") {
+        setPendingNickConfirm("create");
+        return;
+      }
+      setError(nicknameSaveErrorMessage(resolved.reason));
+      return;
+    }
+
+    setPendingNickConfirm(null);
     setBusyId("__create__");
     setError(null);
     try {
       const res = await createParticipant(
         eventCode,
         {
-          nickname: newNick.trim(),
+          nickname: resolved.nickname,
+          realName: resolved.realName || null,
           gender: newGender,
           badgeCode: newBadge.trim() || null,
         },
@@ -161,6 +189,7 @@ export function AdminPlayersManager({
       }
       setShowAdd(false);
       setNewNick("");
+      setNewRealName("");
       setNewBadge("");
       setNewGender("male");
       await load();
@@ -174,13 +203,35 @@ export function AdminPlayersManager({
   function startEdit(player: AdminParticipantRow) {
     setEditingId(player.id);
     setEditNick(player.nickname);
+    setEditRealName(player.real_name ?? "");
     setEditBadge(player.badge_code ?? "");
     setEditGender(player.gender);
     setPendingDeletePlayer(null);
+    setPendingNickConfirm(null);
   }
 
-  async function saveEdit(playerId: string) {
-    if (disabled || !editNick.trim()) return;
+  async function saveEdit(
+    playerId: string,
+    opts?: { confirmUseRealName?: boolean },
+  ) {
+    if (disabled) return;
+
+    const resolved = resolveNicknameOnSave({
+      realName: editRealName,
+      nickname: editNick,
+      confirmUseRealName: opts?.confirmUseRealName,
+    });
+
+    if (!resolved.ok) {
+      if (resolved.reason === "NEED_CONFIRM") {
+        setPendingNickConfirm({ playerId });
+        return;
+      }
+      setError(nicknameSaveErrorMessage(resolved.reason));
+      return;
+    }
+
+    setPendingNickConfirm(null);
     setBusyId(playerId);
     setError(null);
     try {
@@ -188,7 +239,8 @@ export function AdminPlayersManager({
         eventCode,
         playerId,
         {
-          nickname: editNick.trim(),
+          nickname: resolved.nickname,
+          realName: resolved.realName || null,
           gender: editGender,
           badgeCode: editBadge.trim() || null,
         },
@@ -332,6 +384,32 @@ export function AdminPlayersManager({
       />
 
       <AdminConfirmDialog
+        open={pendingNickConfirm !== null}
+        title="Nickname vuoto"
+        description={NICKNAME_FROM_REAL_NAME_PROMPT}
+        confirmLabel="Sì, usa il nome"
+        cancelLabel="No, inserisco un nickname"
+        variant="warning"
+        busy={
+          pendingNickConfirm === "create"
+            ? busyId === "__create__"
+            : busyId === pendingNickConfirm?.playerId
+        }
+        onCancel={() => setPendingNickConfirm(null)}
+        onConfirm={() => {
+          if (pendingNickConfirm === "create") {
+            void handleCreate({ confirmUseRealName: true });
+            return;
+          }
+          if (pendingNickConfirm) {
+            void saveEdit(pendingNickConfirm.playerId, {
+              confirmUseRealName: true,
+            });
+          }
+        }}
+      />
+
+      <AdminConfirmDialog
         open={pendingSimulate !== null}
         title={
           pendingSimulate === "matching"
@@ -466,10 +544,23 @@ export function AdminPlayersManager({
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Nuovo giocatore
               </p>
-              <div className="grid sm:grid-cols-3 gap-2">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="new-real-name" className="text-xs">
+                    Nome
+                  </Label>
+                  <Input
+                    id="new-real-name"
+                    value={newRealName}
+                    onChange={(e) => setNewRealName(e.target.value)}
+                    className="h-8 text-sm"
+                    maxLength={40}
+                    placeholder="Nome reale"
+                  />
+                </div>
                 <div className="space-y-1">
                   <Label htmlFor="new-nick" className="text-xs">
-                    Nickname
+                    Nickname (obbligatorio)
                   </Label>
                   <Input
                     id="new-nick"
@@ -477,6 +568,7 @@ export function AdminPlayersManager({
                     onChange={(e) => setNewNick(e.target.value)}
                     className="h-8 text-sm"
                     maxLength={40}
+                    placeholder="Se vuoto = nome"
                   />
                 </div>
                 <div className="space-y-1">
@@ -512,7 +604,7 @@ export function AdminPlayersManager({
               <div className="flex gap-2">
                 <AdminButton
                   size="sm"
-                  disabled={disabled || busyId === "__create__" || !newNick.trim()}
+                  disabled={disabled || busyId === "__create__"}
                   onClick={() => void handleCreate()}
                 >
                   Salva giocatore
@@ -520,7 +612,10 @@ export function AdminPlayersManager({
                 <AdminButton
                   size="sm"
                   variant="ghost"
-                  onClick={() => setShowAdd(false)}
+                  onClick={() => {
+                    setShowAdd(false);
+                    setPendingNickConfirm(null);
+                  }}
                 >
                   Annulla
                 </AdminButton>
@@ -545,10 +640,13 @@ export function AdminPlayersManager({
                     <tr className="border-b border-border/30 bg-black/20 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                       <th className="px-3 py-2 font-medium">Stato</th>
                       <th className="px-3 py-2 font-medium">Nickname</th>
+                      <th className="px-3 py-2 font-medium hidden md:table-cell">
+                        Nome
+                      </th>
                       <th className="px-3 py-2 font-medium hidden sm:table-cell">
                         Badge
                       </th>
-                      <th className="px-3 py-2 font-medium hidden md:table-cell">
+                      <th className="px-3 py-2 font-medium hidden lg:table-cell">
                         Genere
                       </th>
                       <th className="px-3 py-2 font-medium hidden lg:table-cell">
@@ -588,9 +686,23 @@ export function AdminPlayersManager({
                                 onChange={(e) => setEditNick(e.target.value)}
                                 className="h-7 text-sm max-w-[180px]"
                                 maxLength={40}
+                                placeholder="Nickname"
                               />
                             ) : (
                               <span className="font-medium">{player.nickname}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 hidden md:table-cell">
+                            {isEditing ? (
+                              <Input
+                                value={editRealName}
+                                onChange={(e) => setEditRealName(e.target.value)}
+                                className="h-7 text-sm max-w-[140px]"
+                                maxLength={40}
+                                placeholder="Nome"
+                              />
+                            ) : (
+                              player.real_name ?? "—"
                             )}
                           </td>
                           <td className="px-3 py-2 hidden sm:table-cell">
@@ -605,7 +717,7 @@ export function AdminPlayersManager({
                               player.badge_code ?? "—"
                             )}
                           </td>
-                          <td className="px-3 py-2 hidden md:table-cell">
+                          <td className="px-3 py-2 hidden lg:table-cell">
                             {isEditing ? (
                               <select
                                 value={editGender}

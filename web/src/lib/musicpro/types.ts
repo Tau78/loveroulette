@@ -75,6 +75,8 @@ export interface LoveRouletteParticipant {
   id: string;
   event_id: string;
   nickname: string;
+  /** Nome vero (opzionale); a schermo resta sempre `nickname`. */
+  real_name?: string | null;
   gender: LoveRouletteGender;
   badge_code: string | null;
   role: LoveRouletteParticipantRole;

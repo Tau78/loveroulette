@@ -119,7 +119,7 @@ export function DisplayFinalsStage({
                   key={count}
                   initial={{ scale: 1.2, opacity: 0.6 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="tabular-nums font-display text-xl md:text-2xl text-white"
+                  className="tabular-nums font-display text-2xl md:text-3xl text-white"
                 >
                   {count}
                 </motion.span>

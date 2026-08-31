@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
+import { DisplayPlayerPresent } from "@/components/display/DisplayPlayerPresent";
+import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { PROJECTOR_CANVAS } from "@/lib/display/projector-canvas";
 import {
@@ -11,6 +14,12 @@ import {
   QUIZ_ANSWER_TEXT_CLASS,
   QUIZ_QUESTION_TEXT_CLASS,
 } from "@/lib/display/quiz-display-typography";
+import {
+  QUIZ_ANSWER_SLIDE,
+  QUIZ_QUESTION_SLIDE,
+  quizAnswerEnterX,
+  quizAnswersRevealMs,
+} from "@/lib/display/quiz-reveal-motion";
 import { projectorPreviewScale } from "@/lib/display/embed";
 import {
   DEFAULT_SLIDES,
@@ -22,7 +31,7 @@ import {
   probeSiglaMissing,
   shouldMountSiglaVideo,
 } from "@/lib/admin/casa-sigla";
-import { categoryThemeLabel } from "@/lib/musicpro/quiz-display";
+import { categoryThemeLabel, type QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
 import {
   CasaPlayerSpotlight,
   type CasaSpotlight,
@@ -56,7 +65,7 @@ type Props = {
   sigla: "idle" | "warn" | "on" | "hold";
   help: boolean;
   count: number | null;
-  onStage: { nick: string; gender: "M" | "F" } | undefined;
+  onStage: { nick: string; gender: "M" | "F"; photo?: string } | undefined;
   showPct?: boolean;
   enlarge?: boolean;
   slides?: Record<CasaSlideId, CasaSlide>;
@@ -66,6 +75,10 @@ type Props = {
   flash?: { who: string; text: string; photo?: string; say?: boolean } | null;
   spotlight?: CasaSpotlight | null;
   quizGate?: CasaQuizGate;
+  /** Fase live allineata a /display e player (null = solo gate locale). */
+  quizPhase?: QuizDisplayPhase | null;
+  quizRemaining?: number | null;
+  quizSecondsTotal?: number;
   quizQuestion?: {
     text: string;
     category: string;
@@ -97,6 +110,9 @@ export function CasaProjector({
   flash = null,
   spotlight = null,
   quizGate = "tema",
+  quizPhase = null,
+  quizRemaining = null,
+  quizSecondsTotal = 15,
   quizQuestion = null,
   mediaOnScreen = null,
   onClearMediaOnScreen,
@@ -132,6 +148,10 @@ export function CasaProjector({
   /** Never keep the ambient loop while another video is the hero. */
   const suspendBgVideo = mountSigla || mediaVideoOn || beat === "stacco";
   const theme = categoryThemeLabel(quizQuestion?.category ?? FALLBACK_QUIZ.category);
+  const previewQuizPhase: QuizDisplayPhase | null =
+    beat === "quiz"
+      ? quizPhase ?? (quizGate === "tema" ? "theme_intro" : "answers")
+      : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -175,7 +195,7 @@ export function CasaProjector({
   return (
     <div
       ref={box}
-      className="casa-screen theme-dark-fuchsia"
+      className="casa-screen theme-dark-fuchsia lr-display-type-root"
       data-enlarge={enlarge ? "1" : undefined}
     >
       <div
@@ -188,6 +208,7 @@ export function CasaProjector({
       >
         <DisplayStageBackground
           logoScale={lobby ? "full" : "compact"}
+          quizPhase={previewQuizPhase}
           hideBackgroundRoulette={
             siglaFullscreen || beat === "stacco" || beat === "quiz" || mediaVideoOn
           }
@@ -234,40 +255,24 @@ export function CasaProjector({
           />
         ) : beat === "presenti" && onStage ? (
           <div className="casa-proj-center">
-            <DisplayPhaseHero
-              kicker={onStage.gender}
-              headline={onStage.nick.toUpperCase()}
-              uppercase
+            <DisplayPlayerPresent
+              nick={onStage.nick}
+              gender={onStage.gender}
+              photo={onStage.photo}
             />
           </div>
         ) : beat === "stacco" && count != null ? (
           <div className="casa-proj-count">{count}</div>
-        ) : beat === "quiz" && quizGate === "tema" ? (
-          <div className="casa-proj-theme">
-            <DisplayThemeSlide
-              title={theme.title}
-              subtitle={theme.subtitle}
-              category={quizQuestion?.category ?? FALLBACK_QUIZ.category}
-              kicker="Manche"
-            />
-          </div>
         ) : beat === "quiz" ? (
-          <div className="casa-proj-quiz">
-            <p className={QUIZ_QUESTION_TEXT_CLASS}>
-              {(quizQuestion?.text ?? FALLBACK_QUIZ.text).toUpperCase()}
-            </p>
-            <div className="casa-proj-opts">
-              {(quizQuestion?.options ?? FALLBACK_QUIZ.options).map((opt, i) => (
-                <div key={`${opt}-${i}`} className="casa-proj-opt">
-                  <span className={QUIZ_ANSWER_LETTER_CLASS}>
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  <span className={QUIZ_ANSWER_TEXT_CLASS}>{opt.toUpperCase()}</span>
-                  {showPct ? <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span> : null}
-                </div>
-              ))}
-            </div>
-          </div>
+          <QuizPreview
+            gate={quizGate}
+            phase={quizPhase}
+            remaining={quizRemaining}
+            secondsTotal={quizSecondsTotal}
+            question={quizQuestion}
+            showPct={showPct}
+            theme={theme}
+          />
         ) : slide ? (
           <div className="casa-proj-center">
             <DisplayPhaseHero
@@ -334,6 +339,221 @@ export function CasaProjector({
         ) : null}
       </div>
       {enlarge ? <span className="casa-pgm">PGM · 16:9</span> : null}
+    </div>
+  );
+}
+
+function QuizPreview({
+  gate,
+  phase,
+  remaining,
+  secondsTotal,
+  question,
+  showPct,
+  theme,
+}: {
+  gate: CasaQuizGate;
+  phase: QuizDisplayPhase | null;
+  remaining: number | null;
+  secondsTotal: number;
+  question: Props["quizQuestion"];
+  showPct: boolean;
+  theme: { title: string; subtitle: string };
+}) {
+  const body = (question?.text ?? FALLBACK_QUIZ.text).toUpperCase();
+  const options = question?.options ?? FALLBACK_QUIZ.options;
+  const category = question?.category ?? FALLBACK_QUIZ.category;
+  const effective =
+    phase ??
+    (gate === "tema" ? "theme_intro" : "answers");
+
+  if (effective === "start_countdown") {
+    return (
+      <div className="casa-proj-quiz-shell">
+        <div className="casa-proj-center" aria-live="polite">
+          <DisplayPhaseHero
+            kicker="Si parte"
+            headline={String(remaining ?? 0)}
+            subline="Countdown avvio"
+            uppercase
+          />
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.08} />
+      </div>
+    );
+  }
+
+  if (effective === "theme_intro") {
+    return (
+      <div className="casa-proj-quiz-shell">
+        <div className="casa-proj-theme">
+          <DisplayThemeSlide
+            title={theme.title}
+            subtitle={theme.subtitle}
+            category={category}
+            kicker="Manche"
+          />
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.12} />
+      </div>
+    );
+  }
+
+  if (effective === "question") {
+    return (
+      <div className="casa-proj-quiz-shell" data-phase="question">
+        <div className="casa-proj-quiz">
+          <motion.p
+            className={QUIZ_QUESTION_TEXT_CLASS}
+            initial={{ opacity: 0, x: QUIZ_QUESTION_SLIDE.fromX }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{
+              duration: QUIZ_QUESTION_SLIDE.duration,
+              ease: QUIZ_QUESTION_SLIDE.ease,
+            }}
+          >
+            {body}
+          </motion.p>
+          <div className="casa-proj-opts" aria-hidden>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="casa-proj-opt casa-proj-opt-skel">
+                <span className={QUIZ_ANSWER_LETTER_CLASS}>
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className="casa-proj-skel-bar" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.16} />
+      </div>
+    );
+  }
+
+  if (effective === "next_question") {
+    return (
+      <div className="casa-proj-quiz-shell">
+        <div className="casa-proj-center">
+          <DisplayPhaseHero
+            kicker="Classifica"
+            headline="ACCOPPIAMENTO"
+            subline="Provvisoria"
+            uppercase
+          />
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.28} />
+      </div>
+    );
+  }
+
+  if (effective === "results") {
+    return (
+      <div className="casa-proj-quiz-shell" data-phase="results">
+        <div className="casa-proj-quiz">
+          <p className={QUIZ_QUESTION_TEXT_CLASS}>{body}</p>
+          <div className="casa-proj-opts">
+            {options.map((opt, i) => (
+              <div key={`${opt}-${i}`} className="casa-proj-opt">
+                <span className={QUIZ_ANSWER_LETTER_CLASS}>
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className={QUIZ_ANSWER_TEXT_CLASS}>{opt.toUpperCase()}</span>
+                <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <DisplayQuizFooter countdown={null} heartProgress={0.24} />
+      </div>
+    );
+  }
+
+  // answers — countdown dopo reveal slide (allineato a /display)
+  return (
+    <QuizAnswersPreview
+      body={body}
+      options={options}
+      remaining={remaining}
+      secondsTotal={secondsTotal}
+      showPct={showPct}
+    />
+  );
+}
+
+function QuizAnswersPreview({
+  body,
+  options,
+  remaining,
+  secondsTotal,
+  showPct,
+}: {
+  body: string;
+  options: readonly string[];
+  remaining: number | null;
+  secondsTotal: number;
+  showPct: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  const [countdownReady, setCountdownReady] = useState(false);
+  const locked = remaining != null && remaining <= 0;
+  const total = Math.max(1, secondsTotal);
+  const value = Math.max(0, remaining ?? total);
+
+  useEffect(() => {
+    setCountdownReady(false);
+    if (reduceMotion) {
+      setCountdownReady(true);
+      return;
+    }
+    const timer = window.setTimeout(
+      () => setCountdownReady(true),
+      quizAnswersRevealMs(),
+    );
+    return () => window.clearTimeout(timer);
+  }, [body, options, reduceMotion]);
+
+  return (
+    <div
+      className="casa-proj-quiz-shell"
+      data-phase="answers"
+      data-locked={locked ? "1" : undefined}
+    >
+      <div className="casa-proj-quiz">
+        <p className={QUIZ_QUESTION_TEXT_CLASS}>{body}</p>
+        <div
+          className={
+            locked ? "casa-proj-opts casa-proj-opts-dim" : "casa-proj-opts"
+          }
+        >
+          {options.map((opt, i) => (
+            <motion.div
+              key={`${opt}-${i}`}
+              className="casa-proj-opt"
+              initial={
+                reduceMotion ? false : { opacity: 0, x: quizAnswerEnterX(i) }
+              }
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                delay: reduceMotion ? 0 : i * QUIZ_ANSWER_SLIDE.stagger,
+                duration: QUIZ_ANSWER_SLIDE.duration,
+                ease: QUIZ_ANSWER_SLIDE.ease,
+              }}
+            >
+              <span className={QUIZ_ANSWER_LETTER_CLASS}>
+                {String.fromCharCode(65 + i)}
+              </span>
+              <span className={QUIZ_ANSWER_TEXT_CLASS}>{opt.toUpperCase()}</span>
+              {showPct ? (
+                <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span>
+              ) : null}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+      <DisplayQuizFooter
+        countdown={countdownReady ? { value, total } : null}
+        heartProgress={0.2}
+      />
     </div>
   );
 }

@@ -8,6 +8,8 @@ export interface DisplayOverlay {
   body?: string;
   /** Optional kicker above the headline (sticky slide overlays). */
   kicker?: string;
+  /** Optional face / media for player presentation overlays. */
+  imageUrl?: string;
   updatedAt: string;
 }
 
@@ -51,6 +53,9 @@ export function getDisplayOverlay(
   if (typeof record.kicker === "string" && record.kicker.trim()) {
     overlay.kicker = record.kicker.trim();
   }
+  if (typeof record.imageUrl === "string" && record.imageUrl.trim()) {
+    overlay.imageUrl = record.imageUrl.trim();
+  }
 
   return overlay;
 }
@@ -78,6 +83,9 @@ export async function setDisplayOverlay(
   }
   if (overlay.kicker !== undefined) {
     stored.kicker = overlay.kicker;
+  }
+  if (overlay.imageUrl !== undefined) {
+    stored.imageUrl = overlay.imageUrl;
   }
 
   const { data: row, error: fetchError } = await supabase

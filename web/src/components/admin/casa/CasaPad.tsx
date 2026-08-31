@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   useVisualViewportRect,
   visualViewportOverlayStyle,
@@ -38,7 +38,14 @@ import {
   patchEventConfig,
   postDisplayAudioStart,
   postDisplayCommand,
+  updateParticipant,
 } from "@/lib/admin/animator-api";
+import {
+  NICKNAME_FROM_REAL_NAME_PROMPT,
+  resolveNicknameOnSave,
+} from "@/lib/player/nickname-save";
+import { useTypeScalePrefs } from "@/hooks/useTypeScalePrefs";
+import { clampTypeScale } from "@/lib/display/type-scale";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
   DEFAULT_CASA_CLOCK,
@@ -157,6 +164,8 @@ type Gender = "M" | "F";
 type Guest = {
   id: string;
   nick: string;
+  /** Nome anagrafico (non mostrato a schermo). */
+  realName?: string;
   gender: Gender;
   photo?: string;
   score: number;
@@ -219,16 +228,24 @@ function SetupFields({
   manche,
   seconds,
   mustAnswer,
+  displayScale,
+  planciaScale,
   onManche,
   onSeconds,
   onMustAnswer,
+  onDisplayScale,
+  onPlanciaScale,
 }: {
   manche: number;
   seconds: number;
   mustAnswer: boolean;
+  displayScale: number;
+  planciaScale: number;
   onManche: (n: number) => void;
   onSeconds: (n: (typeof SECONDS)[number]) => void;
   onMustAnswer: () => void;
+  onDisplayScale: (n: number) => void;
+  onPlanciaScale: (n: number) => void;
 }) {
   return (
     <>
@@ -278,6 +295,46 @@ function SetupFields({
         >
           {mustAnswer ? "On" : "Off"}
         </button>
+      </div>
+      <div className="casa-setup-row">
+        <span>Dimensione caratteri Schermo</span>
+        <div className="casa-stepper">
+          <button
+            type="button"
+            className="casa-stepper-btn"
+            onClick={() => onDisplayScale(displayScale - 0.1)}
+          >
+            −
+          </button>
+          <strong>{Math.round(displayScale * 100)}%</strong>
+          <button
+            type="button"
+            className="casa-stepper-btn"
+            onClick={() => onDisplayScale(displayScale + 0.1)}
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div className="casa-setup-row">
+        <span>Dimensione Caratteri Plancia</span>
+        <div className="casa-stepper">
+          <button
+            type="button"
+            className="casa-stepper-btn"
+            onClick={() => onPlanciaScale(planciaScale - 0.1)}
+          >
+            −
+          </button>
+          <strong>{Math.round(planciaScale * 100)}%</strong>
+          <button
+            type="button"
+            className="casa-stepper-btn"
+            onClick={() => onPlanciaScale(planciaScale + 0.1)}
+          >
+            +
+          </button>
+        </div>
       </div>
     </>
   );
@@ -580,6 +637,7 @@ function formatMmSs(totalSec: number): string {
 
 export function CasaPad({ eventCode }: { eventCode: string }) {
   const live = useCasaLiveSession();
+  const typeScale = useTypeScalePrefs(eventCode);
   const [beat, setBeat] = useState<Beat>("casa");
   const [guests, setGuests] = useState<Guest[]>(SEED);
   const [query, setQuery] = useState("");
@@ -674,16 +732,17 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
   const liveQuizActive =
     live.runtimeState === "quiz" && Boolean(live.quizState);
+  // start_countdown tick sempre; hold solo se Auto acceso.
   const { displayPhase: liveQuizPhase, remaining: liveQuizRemaining } =
     useQuizPhaseSync({
       eventSlug: eventCode,
       quizState: live.quizState,
       enabled: liveQuizActive && !live.controlsDisabled,
-      // Backup tick driver (TransportBar also drives when autoplay is on).
       driveTicks:
         liveQuizActive &&
         !live.controlsDisabled &&
-        live.quizState?.autoplayEnabled === true,
+        (live.quizState?.autoplayEnabled === true ||
+          live.quizState?.displayPhase === "start_countdown"),
       onTick: (quiz, runtime) => {
         live.applyQuizUpdate(quiz, runtime);
       },
@@ -882,6 +941,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           participants?: {
             id: string;
             nickname: string;
+            real_name?: string | null;
             gender: "male" | "female";
           }[];
         };
@@ -891,6 +951,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           rows.map((p) => ({
             id: p.id,
             nick: p.nickname,
+            realName: p.real_name?.trim() || undefined,
             gender: p.gender === "female" ? "F" : "M",
             score: 0,
           })),
@@ -945,12 +1006,23 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             return;
           }
           if (beat === "presenti" && onStage) {
+            const sex = onStage.gender === "F" ? "Lei" : "Lui";
+            const photo =
+              onStage.photo &&
+              !onStage.photo.startsWith("blob:") &&
+              !onStage.photo.startsWith("file:")
+                ? onStage.photo
+                : onStage.gender === "F"
+                  ? "/grafiche/avatar-f.png"
+                  : "/grafiche/avatar-m.png";
             await postDisplayCommand(
               eventCode,
               {
                 type: "slide",
-                kicker: onStage.gender,
                 title: onStage.nick.toUpperCase(),
+                body: sex,
+                kicker: onStage.gender,
+                imageUrl: photo,
               },
               live.pin,
             );
@@ -1024,19 +1096,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     if (beat !== "quiz") setGoBusy(false);
   }, [beat]);
 
-  // Serata già in quiz con autoplay spento → riaccendi il countdown fasi.
-  useEffect(() => {
-    if (!live.pinReady || live.controlsDisabled) return;
-    if (live.runtimeState !== "quiz" || !live.quizState) return;
-    if (live.quizState.autoplayEnabled) return;
-    void live.runQuizAction("setAutoplayEnabled", { enabled: true });
-  }, [
-    live.controlsDisabled,
-    live.pinReady,
-    live.quizState,
-    live.runtimeState,
-    live.runQuizAction,
-  ]);
+  // Serata già in quiz: hold fasi restano su AVANTI (niente autoplay forzato).
 
   useEffect(() => {
     if (open === "questions") return;
@@ -1260,13 +1320,6 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           if (!result.ok) {
             setGoError(result.error);
             return;
-          }
-          // Countdown fasi live: senza autoplay il quiz resta fermo.
-          const auto = await live.runQuizAction("setAutoplayEnabled", {
-            enabled: true,
-          });
-          if (!auto.ok) {
-            setGoError(auto.error);
           }
           void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
         } catch (err) {
@@ -1624,6 +1677,13 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     flash,
     spotlight,
     quizGate: projectorQuizGate,
+    quizPhase: liveQuizActive ? liveQuizPhase : null,
+    quizRemaining: liveQuizActive
+      ? liveQuizRemaining
+      : beat === "quiz" && quizGate === "play"
+        ? quizLeftSec
+        : null,
+    quizSecondsTotal: live.quizState?.timing.questionSeconds ?? seconds,
     quizQuestion: projectorQuestion,
     mediaOnScreen:
       videoState.onScreenUrl && videoState.onScreenName
@@ -1810,7 +1870,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         return (
           <div className={`casa-timer-widget ${liveOff ?? ""}`}>
             {beat === "quiz" && quizGate === "play" ? (
-              <p className="casa-timer-readout">{quizLeftSec}s</p>
+              <p className="casa-timer-readout">
+                {liveQuizActive ? liveQuizRemaining : quizLeftSec}s
+              </p>
             ) : (
               <>
                 <p className="casa-timer-readout">{formatMmSs(freeTimerSec)}</p>
@@ -2111,7 +2173,16 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }
 
   return (
-    <div className="casa" data-layout-edit={layoutEdit ? "1" : undefined}>
+    <div
+      className="casa"
+      data-layout-edit={layoutEdit ? "1" : undefined}
+      style={
+        {
+          "--casa-type-scale": String(typeScale.prefs.plancia),
+          "--lr-display-type-scale": String(typeScale.prefs.display),
+        } as CSSProperties
+      }
+    >
       <header className="casa-top">
         <div className="casa-top-mod casa-top-sala" aria-live="polite">
           <span>
@@ -2323,9 +2394,33 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                       manche={manche}
                       seconds={seconds}
                       mustAnswer={mustAnswer}
+                      displayScale={typeScale.prefs.display}
+                      planciaScale={typeScale.prefs.plancia}
                       onManche={changeManche}
                       onSeconds={setSeconds}
                       onMustAnswer={() => setMustAnswer((v) => !v)}
+                      onDisplayScale={(n) => {
+                        const display = clampTypeScale(n);
+                        typeScale.updatePrefs({ display });
+                        if (live.pinReady && live.pin) {
+                          void patchEventConfig(
+                            eventCode,
+                            { displayTypeScale: display },
+                            live.pin,
+                          );
+                        }
+                      }}
+                      onPlanciaScale={(n) => {
+                        const plancia = clampTypeScale(n);
+                        typeScale.updatePrefs({ plancia });
+                        if (live.pinReady && live.pin) {
+                          void patchEventConfig(
+                            eventCode,
+                            { planciaTypeScale: plancia },
+                            live.pin,
+                          );
+                        }
+                      }}
                     />
                     {beat === "casa" ? (
                       <button type="button" className="casa-hit" onClick={() => setOpen("prep")}>
@@ -2664,13 +2759,88 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
               </button>
             </div>
             <label className="casa-pop-field">
-              <span>Rinomina</span>
+              <span>Nome</span>
+              <input
+                className="casa-field"
+                value={picked.realName ?? ""}
+                onChange={(e) =>
+                  patchGuest(picked.id, { realName: e.target.value })
+                }
+                placeholder="Nome reale"
+              />
+            </label>
+            <label className="casa-pop-field">
+              <span>Nickname (obbligatorio)</span>
               <input
                 className="casa-field"
                 value={picked.nick}
                 onChange={(e) => patchGuest(picked.id, { nick: e.target.value })}
+                placeholder="Mostrato a schermo"
               />
             </label>
+            <div className="casa-pop-acts">
+              <button
+                type="button"
+                className="casa-hit"
+                onClick={() => {
+                  const resolved = resolveNicknameOnSave({
+                    realName: picked.realName ?? "",
+                    nickname: picked.nick,
+                  });
+                  if (!resolved.ok) {
+                    if (resolved.reason === "NEED_CONFIRM") {
+                      const ok = window.confirm(NICKNAME_FROM_REAL_NAME_PROMPT);
+                      if (!ok) return;
+                      const confirmed = resolveNicknameOnSave({
+                        realName: picked.realName ?? "",
+                        nickname: picked.nick,
+                        confirmUseRealName: true,
+                      });
+                      if (!confirmed.ok) return;
+                      patchGuest(picked.id, {
+                        nick: confirmed.nickname,
+                        realName: confirmed.realName,
+                      });
+                      if (live.pinReady && live.pin) {
+                        void updateParticipant(
+                          eventCode,
+                          picked.id,
+                          {
+                            nickname: confirmed.nickname,
+                            realName: confirmed.realName || null,
+                          },
+                          live.pin,
+                        );
+                      }
+                      return;
+                    }
+                    window.alert(
+                      resolved.reason === "NEED_REAL_NAME"
+                        ? "Scrivi almeno il nome o un nickname."
+                        : "Il nickname è obbligatorio.",
+                    );
+                    return;
+                  }
+                  patchGuest(picked.id, {
+                    nick: resolved.nickname,
+                    realName: resolved.realName,
+                  });
+                  if (live.pinReady && live.pin) {
+                    void updateParticipant(
+                      eventCode,
+                      picked.id,
+                      {
+                        nickname: resolved.nickname,
+                        realName: resolved.realName || null,
+                      },
+                      live.pin,
+                    );
+                  }
+                }}
+              >
+                Salva scheda
+              </button>
+            </div>
             <div className="casa-pop-score">
               <span>Punti</span>
               <strong data-neg={picked.score < 0 ? "1" : undefined}>

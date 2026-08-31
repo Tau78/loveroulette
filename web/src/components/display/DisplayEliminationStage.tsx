@@ -124,11 +124,11 @@ export function DisplayEliminationStage({
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="rounded-[2rem] border border-destructive/35 bg-gradient-to-b from-black/90 via-black/80 to-black/90 px-6 py-10 md:px-14 md:py-16 shadow-[0_0_60px_rgba(255,71,87,0.25)]">
-              <p className="font-display text-xl md:text-3xl font-bold uppercase tracking-[0.35em] text-destructive mb-6 md:mb-8">
+              <p className="font-display text-2xl md:text-4xl font-bold uppercase tracking-[0.35em] text-destructive mb-6 md:mb-8">
                 {ELIMINATION_COPY.displayEliminatedKicker}
               </p>
               <motion.p
-                className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight"
+                className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-tight"
                 style={{
                   fontFamily: "var(--font-display), serif",
                   textShadow:
@@ -149,7 +149,7 @@ export function DisplayEliminationStage({
                 }}
               >
                 {visibleElimination.maleNick}
-                <span className="block text-3xl md:text-5xl text-destructive/90 my-2 md:my-3">
+                <span className="block text-4xl md:text-6xl text-destructive/90 my-2 md:my-3">
                   &
                 </span>
                 {visibleElimination.femaleNick}

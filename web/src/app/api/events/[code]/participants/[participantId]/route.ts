@@ -13,6 +13,7 @@ import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
 const patchSchema = z.object({
   nickname: z.string().min(1).max(40).optional(),
+  realName: z.string().trim().max(80).optional().nullable(),
   gender: z.enum(["male", "female"]).optional(),
   badgeCode: z.string().max(20).nullable().optional(),
   role: z
@@ -140,6 +141,7 @@ export async function PATCH(
       participantId,
       {
         nickname: body.nickname,
+        realName: body.realName,
         gender: body.gender,
         badgeCode: body.badgeCode,
         role: body.role,

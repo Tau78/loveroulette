@@ -30,6 +30,7 @@ import { AdminButton } from "@/components/admin/AdminButton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ADMIN_UI } from "@/lib/admin/admin-ui-tokens";
+import { quizAvantiState } from "@/lib/admin/quiz-avanti-gate";
 
 const PHASE_BADGE: Record<
   EventState,
@@ -99,7 +100,10 @@ export function AdminTransportBar({
     eventSlug: eventCode,
     quizState,
     enabled: runtimeState === "quiz" && Boolean(quizState) && !disabled,
-    driveTicks: autoplayEnabled && !disabled,
+    // start_countdown avanza sempre; le hold restano su AVANTI salvo Auto.
+    driveTicks:
+      !disabled &&
+      (autoplayEnabled || quizState?.displayPhase === "start_countdown"),
     onTick: (quiz) => onQuizChange?.(quiz),
   });
 
@@ -250,11 +254,14 @@ export function AdminTransportBar({
         : null;
       primaryDisabled = primaryDisabled || startQuizDisabled || !onStartQuiz;
       break;
-    case "quiz":
+    case "quiz": {
       primaryLabel = onLastResults ? "Matching" : "Avanti";
       primaryIcon = onLastResults ? FastForward : ChevronRight;
       primaryAction = () => void quizSkipPhase();
+      const quizGate = quizAvantiState(displayPhase, quizRemaining);
+      primaryDisabled = primaryDisabled || !quizGate.enabled;
       break;
+    }
     case "matching":
       primaryLabel = "Estrazione";
       primaryAction = () => void goTo("extraction");
@@ -409,17 +416,30 @@ export function AdminTransportBar({
     </div>
   );
 
+  const quizHint =
+    runtimeState === "quiz"
+      ? quizAvantiState(displayPhase, quizRemaining).hint
+      : null;
+
   if (variant === "go") {
+    const goDisabled = primaryDisabled || !primaryAction;
     return (
       <div className={cn("casa-conductor-local", className)}>
         <button
           type="button"
           className="casa-go"
-          disabled={primaryDisabled || !primaryAction}
+          disabled={goDisabled}
+          aria-disabled={goDisabled}
+          title={quizHint ?? undefined}
           onClick={() => primaryAction?.()}
         >
           {primaryAction ? primaryLabel : "Evento chiuso"}
         </button>
+        {quizHint ? (
+          <p className="casa-sub casa-conductor-note" title={quizHint}>
+            {quizHint}
+          </p>
+        ) : null}
         {error ? (
           <p className="casa-sub casa-conductor-note" title={error}>
             {error}

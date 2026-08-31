@@ -6,11 +6,13 @@ import {
   useContext,
   useEffect,
   useState,
+  type CSSProperties,
   type MouseEvent,
   type ReactNode,
 } from "react";
 import { Maximize } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
+import { useTypeScalePrefs } from "@/hooks/useTypeScalePrefs";
 import { cn } from "@/lib/utils";
 
 interface DisplayProjectorFullscreenValue {
@@ -38,6 +40,8 @@ interface DisplayProjectorRootProps {
   embedMode: boolean;
   presentMode: boolean;
   className?: string;
+  /** Evento per scala tipografia Schermo. */
+  eventCode?: string;
 }
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
@@ -52,7 +56,9 @@ export function DisplayProjectorRoot({
   embedMode,
   presentMode,
   className,
+  eventCode,
 }: DisplayProjectorRootProps) {
+  const { prefs } = useTypeScalePrefs(eventCode ?? "default");
   const { containerRef, isFullscreen, supported, enter, toggle } = useFullscreen({
     storageKey: "lr_display_fullscreen_pref",
     enableShortcut: !embedMode,
@@ -115,11 +121,17 @@ export function DisplayProjectorRoot({
         data-display-fullscreen={isFullscreen || undefined}
         onDoubleClick={handleDoubleClick}
         className={cn(
+          "lr-display-type-root",
           className,
           "outline-none",
           isFullscreen &&
             "fixed inset-0 z-[9999] h-full max-h-none w-full max-w-none bg-black",
         )}
+        style={
+          {
+            "--lr-display-type-scale": String(prefs.display),
+          } as CSSProperties
+        }
       >
         {children}
 
