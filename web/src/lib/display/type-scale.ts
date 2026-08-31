@@ -104,6 +104,9 @@ export function casaFitInversePercent(scale: number): number {
 }
 
 export function typeScaleStyleVars(prefs: Partial<TypeScalePrefs>): {
+  [DISPLAY_TYPE_SCALE_CSS_VAR]?: string;
+  [PLANCIA_TYPE_SCALE_CSS_VAR]?: string;
+} {
   const style: {
     [DISPLAY_TYPE_SCALE_CSS_VAR]?: string;
     [PLANCIA_TYPE_SCALE_CSS_VAR]?: string;
