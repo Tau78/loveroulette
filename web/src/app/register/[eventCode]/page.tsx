@@ -6,11 +6,17 @@ import { useState } from "react";
 import { DataVisibilitySelector } from "@/components/player/DataVisibilitySelector";
 import { DEFAULT_PARTICIPANT_DATA_VISIBILITY } from "@/lib/player/data-visibility";
 import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
+import {
+  NICKNAME_FROM_REAL_NAME_PROMPT,
+  nicknameSaveErrorMessage,
+  resolveNicknameOnSave,
+} from "@/lib/player/nickname-save";
 
 export default function RegisterPage() {
   const params = useParams();
   const eventCode = String(params.eventCode ?? "").toUpperCase();
   const [email, setEmail] = useState("");
+  const [realName, setRealName] = useState("");
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [dataVisibility, setDataVisibility] = useState<ParticipantDataVisibility>(
@@ -19,6 +25,44 @@ export default function RegisterPage() {
   const [consent, setConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [nickConfirmOpen, setNickConfirmOpen] = useState(false);
+
+  function submitRegistration(opts?: { confirmUseRealName?: boolean }) {
+    if (!email.trim()) {
+      setFormError("Inserisci la tua email.");
+      return;
+    }
+    if (!dataVisibility) {
+      setFormError("Scegli chi può vedere i tuoi dati personali.");
+      return;
+    }
+    if (!consent) {
+      setFormError("Devi accettare l'informativa privacy.");
+      return;
+    }
+
+    const resolved = resolveNicknameOnSave({
+      realName,
+      nickname,
+      confirmUseRealName: opts?.confirmUseRealName,
+    });
+
+    if (!resolved.ok) {
+      if (resolved.reason === "NEED_CONFIRM") {
+        setNickConfirmOpen(true);
+        setFormError(NICKNAME_FROM_REAL_NAME_PROMPT);
+        return;
+      }
+      setNickConfirmOpen(false);
+      setFormError(nicknameSaveErrorMessage(resolved.reason));
+      return;
+    }
+
+    setNickname(resolved.nickname);
+    setNickConfirmOpen(false);
+    setFormError(null);
+    setSubmitted(true);
+  }
 
   if (submitted) {
     return (
@@ -48,25 +92,66 @@ export default function RegisterPage() {
         </Link>
         <h1 className="text-2xl font-bold">Pre-registrazione</h1>
         <p className="text-muted text-sm">
-          Registrati prima della serata per accedere alla chat e al gioco.
+          Registrati prima della serata per accedere alla chat e al gioco. Il
+          nickname è obbligatorio e verrà mostrato a schermo.
         </p>
 
         <form
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!dataVisibility) {
-              setFormError("Scegli chi può vedere i tuoi dati personali.");
-              return;
-            }
-            if (consent && email && nickname) {
-              setFormError(null);
-              setSubmitted(true);
-            }
+            submitRegistration();
           }}
         >
           <Field label="Email" type="email" value={email} onChange={setEmail} required />
-          <Field label="Nickname" value={nickname} onChange={setNickname} required />
+          <Field
+            label="Nome"
+            value={realName}
+            onChange={(v) => {
+              setRealName(v);
+              if (nickConfirmOpen) setNickConfirmOpen(false);
+            }}
+          />
+          <Field
+            label="Nickname (obbligatorio)"
+            value={nickname}
+            onChange={(v) => {
+              setNickname(v);
+              if (nickConfirmOpen) setNickConfirmOpen(false);
+            }}
+            placeholder="Se vuoto userai il nome"
+          />
+
+          {nickConfirmOpen ? (
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="rounded-xl border border-amber-400/40 bg-amber-950/35 p-4 space-y-3"
+            >
+              <p className="text-sm font-medium text-amber-50">
+                {NICKNAME_FROM_REAL_NAME_PROMPT}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => submitRegistration({ confirmUseRealName: true })}
+                  className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white"
+                >
+                  Sì, usa il nome
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNickConfirmOpen(false);
+                    setFormError(null);
+                  }}
+                  className="rounded-lg border border-muted/40 px-3 py-2 text-sm"
+                >
+                  No, inserisco un nickname
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div>
             <label className="block text-sm text-muted mb-1">Genere</label>
@@ -94,7 +179,7 @@ export default function RegisterPage() {
               setDataVisibility(value);
               if (formError) setFormError(null);
             }}
-            invalid={Boolean(formError)}
+            invalid={Boolean(formError) && !nickConfirmOpen}
           />
 
           <label className="flex items-start gap-3 text-sm text-muted">
@@ -111,7 +196,7 @@ export default function RegisterPage() {
             </span>
           </label>
 
-          {formError ? (
+          {formError && !nickConfirmOpen ? (
             <p className="text-sm text-destructive" role="alert">
               {formError}
             </p>
@@ -119,10 +204,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={!consent}
+            disabled={!consent || nickConfirmOpen}
             className="w-full rounded-xl bg-accent py-4 text-lg font-bold text-white disabled:opacity-50"
           >
-            Registrati
+            Salva registrazione
           </button>
         </form>
       </div>
@@ -136,12 +221,14 @@ function Field({
   onChange,
   type = "text",
   required,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
   required?: boolean;
+  placeholder?: string;
 }) {
   return (
     <div>
@@ -151,7 +238,8 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        className="w-full rounded-lg bg-surface border border-muted/30 px-4 py-3"
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-muted/30 bg-surface px-4 py-3"
       />
     </div>
   );

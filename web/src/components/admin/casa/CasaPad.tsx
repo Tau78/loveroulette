@@ -38,7 +38,12 @@ import {
   patchEventConfig,
   postDisplayAudioStart,
   postDisplayCommand,
+  updateParticipant,
 } from "@/lib/admin/animator-api";
+import {
+  NICKNAME_FROM_REAL_NAME_PROMPT,
+  resolveNicknameOnSave,
+} from "@/lib/player/nickname-save";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
   DEFAULT_CASA_CLOCK,
@@ -157,6 +162,8 @@ type Gender = "M" | "F";
 type Guest = {
   id: string;
   nick: string;
+  /** Nome anagrafico (non mostrato a schermo). */
+  realName?: string;
   gender: Gender;
   photo?: string;
   score: number;
@@ -883,6 +890,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           participants?: {
             id: string;
             nickname: string;
+            real_name?: string | null;
             gender: "male" | "female";
           }[];
         };
@@ -892,6 +900,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           rows.map((p) => ({
             id: p.id,
             nick: p.nickname,
+            realName: p.real_name?.trim() || undefined,
             gender: p.gender === "female" ? "F" : "M",
             score: 0,
           })),
@@ -2666,13 +2675,88 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
               </button>
             </div>
             <label className="casa-pop-field">
-              <span>Rinomina</span>
+              <span>Nome</span>
+              <input
+                className="casa-field"
+                value={picked.realName ?? ""}
+                onChange={(e) =>
+                  patchGuest(picked.id, { realName: e.target.value })
+                }
+                placeholder="Nome reale"
+              />
+            </label>
+            <label className="casa-pop-field">
+              <span>Nickname (obbligatorio)</span>
               <input
                 className="casa-field"
                 value={picked.nick}
                 onChange={(e) => patchGuest(picked.id, { nick: e.target.value })}
+                placeholder="Mostrato a schermo"
               />
             </label>
+            <div className="casa-pop-acts">
+              <button
+                type="button"
+                className="casa-hit"
+                onClick={() => {
+                  const resolved = resolveNicknameOnSave({
+                    realName: picked.realName ?? "",
+                    nickname: picked.nick,
+                  });
+                  if (!resolved.ok) {
+                    if (resolved.reason === "NEED_CONFIRM") {
+                      const ok = window.confirm(NICKNAME_FROM_REAL_NAME_PROMPT);
+                      if (!ok) return;
+                      const confirmed = resolveNicknameOnSave({
+                        realName: picked.realName ?? "",
+                        nickname: picked.nick,
+                        confirmUseRealName: true,
+                      });
+                      if (!confirmed.ok) return;
+                      patchGuest(picked.id, {
+                        nick: confirmed.nickname,
+                        realName: confirmed.realName,
+                      });
+                      if (live.pinReady && live.pin) {
+                        void updateParticipant(
+                          eventCode,
+                          picked.id,
+                          {
+                            nickname: confirmed.nickname,
+                            realName: confirmed.realName || null,
+                          },
+                          live.pin,
+                        );
+                      }
+                      return;
+                    }
+                    window.alert(
+                      resolved.reason === "NEED_REAL_NAME"
+                        ? "Scrivi almeno il nome o un nickname."
+                        : "Il nickname è obbligatorio.",
+                    );
+                    return;
+                  }
+                  patchGuest(picked.id, {
+                    nick: resolved.nickname,
+                    realName: resolved.realName,
+                  });
+                  if (live.pinReady && live.pin) {
+                    void updateParticipant(
+                      eventCode,
+                      picked.id,
+                      {
+                        nickname: resolved.nickname,
+                        realName: resolved.realName || null,
+                      },
+                      live.pin,
+                    );
+                  }
+                }}
+              >
+                Salva scheda
+              </button>
+            </div>
             <div className="casa-pop-score">
               <span>Punti</span>
               <strong data-neg={picked.score < 0 ? "1" : undefined}>

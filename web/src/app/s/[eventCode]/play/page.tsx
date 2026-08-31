@@ -51,8 +51,13 @@ import { DataVisibilitySelector } from "@/components/player/DataVisibilitySelect
 import { DEFAULT_PARTICIPANT_DATA_VISIBILITY } from "@/lib/player/data-visibility";
 import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
 import { isParticipantInFinalists } from "@/lib/player/finalist-cheer";
+import {
+  NICKNAME_FROM_REAL_NAME_PROMPT,
+  nicknameSaveErrorMessage,
+  resolveNicknameOnSave,
+} from "@/lib/player/nickname-save";
 
-type JoinField = "nickname" | "badge" | "dataVisibility";
+type JoinField = "realName" | "nickname" | "badge" | "dataVisibility";
 
 type RestoreState = "pending" | "ready";
 
@@ -75,6 +80,7 @@ async function postJoin(
   eventSlug: string,
   payload: {
     nickname: string;
+    realName?: string | null;
     gender: "male" | "female";
     badgeCode: string | null;
     dataVisibility: ParticipantDataVisibility;
@@ -86,6 +92,7 @@ async function postJoin(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       nickname: payload.nickname,
+      realName: payload.realName,
       gender: payload.gender,
       badgeCode: payload.badgeCode,
       dataVisibility: payload.dataVisibility,
@@ -132,6 +139,7 @@ export default function PlayerPlayPage() {
   const badgeRequired = eventInfo?.badgeRequired === true;
 
   const [nickname, setNickname] = useState("");
+  const [realName, setRealName] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [badgeCode, setBadgeCode] = useState("");
   const [dataVisibility, setDataVisibility] = useState<ParticipantDataVisibility>(
@@ -143,6 +151,7 @@ export default function PlayerPlayPage() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<JoinField | null>(null);
   const [joining, setJoining] = useState(false);
+  const [nickConfirmOpen, setNickConfirmOpen] = useState(false);
   const [waveMode, setWaveMode] = useState<WaveMode>("idle");
   const [partnerNick, setPartnerNick] = useState<string | null>(null);
   const joinedRef = useRef(false);
@@ -275,6 +284,7 @@ export default function PlayerPlayPage() {
   const performJoin = useCallback(
     async (input: {
       nickname: string;
+      realName?: string | null;
       gender: "male" | "female";
       badgeCode: string;
       dataVisibility: ParticipantDataVisibility;
@@ -287,6 +297,7 @@ export default function PlayerPlayPage() {
 
       const result = await postJoin(eventSlug, {
         nickname: nick,
+        realName: input.realName?.trim() || null,
         gender: input.gender,
         badgeCode: badge || null,
         dataVisibility: input.dataVisibility,
@@ -407,13 +418,27 @@ export default function PlayerPlayPage() {
     setWaveMode("idle");
   }, []);
 
-  const handleJoin = async () => {
-    const nick = nickname.trim();
-    if (!nick) {
-      setFieldError("nickname");
-      setJoinError("Scrivi un nickname per entrare in sala.");
+  const handleJoin = async (opts?: { confirmUseRealName?: boolean }) => {
+    const resolved = resolveNicknameOnSave({
+      realName,
+      nickname,
+      confirmUseRealName: opts?.confirmUseRealName,
+    });
+
+    if (!resolved.ok) {
+      if (resolved.reason === "NEED_CONFIRM") {
+        setNickConfirmOpen(true);
+        setFieldError("nickname");
+        setJoinError(NICKNAME_FROM_REAL_NAME_PROMPT);
+        return;
+      }
+      setFieldError(resolved.reason === "NEED_REAL_NAME" ? "realName" : "nickname");
+      setJoinError(nicknameSaveErrorMessage(resolved.reason));
       return;
     }
+
+    setNickConfirmOpen(false);
+    setNickname(resolved.nickname);
 
     if (!dataVisibility) {
       setFieldError("dataVisibility");
@@ -433,7 +458,8 @@ export default function PlayerPlayPage() {
 
     try {
       const result = await performJoin({
-        nickname: nick,
+        nickname: resolved.nickname,
+        realName: resolved.realName || null,
         gender,
         badgeCode,
         dataVisibility,
@@ -556,7 +582,8 @@ export default function PlayerPlayPage() {
               Entra in sala
             </h1>
             <p className="text-sm text-muted-foreground">
-              Scegli nickname e genere per giocare stasera.
+              Il nickname è obbligatorio e verrà mostrato a schermo. Può
+              coincidere col tuo nome.
             </p>
           </div>
 
@@ -571,7 +598,33 @@ export default function PlayerPlayPage() {
                 }}
               >
                 <div className="space-y-2">
-                  <Label htmlFor="nickname">Nickname</Label>
+                  <Label htmlFor="realName">Nome</Label>
+                  <Input
+                    id="realName"
+                    value={realName}
+                    onChange={(e) => {
+                      setRealName(e.target.value);
+                      if (fieldError === "realName") {
+                        setFieldError(null);
+                        setJoinError(null);
+                      }
+                      if (nickConfirmOpen) setNickConfirmOpen(false);
+                    }}
+                    placeholder="Il tuo nome"
+                    maxLength={40}
+                    autoComplete="given-name"
+                    enterKeyHint="next"
+                    aria-invalid={fieldError === "realName"}
+                    className={cn(
+                      "h-11 bg-background/50",
+                      fieldError === "realName" &&
+                        "border-destructive ring-destructive/30",
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nickname">Nickname (obbligatorio)</Label>
                   <Input
                     id="nickname"
                     value={nickname}
@@ -581,8 +634,9 @@ export default function PlayerPlayPage() {
                         setFieldError(null);
                         setJoinError(null);
                       }
+                      if (nickConfirmOpen) setNickConfirmOpen(false);
                     }}
-                    placeholder="Il tuo nick"
+                    placeholder="Come appari a schermo — se vuoto userai il nome"
                     maxLength={24}
                     autoComplete="nickname"
                     enterKeyHint="next"
@@ -593,7 +647,51 @@ export default function PlayerPlayPage() {
                         "border-destructive ring-destructive/30",
                     )}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    È ciò che vedono tutti sul grande schermo.
+                  </p>
                 </div>
+
+                {nickConfirmOpen ? (
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="nickname-confirm-title"
+                    className="rounded-xl border border-amber-400/40 bg-amber-950/35 p-4 space-y-3"
+                  >
+                    <p
+                      id="nickname-confirm-title"
+                      className="text-sm font-medium text-amber-50"
+                    >
+                      {NICKNAME_FROM_REAL_NAME_PROMPT}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={joining}
+                        onClick={() =>
+                          void handleJoin({ confirmUseRealName: true })
+                        }
+                      >
+                        Sì, usa il nome
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={joining}
+                        onClick={() => {
+                          setNickConfirmOpen(false);
+                          setJoinError(null);
+                          setFieldError("nickname");
+                        }}
+                      >
+                        No, inserisco un nickname
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="space-y-2">
                   <Label>Genere</Label>
@@ -656,20 +754,19 @@ export default function PlayerPlayPage() {
                   </div>
                 ) : null}
 
-                {joinError ? (
+                {joinError && !nickConfirmOpen ? (
                   <p className="text-sm text-destructive" role="alert">
                     {joinError}
                   </p>
                 ) : null}
 
                 <Button
-                  type="button"
+                  type="submit"
                   size="lg"
                   className="h-12 w-full text-base font-semibold shadow-[0_0_24px_rgba(236,72,153,0.35)]"
-                  disabled={joining}
-                  onClick={() => void handleJoin()}
+                  disabled={joining || nickConfirmOpen}
                 >
-                  {joining ? "Accesso..." : "Entra"}
+                  {joining ? "Salvataggio…" : "Salva ed entra"}
                 </Button>
               </form>
             </CardContent>

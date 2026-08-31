@@ -6,6 +6,7 @@ import {
 
 export const joinParticipantBodySchema = z.object({
   nickname: z.string().trim().min(1).max(24),
+  realName: z.string().trim().max(80).optional().nullable(),
   gender: z.enum(["male", "female"]),
   badgeCode: z.string().trim().max(32).optional().nullable(),
   dataVisibility: participantDataVisibilitySchema

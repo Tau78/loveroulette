@@ -8,7 +8,7 @@ import type {
   LoveRouletteParticipant,
   ParticipantDataVisibility,
 } from "./types";
-import { isDataVisibilitySchemaError } from "./participant-schema";
+import { isDataVisibilitySchemaError, isRealNameSchemaError } from "./participant-schema";
 
 export type JoinParticipantErrorCode =
   | "NICKNAME_TAKEN"
@@ -30,6 +30,8 @@ export interface JoinParticipantInput {
   gender: LoveRouletteGender;
   badgeCode?: string | null;
   dataVisibility?: ParticipantDataVisibility;
+  /** Nome anagrafico opzionale (non mostrato a schermo). */
+  realName?: string | null;
   /** Reconnect stesso dispositivo (localStorage). */
   participantId?: string | null;
 }
@@ -38,12 +40,17 @@ const PARTICIPANT_SELECT_BASE =
   "id, event_id, nickname, gender, badge_code, role, is_online";
 
 const PARTICIPANT_SELECT_WITH_VISIBILITY = `${PARTICIPANT_SELECT_BASE}, data_visibility`;
+const PARTICIPANT_SELECT_FULL = `${PARTICIPANT_SELECT_WITH_VISIBILITY}, real_name`;
 
 function mapParticipantRow(row: Record<string, unknown>): LoveRouletteParticipant {
   return {
     id: String(row.id),
     event_id: String(row.event_id),
     nickname: String(row.nickname),
+    real_name:
+      row.real_name === null || row.real_name === undefined
+        ? null
+        : String(row.real_name),
     gender: row.gender === "female" ? "female" : "male",
     badge_code:
       row.badge_code === null || row.badge_code === undefined
@@ -185,6 +192,7 @@ async function markParticipantOnline(
     nickname?: string;
     badgeCode?: string | null;
     dataVisibility?: ParticipantDataVisibility;
+    realName?: string | null;
   },
 ): Promise<LoveRouletteParticipant> {
   const update: Record<string, unknown> = {
@@ -205,15 +213,31 @@ async function markParticipantOnline(
     update.data_visibility = input.dataVisibility;
   }
 
+  if (input.realName !== undefined) {
+    const trimmed = input.realName?.trim() ?? "";
+    update.real_name = trimmed || null;
+  }
+
   let result = await supabase
     .from("love_roulette_participants")
     .update(update)
     .eq("id", participantId)
-    .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
+    .select(PARTICIPANT_SELECT_FULL)
     .single();
 
+  if (result.error && isRealNameSchemaError(result.error)) {
+    const { real_name: _rn, ...withoutReal } = update;
+    result = await supabase
+      .from("love_roulette_participants")
+      .update(withoutReal)
+      .eq("id", participantId)
+      .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
+      .single();
+  }
+
   if (result.error && isDataVisibilitySchemaError(result.error)) {
-    const { data_visibility: _removed, ...updateWithoutVisibility } = update;
+    const { data_visibility: _removed, real_name: _rn, ...updateWithoutVisibility } =
+      update;
     result = await supabase
       .from("love_roulette_participants")
       .update(updateWithoutVisibility)
@@ -259,6 +283,7 @@ export async function joinParticipant(
   const nickname = normalizeNickname(input.nickname);
   const badge_code = normalizeBadge(input.badgeCode);
   const data_visibility = resolveDataVisibility(input);
+  const real_name = input.realName?.trim() ? input.realName.trim() : null;
 
   if (input.participantId) {
     const existingById = await findParticipantById(
@@ -287,6 +312,7 @@ export async function joinParticipant(
         nickname,
         badgeCode: badge_code,
         dataVisibility: data_visibility,
+        realName: real_name,
       });
     }
   }
@@ -331,6 +357,7 @@ export async function joinParticipant(
       nickname,
       badgeCode: badge_code,
       dataVisibility: data_visibility,
+      realName: real_name,
     });
   }
 
@@ -359,9 +386,17 @@ export async function joinParticipant(
 
   let result = await supabase
     .from("love_roulette_participants")
-    .insert({ ...insertBase, data_visibility })
-    .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
+    .insert({ ...insertBase, data_visibility, real_name })
+    .select(PARTICIPANT_SELECT_FULL)
     .single();
+
+  if (result.error && isRealNameSchemaError(result.error)) {
+    result = await supabase
+      .from("love_roulette_participants")
+      .insert({ ...insertBase, data_visibility })
+      .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
+      .single();
+  }
 
   if (result.error && isDataVisibilitySchemaError(result.error)) {
     result = await supabase

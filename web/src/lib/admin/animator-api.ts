@@ -217,6 +217,7 @@ export async function createParticipant(
   eventCode: string,
   body: {
     nickname: string;
+    realName?: string | null;
     gender: "male" | "female";
     badgeCode?: string | null;
   },
@@ -234,6 +235,7 @@ export async function updateParticipant(
   participantId: string,
   body: {
     nickname?: string;
+    realName?: string | null;
     gender?: "male" | "female";
     badgeCode?: string | null;
     forceOffline?: boolean;

@@ -5,46 +5,53 @@ import type {
   LoveRouletteParticipant,
   LoveRouletteParticipantRole,
 } from "./types";
-import { isDataVisibilitySchemaError } from "./participant-schema";
+import {
+  isDataVisibilitySchemaError,
+  isRealNameSchemaError,
+} from "./participant-schema";
 import { JoinParticipantError } from "./participants";
 
 const PARTICIPANT_ADMIN_SELECT_BASE =
   "id, event_id, nickname, gender, badge_code, role, is_online, last_seen_at";
 
-const PARTICIPANT_ADMIN_SELECT = `${PARTICIPANT_ADMIN_SELECT_BASE}, data_visibility`;
+const PARTICIPANT_ADMIN_SELECT_VISIBILITY = `${PARTICIPANT_ADMIN_SELECT_BASE}, data_visibility`;
+const PARTICIPANT_ADMIN_SELECT = `${PARTICIPANT_ADMIN_SELECT_VISIBILITY}, real_name`;
 
 type AdminParticipantQueryResult = {
   data: unknown;
   error: { message: string; code?: string } | null;
 };
 
-async function withDataVisibilityFallback<T>(
+async function withParticipantAdminSelectFallback<T>(
   run: (select: string) => PromiseLike<AdminParticipantQueryResult>,
   map: (rows: Record<string, unknown>[]) => T,
 ): Promise<T> {
   const primary = await run(PARTICIPANT_ADMIN_SELECT);
   if (!primary.error) {
-    const rows = Array.isArray(primary.data)
-      ? (primary.data as Record<string, unknown>[])
-      : primary.data
-        ? [primary.data as Record<string, unknown>]
-        : [];
-    return map(rows);
+    return map(normalizeRows(primary.data));
   }
 
-  if (!isDataVisibilitySchemaError(primary.error)) {
+  if (isRealNameSchemaError(primary.error)) {
+    const withVisibility = await run(PARTICIPANT_ADMIN_SELECT_VISIBILITY);
+    if (!withVisibility.error) {
+      return map(normalizeRows(withVisibility.data));
+    }
+    if (!isDataVisibilitySchemaError(withVisibility.error)) {
+      throw new Error(withVisibility.error.message);
+    }
+  } else if (!isDataVisibilitySchemaError(primary.error)) {
     throw new Error(primary.error.message);
   }
 
   const fallback = await run(PARTICIPANT_ADMIN_SELECT_BASE);
   if (fallback.error) throw new Error(fallback.error.message);
+  return map(normalizeRows(fallback.data));
+}
 
-  const rows = Array.isArray(fallback.data)
-    ? (fallback.data as Record<string, unknown>[])
-    : fallback.data
-      ? [fallback.data as Record<string, unknown>]
-      : [];
-  return map(rows);
+function normalizeRows(data: unknown): Record<string, unknown>[] {
+  if (Array.isArray(data)) return data as Record<string, unknown>[];
+  if (data) return [data as Record<string, unknown>];
+  return [];
 }
 
 export interface AdminParticipantRow extends LoveRouletteParticipant {
@@ -58,6 +65,7 @@ export interface CreateParticipantAdminInput {
   gender: LoveRouletteGender;
   badgeCode?: string | null;
   role?: LoveRouletteParticipantRole;
+  realName?: string | null;
 }
 
 export interface UpdateParticipantAdminInput {
@@ -65,6 +73,7 @@ export interface UpdateParticipantAdminInput {
   gender?: LoveRouletteGender;
   badgeCode?: string | null;
   role?: LoveRouletteParticipantRole;
+  realName?: string | null;
 }
 
 function mapRow(row: Record<string, unknown>): AdminParticipantRow {
@@ -72,6 +81,10 @@ function mapRow(row: Record<string, unknown>): AdminParticipantRow {
     id: String(row.id),
     event_id: String(row.event_id),
     nickname: String(row.nickname),
+    real_name:
+      row.real_name === null || row.real_name === undefined
+        ? null
+        : String(row.real_name),
     gender: row.gender === "female" ? "female" : "male",
     badge_code: (row.badge_code as string | null) ?? null,
     role: (row.role as LoveRouletteParticipantRole) ?? "player",
@@ -86,7 +99,7 @@ export async function listEventParticipants(
   supabase: SupabaseClient,
   eventId: string,
 ): Promise<AdminParticipantRow[]> {
-  return withDataVisibilityFallback(
+  return withParticipantAdminSelectFallback(
     (select) =>
       supabase
         .from("love_roulette_participants")
@@ -102,7 +115,7 @@ export async function getEventParticipant(
   eventId: string,
   participantId: string,
 ): Promise<AdminParticipantRow | null> {
-  return withDataVisibilityFallback(
+  return withParticipantAdminSelectFallback(
     (select) =>
       supabase
         .from("love_roulette_participants")
@@ -168,22 +181,33 @@ export async function createParticipantAdmin(
   if (!nickname) throw new Error("Nickname obbligatorio.");
 
   const badge_code = input.badgeCode?.trim() || null;
+  const real_name = input.realName?.trim() ? input.realName.trim() : null;
 
   await assertNicknameAvailable(supabase, input.eventId, nickname);
   await assertBadgeAvailable(supabase, input.eventId, badge_code);
 
-  const insertResult = await supabase
+  const insertBase = {
+    event_id: input.eventId,
+    nickname,
+    gender: input.gender,
+    badge_code,
+    role: input.role ?? "player",
+    is_online: false,
+  };
+
+  let insertResult = await supabase
     .from("love_roulette_participants")
-    .insert({
-      event_id: input.eventId,
-      nickname,
-      gender: input.gender,
-      badge_code,
-      role: input.role ?? "player",
-      is_online: false,
-    })
+    .insert({ ...insertBase, real_name })
     .select("id")
     .single();
+
+  if (insertResult.error && isRealNameSchemaError(insertResult.error)) {
+    insertResult = await supabase
+      .from("love_roulette_participants")
+      .insert(insertBase)
+      .select("id")
+      .single();
+  }
 
   if (insertResult.error) {
     if (insertResult.error.code === "23505") {
@@ -232,12 +256,24 @@ export async function updateParticipantAdmin(
   if (input.gender !== undefined) update.gender = input.gender;
   if (input.badgeCode !== undefined) update.badge_code = badge_code;
   if (input.role !== undefined) update.role = input.role;
+  if (input.realName !== undefined) {
+    update.real_name = input.realName?.trim() ? input.realName.trim() : null;
+  }
 
-  const { error } = await supabase
+  let { error } = await supabase
     .from("love_roulette_participants")
     .update(update)
     .eq("id", participantId)
     .eq("event_id", eventId);
+
+  if (error && isRealNameSchemaError(error) && "real_name" in update) {
+    const { real_name: _rn, ...withoutReal } = update;
+    ({ error } = await supabase
+      .from("love_roulette_participants")
+      .update(withoutReal)
+      .eq("id", participantId)
+      .eq("event_id", eventId));
+  }
 
   if (error) throw new Error(error.message);
 
