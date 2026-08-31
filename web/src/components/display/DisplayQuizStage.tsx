@@ -136,7 +136,7 @@ function ThemeHeaderPanel({
       <p
         className={cn(
           QUIZ_READABLE,
-          "line-clamp-2 text-[22px] text-white/75",
+            "line-clamp-2 text-[26px] text-white/75",
         )}
       >
         {subtitle ?? "Nuova manche"}
@@ -190,7 +190,7 @@ function AnswersStopOverlay() {
           aria-hidden
         />
         <p
-          className="relative z-10 font-sans text-[72px] font-bold uppercase tracking-[0.18em] text-white"
+          className="relative z-10 font-sans text-[86px] font-bold uppercase tracking-[0.18em] text-white"
           style={{
             textShadow:
               "0 0 24px rgba(233,30,140,0.5), 0 2px 8px rgba(0,0,0,1), 0 4px 24px rgba(0,0,0,0.85)",

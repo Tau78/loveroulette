@@ -1,3 +1,5 @@
+import { scaledDisplayPx } from "@/lib/display/quiz-display-typography";
+
 /**
  * Footer quiz unificato — maschera SVG + countdown + cuore/logo (1920×1080).
  * La maschera copre tutta la larghezza canvas fino a cuore e logo ai lati.
@@ -27,8 +29,7 @@ export const QUIZ_FOOTER_COUNTDOWN_VIEWBOX = 68;
 export const QUIZ_FOOTER_COUNTDOWN_SLOT_CLASS =
   "relative flex size-[120px] items-center justify-center";
 
-export const QUIZ_FOOTER_COUNTDOWN_DIGIT_CLASS =
-  "relative font-display font-bold tabular-nums text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] text-[64px]";
+export const QUIZ_FOOTER_COUNTDOWN_DIGIT_CLASS = `relative font-display font-bold tabular-nums text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] text-[${scaledDisplayPx(64)}px]`;
 
 export const QUIZ_FOOTER_MASK_BAR_CLASS = "relative h-[88px] w-full";
 

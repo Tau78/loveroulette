@@ -35,7 +35,7 @@ function WheelSegmentLabels() {
         return (
           <span
             key={index}
-            className="absolute z-10 font-display text-[22px] font-bold tabular-nums text-white/95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]"
+            className="absolute z-10 font-display text-[26px] font-bold tabular-nums text-white/95 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]"
             style={{
               left: `${x}%`,
               top: `${y}%`,
@@ -115,7 +115,7 @@ function RouletteWheel({ spinning }: { spinning: boolean }) {
         <div className="absolute inset-[18%] rounded-full border-2 border-white/15 bg-gradient-to-br from-black/90 via-black/75 to-primary/20 shadow-[inset_0_0_32px_rgba(0,0,0,0.8)]" />
 
         <div className="absolute inset-[32%] flex items-center justify-center rounded-full border border-primary/40 bg-black/80">
-          <span className="font-display text-[28px] font-bold uppercase tracking-[0.35em] text-primary/90">
+          <span className="font-display text-[34px] font-bold uppercase tracking-[0.35em] text-primary/90">
             Love
           </span>
         </div>
@@ -324,7 +324,7 @@ export function DisplayExtractionStage({
             <RouletteWheel spinning />
             <motion.p
               className={cn(
-                "font-display text-[36px] font-bold uppercase tracking-[0.28em] text-primary",
+                "font-display text-[43px] font-bold uppercase tracking-[0.28em] text-primary",
                 "drop-shadow-[0_0_24px_rgba(236,72,153,0.75)]",
               )}
               animate={{ opacity: [0.65, 1, 0.65] }}

@@ -1,18 +1,36 @@
 /**
- * Tipografia quiz proiettore — maiuscolo, px fissi calibrati su 1920×1080.
+ * Tipografia quiz / proiettore — px calibrati su 1920×1080.
+ * `DISPLAY_TYPE_SCALE` alza tutte le scritte a video in un colpo solo.
  */
 import { cn } from "@/lib/utils";
+
+/** Incremento globale delle scritte sul proiettore (+20%). */
+export const DISPLAY_TYPE_SCALE = 1.2 as const;
+
+/** Scala un px di design verso la tipografia a video. */
+export function scaledDisplayPx(px: number): number {
+  return Math.round(px * DISPLAY_TYPE_SCALE);
+}
+
+export function scaledDisplayPxClass(px: number): `text-[${number}px]` {
+  return `text-[${scaledDisplayPx(px)}px]` as `text-[${number}px]`;
+}
+
+/** Scala un rem di design (es. clamp). */
+export function scaledDisplayRem(rem: number): number {
+  return Math.round(rem * DISPLAY_TYPE_SCALE * 100) / 100;
+}
 
 export const QUIZ_DISPLAY_UPPERCASE = "uppercase";
 
 export const QUIZ_DISPLAY_SANS =
   "font-sans font-semibold uppercase tracking-wide leading-tight";
 
-/** Domanda in header (1–3 righe). */
+/** Domanda in header (1–3 righe). Design 36 → +20%. */
 export const QUIZ_QUESTION_TEXT_CLASS = cn(
   QUIZ_DISPLAY_SANS,
   "font-bold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]",
-  "text-[36px]",
+  scaledDisplayPxClass(36),
   "line-clamp-3",
 );
 
@@ -20,7 +38,7 @@ export const QUIZ_QUESTION_TEXT_CLASS = cn(
 export const QUIZ_ANSWER_TEXT_CLASS = cn(
   QUIZ_DISPLAY_SANS,
   "text-white",
-  "text-[28px]",
+  scaledDisplayPxClass(28),
   "line-clamp-2",
 );
 
@@ -28,23 +46,27 @@ export const QUIZ_ANSWER_TEXT_CLASS = cn(
 export const QUIZ_RESULT_LABEL_CLASS = cn(
   QUIZ_DISPLAY_SANS,
   "text-white/95",
-  "text-[22px]",
+  scaledDisplayPxClass(22),
   "line-clamp-2",
 );
 
 /** Lettera A–D nelle risposte. */
-export const QUIZ_ANSWER_LETTER_CLASS =
-  "shrink-0 font-mono font-bold text-primary text-[32px]";
+export const QUIZ_ANSWER_LETTER_CLASS = cn(
+  "shrink-0 font-mono font-bold text-primary",
+  scaledDisplayPxClass(32),
+);
 
 /** Percentuale risultati. */
-export const QUIZ_RESULT_PERCENT_CLASS =
-  "shrink-0 font-sans font-bold tabular-nums text-primary text-[40px]";
+export const QUIZ_RESULT_PERCENT_CLASS = cn(
+  "shrink-0 font-sans font-bold tabular-nums text-primary",
+  scaledDisplayPxClass(40),
+);
 
 /** Tema al centro — impatto proiettore (1920×1080). */
 export const QUIZ_THEME_TITLE_CLASS = cn(
   QUIZ_DISPLAY_SANS,
   "font-black text-white",
-  "text-[clamp(4.5rem,9vw,7.5rem)]",
+  `text-[clamp(${scaledDisplayRem(4.5)}rem,${scaledDisplayRem(9)}vw,${scaledDisplayRem(7.5)}rem)]`,
   "leading-[0.92]",
   "line-clamp-2",
 );

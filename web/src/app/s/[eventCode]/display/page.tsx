@@ -364,7 +364,7 @@ export default function DisplayPage() {
                   )}
                 >
                   {isActive ? (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-primary/60 bg-primary px-3 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_20px_rgba(233,30,140,0.65)]">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-primary/60 bg-primary px-3 py-0.5 text-[12px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_20px_rgba(233,30,140,0.65)]">
                       In pista
                     </span>
                   ) : null}
@@ -372,8 +372,8 @@ export default function DisplayPage() {
                     className={cn(
                       "font-display font-bold text-white leading-tight",
                       isActive
-                        ? "text-[clamp(1.75rem,3.2vw,3.25rem)]"
-                        : "text-3xl md:text-5xl",
+                        ? "text-[clamp(2.1rem,3.84vw,3.9rem)]"
+                        : "text-4xl md:text-6xl",
                     )}
                     style={{
                       fontFamily: "var(--font-display), serif",

@@ -45,7 +45,7 @@ export function DisplayFinalsVotePrepStage({
         <div className="relative z-10 grid h-full min-h-0 grid-rows-[minmax(0,0.3fr)_minmax(0,0.24fr)_minmax(0,0.46fr)] gap-[clamp(0.35rem,1.2vh,0.9rem)] text-center">
           <div className="flex min-h-0 items-end justify-center overflow-hidden pb-[clamp(0.25rem,0.8vh,0.5rem)]">
             <motion.p
-              className="font-display max-w-full font-bold uppercase leading-[1.02] tracking-wide text-white line-clamp-2 text-[clamp(2rem,min(5.5vh,6vw),4.5rem)]"
+              className="font-display max-w-full font-bold uppercase leading-[1.02] tracking-wide text-white line-clamp-2 text-[clamp(2.4rem,min(6.6vh,7.2vw),5.4rem)]"
               style={{
                 fontFamily: "var(--font-display), serif",
                 textShadow:
@@ -61,7 +61,7 @@ export function DisplayFinalsVotePrepStage({
 
           <div className="flex min-h-0 items-center justify-center overflow-hidden">
             <motion.p
-              className="font-display max-w-full font-bold uppercase leading-[1.05] tracking-[0.08em] text-primary line-clamp-2 text-[clamp(1.5rem,min(4.2vh,4.5vw),3.25rem)]"
+              className="font-display max-w-full font-bold uppercase leading-[1.05] tracking-[0.08em] text-primary line-clamp-2 text-[clamp(1.8rem,min(5.04vh,5.4vw),3.9rem)]"
               style={{
                 fontFamily: "var(--font-display), serif",
                 textShadow:
@@ -77,7 +77,7 @@ export function DisplayFinalsVotePrepStage({
 
           <div className="flex min-h-0 items-center justify-center overflow-hidden">
             <motion.div
-              className="font-display flex max-h-full max-w-full items-center justify-center font-bold tabular-nums leading-none text-primary text-[clamp(5rem,min(26vh,20vw),13rem)]"
+              className="font-display flex max-h-full max-w-full items-center justify-center font-bold tabular-nums leading-none text-primary text-[clamp(6rem,min(31.2vh,24vw),15.6rem)]"
               style={{
                 fontFamily: "var(--font-display), serif",
                 textShadow:

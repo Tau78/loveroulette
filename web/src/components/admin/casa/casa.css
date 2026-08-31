@@ -832,7 +832,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-who {
   margin: 0;
-  font-size: clamp(56px, 8vw, 96px);
+  font-size: clamp(67px, 9.6vw, 115px);
   font-weight: 800;
   letter-spacing: 0.06em;
   line-height: 0.95;
@@ -841,7 +841,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-dice {
   margin: 0 0 12px;
-  font-size: clamp(18px, 2.4vw, 28px);
+  font-size: clamp(22px, 2.9vw, 34px);
   font-weight: 800;
   letter-spacing: 0.28em;
   color: #e91e8c;
@@ -849,7 +849,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-said {
   margin: 0;
-  font-size: clamp(32px, 4.4vw, 56px);
+  font-size: clamp(38px, 5.3vw, 67px);
   font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1.1;
@@ -922,7 +922,7 @@ html.casa-native-chrome .casa {
 
 .casa-spot-sex {
   margin: 8px 0 0;
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 800;
   letter-spacing: 0.32em;
   color: #f5c84b;
@@ -930,7 +930,7 @@ html.casa-native-chrome .casa {
 
 .casa-spot-nick {
   margin: 0;
-  font-size: 96px;
+  font-size: 115px;
   font-weight: 800;
   letter-spacing: 0.06em;
   line-height: 0.95;
@@ -942,7 +942,7 @@ html.casa-native-chrome .casa {
 
 .casa-spot-score {
   margin: 8px 0 0;
-  font-size: 80px;
+  font-size: 96px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
@@ -968,7 +968,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-kicker {
   margin: 0;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -977,7 +977,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-title {
   margin: 0;
-  font-size: 72px;
+  font-size: 86px;
   font-weight: 800;
   letter-spacing: 0.08em;
   color: #fff;
@@ -985,7 +985,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-line {
   margin: 0;
-  font-size: 22px;
+  font-size: 26px;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
 }
@@ -1014,7 +1014,7 @@ html.casa-native-chrome .casa {
   z-index: 2;
   display: grid;
   place-items: center;
-  font-size: 320px;
+  font-size: 384px;
   font-weight: 800;
   color: #fff;
   text-shadow:
@@ -1057,7 +1057,7 @@ html.casa-native-chrome .casa {
 .casa-proj-quiz-wait {
   margin-top: auto;
   text-align: center;
-  font-size: 36px;
+  font-size: 43px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1092,7 +1092,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-pct {
   margin-left: auto;
-  font-size: 42px;
+  font-size: 50px;
   font-weight: 800;
   color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);

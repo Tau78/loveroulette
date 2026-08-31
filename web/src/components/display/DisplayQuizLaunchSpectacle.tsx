@@ -149,7 +149,7 @@ export function DisplayQuizLaunchSpectacle({
               ) : null}
 
               <motion.p
-                className="relative font-sans text-[clamp(1.25rem,3.5vw,2.5rem)] font-semibold uppercase tracking-[0.35em] text-white"
+                className="relative font-sans text-[clamp(1.5rem,4.2vw,3rem)] font-semibold uppercase tracking-[0.35em] text-white"
                 style={{ textShadow: DISPLAY_TEXT_SHADOW_BROADCAST }}
                 initial={reduceMotion ? false : { opacity: 0, y: 40, letterSpacing: "0.5em" }}
                 animate={{ opacity: 1, y: 0, letterSpacing: "0.35em" }}
@@ -159,7 +159,7 @@ export function DisplayQuizLaunchSpectacle({
               </motion.p>
 
               <motion.p
-                className="relative font-display text-[clamp(3.5rem,12vw,8rem)] font-bold uppercase leading-none tracking-tight text-white"
+                className="relative font-display text-[clamp(4.2rem,14.4vw,9.6rem)] font-bold uppercase leading-none tracking-tight text-white"
                 style={{ textShadow: DISPLAY_TEXT_SHADOW_HERO }}
                 initial={
                   reduceMotion

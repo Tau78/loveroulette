@@ -150,7 +150,7 @@ export function DisplayThemeSlide({
               className={cn(
                 QUIZ_THEME_TITLE_CLASS,
                 "text-center text-white",
-                compact && "text-[clamp(2.4rem,6vw,3.8rem)] leading-[0.95]",
+                compact && "text-[clamp(2.9rem,7.2vw,4.6rem)] leading-[0.95]",
               )}
               style={{
                 textShadow:
@@ -169,7 +169,7 @@ export function DisplayThemeSlide({
                   "max-w-4xl font-sans font-semibold uppercase tracking-wide text-white/85",
                   compact
                     ? "text-sm"
-                    : "text-xl md:text-[28px] md:leading-snug",
+                    : "text-2xl md:text-[34px] md:leading-snug",
                 )}
                 style={{
                   textShadow: "0 2px 14px rgba(0,0,0,0.95)",

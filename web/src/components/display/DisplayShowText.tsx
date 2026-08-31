@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 
 const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
 
-/** Titolo prova finale — massimo impatto sul proiettore. */
+/** Titolo prova finale — massimo impatto sul proiettore (+20% type scale). */
 export const DISPLAY_CHALLENGE_TITLE_CLASS =
-  "max-w-full text-[clamp(4rem,11vw,12rem)] leading-[0.92] tracking-wide";
+  "max-w-full text-[clamp(4.8rem,13.2vw,14.4rem)] leading-[0.92] tracking-wide";
 
 interface DisplayPhaseHeroProps {
   kicker?: string;
@@ -97,8 +97,8 @@ export function DisplayPhaseHero({
             className={cn(
               "font-semibold uppercase text-white/90",
               challengeTitle
-                ? "text-2xl md:text-4xl tracking-[0.38em]"
-                : "text-sm md:text-lg tracking-[0.45em]",
+                ? "text-3xl md:text-5xl tracking-[0.38em]"
+                : "text-base md:text-xl tracking-[0.45em]",
             )}
             style={{
               textShadow:
@@ -121,7 +121,7 @@ export function DisplayPhaseHero({
                   headlineClassName ?? DISPLAY_CHALLENGE_TITLE_CLASS,
                 )
               : cn(
-                  "text-4xl md:text-6xl lg:text-7xl leading-[1.08] text-transparent bg-clip-text bg-gradient-to-b from-white via-primary to-primary/85 max-w-5xl",
+                  "text-5xl md:text-7xl lg:text-8xl leading-[1.08] text-transparent bg-clip-text bg-gradient-to-b from-white via-primary to-primary/85 max-w-5xl",
                   uppercase && "uppercase",
                   headlineClassName,
                 ),
@@ -156,7 +156,7 @@ export function DisplayPhaseHero({
         {subline ? (
           <motion.p
             className={cn(
-              "text-lg md:text-2xl text-white/85 max-w-3xl leading-relaxed",
+              "text-xl md:text-3xl text-white/85 max-w-3xl leading-relaxed",
               uppercase && "uppercase",
               sublineClassName,
             )}
@@ -224,7 +224,7 @@ export function DisplayRevealSplash({ title, body }: DisplayRevealSplashProps) {
         <div className="mx-auto rounded-[2rem] border border-primary/30 bg-gradient-to-b from-black/90 via-black/80 to-black/90 px-6 py-10 md:px-14 md:py-16 shadow-[0_0_80px_rgba(233,30,140,0.35)]">
           {title ? (
             <motion.p
-              className="font-display text-2xl md:text-4xl font-bold uppercase tracking-[0.35em] text-primary mb-6 md:mb-8"
+              className="font-display text-3xl md:text-5xl font-bold uppercase tracking-[0.35em] text-primary mb-6 md:mb-8"
               style={{
                 fontFamily: "var(--font-display), serif",
                 textShadow: "0 0 28px rgba(233,30,140,0.8)",
@@ -240,7 +240,7 @@ export function DisplayRevealSplash({ title, body }: DisplayRevealSplashProps) {
           {coupleParts && coupleParts.length >= 2 ? (
             <div className="flex flex-col items-center gap-2 md:gap-4">
               <motion.p
-                className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-none"
+                className="font-display text-6xl md:text-8xl lg:text-9xl font-bold text-white leading-none"
                 style={{
                   fontFamily: "var(--font-display), serif",
                   textShadow:
@@ -253,7 +253,7 @@ export function DisplayRevealSplash({ title, body }: DisplayRevealSplashProps) {
                 {coupleParts[0]}
               </motion.p>
               <motion.span
-                className="font-display text-4xl md:text-6xl text-primary font-bold"
+                className="font-display text-5xl md:text-7xl text-primary font-bold"
                 style={{ fontFamily: "var(--font-display), serif" }}
                 initial={reduceMotion ? false : { opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -263,7 +263,7 @@ export function DisplayRevealSplash({ title, body }: DisplayRevealSplashProps) {
                 &
               </motion.span>
               <motion.p
-                className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-none"
+                className="font-display text-6xl md:text-8xl lg:text-9xl font-bold text-white leading-none"
                 style={{
                   fontFamily: "var(--font-display), serif",
                   textShadow:
@@ -278,7 +278,7 @@ export function DisplayRevealSplash({ title, body }: DisplayRevealSplashProps) {
             </div>
           ) : body ? (
             <motion.p
-              className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white"
+              className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-white"
               style={{
                 fontFamily: "var(--font-display), serif",
                 textShadow:

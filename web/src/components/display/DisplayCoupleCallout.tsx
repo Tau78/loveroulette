@@ -65,7 +65,7 @@ export function DisplayCoupleCallout({
         <div className="relative z-10 flex flex-col items-center gap-[clamp(0.75rem,2vh,1.25rem)]">
           <div className="flex flex-col items-center gap-2">
             <motion.p
-              className="font-display shrink-0 font-bold uppercase text-primary line-clamp-2 text-[clamp(1.25rem,3.2vh,2.25rem)] tracking-[0.12em]"
+              className="font-display shrink-0 font-bold uppercase text-primary line-clamp-2 text-[clamp(1.5rem,3.84vh,2.7rem)] tracking-[0.12em]"
               style={{
                 fontFamily: "var(--font-display), serif",
                 textShadow:
@@ -80,7 +80,7 @@ export function DisplayCoupleCallout({
 
             {actionLabel ? (
               <motion.p
-                className="shrink-0 font-bold uppercase tracking-[0.22em] text-white/90 line-clamp-2 text-[clamp(0.95rem,2.2vh,1.5rem)]"
+                className="shrink-0 font-bold uppercase tracking-[0.22em] text-white/90 line-clamp-2 text-[clamp(1.14rem,2.64vh,1.8rem)]"
                 style={{
                   textShadow:
                     "0 2px 0 rgba(0,0,0,1), 0 0 24px rgba(233,30,140,0.55)",
@@ -95,7 +95,7 @@ export function DisplayCoupleCallout({
           </div>
 
           <motion.p
-            className="shrink-0 font-semibold uppercase tracking-[0.28em] text-primary/95 text-[clamp(0.75rem,1.6vh,1rem)]"
+            className="shrink-0 font-semibold uppercase tracking-[0.28em] text-primary/95 text-[clamp(0.9rem,1.92vh,1.2rem)]"
             style={{ textShadow: "0 2px 8px rgba(0,0,0,1)" }}
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -106,7 +106,7 @@ export function DisplayCoupleCallout({
 
           <div className="flex w-full flex-col items-center justify-center gap-[clamp(0.15rem,0.8vh,0.5rem)]">
             <motion.p
-              className="font-display font-bold uppercase text-white leading-[0.95] line-clamp-2 text-[clamp(2.75rem,min(9vh,11vw),6.5rem)]"
+              className="font-display font-bold uppercase text-white leading-[0.95] line-clamp-2 text-[clamp(3.3rem,min(10.8vh,13.2vw),7.8rem)]"
               style={{
                 fontFamily: "var(--font-display), serif",
                 textShadow: NAME_SHADOW,
@@ -124,7 +124,7 @@ export function DisplayCoupleCallout({
             </motion.p>
 
             <motion.span
-              className="font-display shrink-0 text-primary font-bold text-[clamp(1.5rem,4vh,3rem)]"
+              className="font-display shrink-0 text-primary font-bold text-[clamp(1.8rem,4.8vh,3.6rem)]"
               style={{
                 fontFamily: "var(--font-display), serif",
                 textShadow:
@@ -144,7 +144,7 @@ export function DisplayCoupleCallout({
             </motion.span>
 
             <motion.p
-              className="font-display font-bold uppercase text-white leading-[0.95] line-clamp-2 text-[clamp(2.75rem,min(9vh,11vw),6.5rem)]"
+              className="font-display font-bold uppercase text-white leading-[0.95] line-clamp-2 text-[clamp(3.3rem,min(10.8vh,13.2vw),7.8rem)]"
               style={{
                 fontFamily: "var(--font-display), serif",
                 textShadow: NAME_SHADOW,
@@ -164,7 +164,7 @@ export function DisplayCoupleCallout({
 
           {footerLabel ? (
             <motion.p
-              className="shrink-0 font-semibold text-white/85 tabular-nums uppercase tracking-[0.14em] line-clamp-1 text-[clamp(0.85rem,1.8vh,1.25rem)]"
+              className="shrink-0 font-semibold text-white/85 tabular-nums uppercase tracking-[0.14em] line-clamp-1 text-[clamp(1.02rem,2.16vh,1.5rem)]"
               style={{
                 textShadow: "0 2px 0 rgba(0,0,0,1), 0 2px 12px rgba(0,0,0,0.95)",
               }}
