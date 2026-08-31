@@ -101,7 +101,7 @@ function StaccoDigit({
   reduce: boolean;
 }) {
   const digitClass =
-    "font-sans font-black tabular-nums leading-none text-white text-[min(42vw,384px)]";
+    "font-sans font-black tabular-nums leading-none text-white text-[min(63vw,calc(384px*var(--lr-display-type-scale,1.8)/1.2))]";
   const digitShadow = {
     textShadow:
       "0 0 28px rgba(233,30,140,0.55), 0 3px 0 rgba(0,0,0,1), 0 8px 40px rgba(0,0,0,0.9), 0 0 80px rgba(0,0,0,0.75)",

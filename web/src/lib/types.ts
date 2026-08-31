@@ -42,9 +42,9 @@ export interface EventConfig {
   badge_required: boolean;
   /** Secondi finestra «Salva sala» (ripescaggio). Null = default client (30). */
   salva_sec: number | null;
-  /** Scala tipografia proiettore (default 1.2). */
+  /** Scala tipografia proiettore (default 1.8). */
   display_type_scale: number | null;
-  /** Scala tipografia plancia Casa (default 1). */
+  /** Scala tipografia plancia Casa (default 1.5). */
   plancia_type_scale: number | null;
 }
 

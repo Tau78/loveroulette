@@ -1,6 +1,6 @@
 /**
  * Tipografia quiz / proiettore — px di design su 1920×1080.
- * La scala runtime è `--lr-display-type-scale` (default 1.2).
+ * La scala runtime è `--lr-display-type-scale` (default 1.8).
  * Per cambiare il default: DISPLAY_TYPE_SCALE / Impostazioni «Dimensione caratteri Schermo».
  */
 import { cn } from "@/lib/utils";

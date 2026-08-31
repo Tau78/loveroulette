@@ -12,7 +12,7 @@ html.casa-native-chrome .casa {
   --yellow: #f5c84b;
   --red: #ff5a5f;
   --blue: #4da3ff;
-  --casa-type-scale: 1;
+  --casa-type-scale: 1.5;
   /* Viewport floor: 100dvh can be 0/tiny in iOS WKWebView (keyboard / first layout). */
   height: 100%;
   height: -webkit-fill-available;
@@ -971,7 +971,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-kicker {
   margin: 0;
-  font-size: 26px;
+  font-size: 39px;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -980,7 +980,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-title {
   margin: 0;
-  font-size: 86px;
+  font-size: 129px;
   font-weight: 800;
   letter-spacing: 0.08em;
   color: #fff;
@@ -988,7 +988,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-line {
   margin: 0;
-  font-size: 26px;
+  font-size: 39px;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
 }
@@ -1017,7 +1017,7 @@ html.casa-native-chrome .casa {
   z-index: 2;
   display: grid;
   place-items: center;
-  font-size: 384px;
+  font-size: 576px;
   font-weight: 800;
   color: #fff;
   text-shadow:

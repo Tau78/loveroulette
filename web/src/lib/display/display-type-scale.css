@@ -1,62 +1,62 @@
 /* Tipografia proiettore — moltiplica i px di design per --lr-display-type-scale. */
 
 .lr-display-type-root {
-  --lr-display-type-scale: 1.2;
+  --lr-display-type-scale: 1.8;
 }
 
 .lr-dt-22 {
-  font-size: calc(22px * var(--lr-display-type-scale, 1.2));
+  font-size: calc(22px * var(--lr-display-type-scale, 1.8));
 }
 
 .lr-dt-28 {
-  font-size: calc(28px * var(--lr-display-type-scale, 1.2));
+  font-size: calc(28px * var(--lr-display-type-scale, 1.8));
 }
 
 .lr-dt-32 {
-  font-size: calc(32px * var(--lr-display-type-scale, 1.2));
+  font-size: calc(32px * var(--lr-display-type-scale, 1.8));
 }
 
 .lr-dt-36 {
-  font-size: calc(36px * var(--lr-display-type-scale, 1.2));
+  font-size: calc(36px * var(--lr-display-type-scale, 1.8));
 }
 
 .lr-dt-40 {
-  font-size: calc(40px * var(--lr-display-type-scale, 1.2));
+  font-size: calc(40px * var(--lr-display-type-scale, 1.8));
 }
 
 .lr-dt-64 {
-  font-size: calc(64px * var(--lr-display-type-scale, 1.2));
+  font-size: calc(64px * var(--lr-display-type-scale, 1.8));
 }
 
 .lr-dt-theme-title {
   font-size: clamp(
-    calc(4.5rem * var(--lr-display-type-scale, 1.2)),
-    calc(9vw * var(--lr-display-type-scale, 1.2)),
-    calc(7.5rem * var(--lr-display-type-scale, 1.2))
+    calc(4.5rem * var(--lr-display-type-scale, 1.8)),
+    calc(9vw * var(--lr-display-type-scale, 1.8)),
+    calc(7.5rem * var(--lr-display-type-scale, 1.8))
   );
 }
 
 .lr-dt-present-name {
   font-size: clamp(
-    calc(5rem * var(--lr-display-type-scale, 1.2)),
-    calc(10vw * var(--lr-display-type-scale, 1.2)),
-    calc(8.5rem * var(--lr-display-type-scale, 1.2))
+    calc(5rem * var(--lr-display-type-scale, 1.8)),
+    calc(10vw * var(--lr-display-type-scale, 1.8)),
+    calc(8.5rem * var(--lr-display-type-scale, 1.8))
   );
 }
 
 .lr-dt-challenge-title {
   font-size: clamp(
-    calc(4rem * var(--lr-display-type-scale, 1.2)),
-    calc(11vw * var(--lr-display-type-scale, 1.2)),
-    calc(12rem * var(--lr-display-type-scale, 1.2))
+    calc(4rem * var(--lr-display-type-scale, 1.8)),
+    calc(11vw * var(--lr-display-type-scale, 1.8)),
+    calc(12rem * var(--lr-display-type-scale, 1.8))
   );
 }
 
 .lr-dt-face {
-  width: calc(280px * var(--lr-display-type-scale, 1.2));
-  height: calc(280px * var(--lr-display-type-scale, 1.2));
+  width: calc(280px * var(--lr-display-type-scale, 1.8));
+  height: calc(280px * var(--lr-display-type-scale, 1.8));
 }
 
 .lr-dt-sex {
-  font-size: calc(40px * var(--lr-display-type-scale, 1.2));
+  font-size: calc(40px * var(--lr-display-type-scale, 1.8));
 }
