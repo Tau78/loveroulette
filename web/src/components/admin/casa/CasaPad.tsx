@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Maximize, Minimize } from "lucide-react";
 import {
   useVisualViewportRect,
   visualViewportOverlayStyle,
@@ -45,6 +46,7 @@ import {
   resolveNicknameOnSave,
 } from "@/lib/player/nickname-save";
 import { useTypeScalePrefs } from "@/hooks/useTypeScalePrefs";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import { clampTypeScale } from "@/lib/display/type-scale";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
@@ -640,6 +642,12 @@ function formatMmSs(totalSec: number): string {
 export function CasaPad({ eventCode }: { eventCode: string }) {
   const live = useCasaLiveSession();
   const typeScale = useTypeScalePrefs(eventCode);
+  const {
+    containerRef: fullscreenRef,
+    isFullscreen,
+    supported: fullscreenSupported,
+    toggle: toggleFullscreen,
+  } = useFullscreen({ storageKey: "lr_casa_fullscreen_pref" });
   const [beat, setBeat] = useState<Beat>("casa");
   const [guests, setGuests] = useState<Guest[]>(SEED);
   const [query, setQuery] = useState("");
@@ -2172,6 +2180,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
   return (
     <div
+      ref={fullscreenRef}
+      className="casa-shell"
+      data-casa-fullscreen={isFullscreen || undefined}
+    >
+    <div
       className="casa"
       data-layout-edit={layoutEdit ? "1" : undefined}
       style={
@@ -2238,6 +2251,27 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             <span>Tempo</span>
           ) : null}
         </button>
+
+        {fullscreenSupported ? (
+          <button
+            type="button"
+            className="casa-top-mod casa-top-fs"
+            onClick={() => void toggleFullscreen()}
+            title={
+              isFullscreen
+                ? "Esci da schermo intero (Esc o F)"
+                : "Schermo intero (F)"
+            }
+            aria-label={isFullscreen ? "Esci da schermo intero" : "Schermo intero"}
+            aria-pressed={isFullscreen}
+          >
+            {isFullscreen ? (
+              <Minimize aria-hidden />
+            ) : (
+              <Maximize aria-hidden />
+            )}
+          </button>
+        ) : null}
       </header>
 
       <div className="casa-deck-wrap" ref={deckWrapRef} data-compact={fitPhone ? "1" : undefined}>
@@ -3022,6 +3056,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           e.target.value = "";
         }}
       />
+    </div>
     </div>
   );
 }

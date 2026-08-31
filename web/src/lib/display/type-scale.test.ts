@@ -3,6 +3,7 @@ import {
   DEFAULT_TYPE_SCALE_PREFS,
   DISPLAY_TYPE_SCALE_DEFAULT,
   PLANCIA_TYPE_SCALE_DEFAULT,
+  casaFitInversePercent,
   clampTypeScale,
   typeScaleStyleVars,
 } from "@/lib/display/type-scale";
@@ -23,5 +24,13 @@ describe("type-scale prefs", () => {
       "--casa-type-scale": "1.1",
     });
     expect(clampTypeScale(1.25)).toBe(1.3);
+  });
+
+  it("keeps the plancia inside the viewport after type-scale zoom", () => {
+    expect(casaFitInversePercent(1)).toBe(100);
+    expect(casaFitInversePercent(1.5)).toBeCloseTo(100 / 1.5);
+    expect(casaFitInversePercent(PLANCIA_TYPE_SCALE_DEFAULT) * PLANCIA_TYPE_SCALE_DEFAULT).toBeCloseTo(
+      100,
+    );
   });
 });

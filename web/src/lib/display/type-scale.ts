@@ -95,10 +95,15 @@ export function saveTypeScalePrefs(
   return next;
 }
 
+/**
+ * Percentuale del viewport da assegnare a `.casa` prima dello `zoom`.
+ * `inverse × scale = 100` → la plancia riempie lo schermo senza uscire.
+ */
+export function casaFitInversePercent(scale: number): number {
+  return 100 / clampTypeScale(scale);
+}
+
 export function typeScaleStyleVars(prefs: Partial<TypeScalePrefs>): {
-  [DISPLAY_TYPE_SCALE_CSS_VAR]?: string;
-  [PLANCIA_TYPE_SCALE_CSS_VAR]?: string;
-} {
   const style: {
     [DISPLAY_TYPE_SCALE_CSS_VAR]?: string;
     [PLANCIA_TYPE_SCALE_CSS_VAR]?: string;

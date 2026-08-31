@@ -2,6 +2,28 @@ html.casa-native-chrome .casa {
   padding-top: 0;
 }
 
+/* Viewport host (no zoom). Fullscreen target. Always fills the window. */
+.casa-shell {
+  --bg: #1a1d24;
+  width: 100%;
+  height: 100%;
+  height: -webkit-fill-available;
+  min-height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--bg);
+  box-sizing: border-box;
+}
+
+.casa-shell:fullscreen,
+.casa-shell:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
 .casa {
   --bg: #1a1d24;
   --card: #252830;
@@ -13,14 +35,14 @@ html.casa-native-chrome .casa {
   --red: #ff5a5f;
   --blue: #4da3ff;
   --casa-type-scale: 1.5;
-  /* Viewport floor: 100dvh can be 0/tiny in iOS WKWebView (keyboard / first layout). */
-  height: 100%;
-  height: -webkit-fill-available;
-  min-height: 100%;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
-  min-height: 100svh;
-  width: 100%;
+  /*
+   * Fit automatico: box inverso × zoom = 100% dello shell.
+   * I testi restano +50% (scala 1.5) senza uscire dal MacBook / iframe.
+   * Non usare min-height: 100dvh qui — dopo lo zoom diventerebbe 150vh.
+   */
+  width: calc(100% / var(--casa-type-scale));
+  height: calc(100% / var(--casa-type-scale));
+  min-height: 0;
   box-sizing: border-box;
   padding-top: max(env(safe-area-inset-top, 0px), var(--lr-sat, 0px));
   padding-right: max(env(safe-area-inset-right, 0px), var(--lr-sar, 0px));
@@ -34,6 +56,13 @@ html.casa-native-chrome .casa {
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
   /* Scala caratteri plancia (Impostazioni). Zoom = tipografia + hit area. */
   zoom: var(--casa-type-scale);
+}
+
+@supports not (zoom: 1) {
+  .casa {
+    transform: scale(var(--casa-type-scale));
+    transform-origin: top left;
+  }
 }
 
 .casa,
@@ -56,6 +85,10 @@ html.casa-native-chrome .casa {
   padding: 8px 10px;
   min-width: 0;
   flex-shrink: 0;
+}
+
+.casa-top:has(.casa-top-fs) {
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
 }
 
 .casa-top-mod {
@@ -124,6 +157,27 @@ html.casa-native-chrome .casa {
   font-variant-numeric: tabular-nums lining-nums;
   letter-spacing: 0;
   text-align: right;
+}
+
+.casa-top-fs {
+  width: 36px;
+  padding: 4px;
+  justify-content: center;
+  justify-self: end;
+  margin: 0;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.casa-top-fs:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+.casa-top-fs svg {
+  width: 16px;
+  height: 16px;
 }
 
 .casa-top-time-sep {
