@@ -127,6 +127,8 @@ export async function patchEventConfig(
     badgeRequired?: boolean;
     extractionCount?: number | null;
     salvaSec?: number | null;
+    displayTypeScale?: number | null;
+    planciaTypeScale?: number | null;
   },
   pin: string | null,
 ): Promise<Response> {

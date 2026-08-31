@@ -173,6 +173,7 @@ export default function DisplayPage() {
 
   return (
     <DisplayProjectorRoot
+      eventCode={eventSlug}
       embedMode={embedMode}
       presentMode={presentMode}
       className="fixed inset-0 bg-black outline-none"

@@ -188,7 +188,7 @@ export function CasaProjector({
   return (
     <div
       ref={box}
-      className="casa-screen theme-dark-fuchsia"
+      className="casa-screen theme-dark-fuchsia lr-display-type-root"
       data-enlarge={enlarge ? "1" : undefined}
     >
       <div

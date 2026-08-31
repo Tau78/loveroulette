@@ -42,6 +42,10 @@ export interface EventConfig {
   badge_required: boolean;
   /** Secondi finestra «Salva sala» (ripescaggio). Null = default client (30). */
   salva_sec: number | null;
+  /** Scala tipografia proiettore (default 1.2). */
+  display_type_scale: number | null;
+  /** Scala tipografia plancia Casa (default 1). */
+  plancia_type_scale: number | null;
 }
 
 export const DEFAULT_EVENT_CONFIG: EventConfig = {
@@ -66,6 +70,8 @@ export const DEFAULT_EVENT_CONFIG: EventConfig = {
   data_retention_days: 30,
   badge_required: false,
   salva_sec: null,
+  display_type_scale: null,
+  plancia_type_scale: null,
 };
 
 /** @deprecated Standalone schema — use LoveRouletteEvent from @/lib/musicpro/types */

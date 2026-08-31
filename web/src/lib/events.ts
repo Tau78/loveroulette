@@ -32,6 +32,8 @@ export function mergeEventConfig(
     data_retention_days: 30,
     badge_required: false,
     salva_sec: null,
+    display_type_scale: null,
+    plancia_type_scale: null,
   };
 
   if (!partial) return base;
@@ -41,6 +43,18 @@ export function mergeEventConfig(
     (!Number.isFinite(merged.salva_sec) || merged.salva_sec < 1)
   ) {
     merged.salva_sec = null;
+  }
+  if (
+    merged.display_type_scale != null &&
+    !Number.isFinite(merged.display_type_scale)
+  ) {
+    merged.display_type_scale = null;
+  }
+  if (
+    merged.plancia_type_scale != null &&
+    !Number.isFinite(merged.plancia_type_scale)
+  ) {
+    merged.plancia_type_scale = null;
   }
   return merged;
 }

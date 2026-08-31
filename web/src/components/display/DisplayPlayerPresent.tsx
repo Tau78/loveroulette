@@ -2,10 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import {
-  scaledDisplayPx,
-  scaledDisplayRem,
-} from "@/lib/display/quiz-display-typography";
+import { QUIZ_PRESENT_NAME_CLASS } from "@/lib/display/quiz-display-typography";
 
 const AVATAR_M = "/grafiche/avatar-m.png";
 const AVATAR_F = "/grafiche/avatar-f.png";
@@ -41,8 +38,6 @@ export function DisplayPlayerPresent({
 }: DisplayPlayerPresentProps) {
   const reduce = useReducedMotion();
   const name = nick.trim().toUpperCase() || "—";
-  const facePx = scaledDisplayPx(280);
-  const sexPx = scaledDisplayPx(40);
 
   return (
     <div
@@ -61,10 +56,10 @@ export function DisplayPlayerPresent({
 
       <motion.h1
         className={cn(
-          "relative z-10 font-sans font-black uppercase leading-[0.92] tracking-wide text-white",
+          "relative z-10",
           compact
-            ? "text-[clamp(2.8rem,7vw,4.5rem)]"
-            : `text-[clamp(${scaledDisplayRem(5)}rem,${scaledDisplayRem(10)}vw,${scaledDisplayRem(8.5)}rem)]`,
+            ? "font-sans font-black uppercase leading-[0.92] tracking-wide text-white text-[clamp(2.8rem,7vw,4.5rem)]"
+            : QUIZ_PRESENT_NAME_CLASS,
         )}
         style={{
           textShadow:
@@ -80,9 +75,8 @@ export function DisplayPlayerPresent({
       <motion.div
         className={cn(
           "relative z-10 overflow-hidden rounded-full border-[6px] border-primary/85 bg-[#14171d] shadow-[0_0_48px_rgba(233,30,140,0.45)]",
-          compact ? "size-[160px]" : undefined,
+          compact ? "size-[160px]" : "lr-dt-face",
         )}
-        style={compact ? undefined : { width: facePx, height: facePx }}
         initial={reduce ? false : { opacity: 0, scale: 0.35, rotate: -10 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
         transition={{
@@ -100,13 +94,13 @@ export function DisplayPlayerPresent({
         />
       </motion.div>
 
+
       <motion.p
         className={cn(
           "relative z-10 font-sans font-extrabold uppercase tracking-[0.32em] text-[#f5c84b]",
-          compact ? "text-xl" : undefined,
+          compact ? "text-xl" : "lr-dt-sex",
         )}
         style={{
-          ...(compact ? {} : { fontSize: sexPx }),
           textShadow: "0 2px 12px rgba(0,0,0,0.95)",
         }}
         initial={reduce ? false : { opacity: 0, y: 28 }}

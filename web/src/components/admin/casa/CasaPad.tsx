@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   useVisualViewportRect,
   visualViewportOverlayStyle,
@@ -44,6 +44,8 @@ import {
   NICKNAME_FROM_REAL_NAME_PROMPT,
   resolveNicknameOnSave,
 } from "@/lib/player/nickname-save";
+import { useTypeScalePrefs } from "@/hooks/useTypeScalePrefs";
+import { clampTypeScale } from "@/lib/display/type-scale";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
   DEFAULT_CASA_CLOCK,
@@ -226,16 +228,24 @@ function SetupFields({
   manche,
   seconds,
   mustAnswer,
+  displayScale,
+  planciaScale,
   onManche,
   onSeconds,
   onMustAnswer,
+  onDisplayScale,
+  onPlanciaScale,
 }: {
   manche: number;
   seconds: number;
   mustAnswer: boolean;
+  displayScale: number;
+  planciaScale: number;
   onManche: (n: number) => void;
   onSeconds: (n: (typeof SECONDS)[number]) => void;
   onMustAnswer: () => void;
+  onDisplayScale: (n: number) => void;
+  onPlanciaScale: (n: number) => void;
 }) {
   return (
     <>
@@ -285,6 +295,46 @@ function SetupFields({
         >
           {mustAnswer ? "On" : "Off"}
         </button>
+      </div>
+      <div className="casa-setup-row">
+        <span>Dimensione caratteri Schermo</span>
+        <div className="casa-stepper">
+          <button
+            type="button"
+            className="casa-stepper-btn"
+            onClick={() => onDisplayScale(displayScale - 0.1)}
+          >
+            −
+          </button>
+          <strong>{Math.round(displayScale * 100)}%</strong>
+          <button
+            type="button"
+            className="casa-stepper-btn"
+            onClick={() => onDisplayScale(displayScale + 0.1)}
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div className="casa-setup-row">
+        <span>Dimensione Caratteri Plancia</span>
+        <div className="casa-stepper">
+          <button
+            type="button"
+            className="casa-stepper-btn"
+            onClick={() => onPlanciaScale(planciaScale - 0.1)}
+          >
+            −
+          </button>
+          <strong>{Math.round(planciaScale * 100)}%</strong>
+          <button
+            type="button"
+            className="casa-stepper-btn"
+            onClick={() => onPlanciaScale(planciaScale + 0.1)}
+          >
+            +
+          </button>
+        </div>
       </div>
     </>
   );
@@ -587,6 +637,7 @@ function formatMmSs(totalSec: number): string {
 
 export function CasaPad({ eventCode }: { eventCode: string }) {
   const live = useCasaLiveSession();
+  const typeScale = useTypeScalePrefs(eventCode);
   const [beat, setBeat] = useState<Beat>("casa");
   const [guests, setGuests] = useState<Guest[]>(SEED);
   const [query, setQuery] = useState("");
@@ -2122,7 +2173,16 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }
 
   return (
-    <div className="casa" data-layout-edit={layoutEdit ? "1" : undefined}>
+    <div
+      className="casa"
+      data-layout-edit={layoutEdit ? "1" : undefined}
+      style={
+        {
+          "--casa-type-scale": String(typeScale.prefs.plancia),
+          "--lr-display-type-scale": String(typeScale.prefs.display),
+        } as CSSProperties
+      }
+    >
       <header className="casa-top">
         <div className="casa-top-mod casa-top-sala" aria-live="polite">
           <span>
@@ -2334,9 +2394,33 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                       manche={manche}
                       seconds={seconds}
                       mustAnswer={mustAnswer}
+                      displayScale={typeScale.prefs.display}
+                      planciaScale={typeScale.prefs.plancia}
                       onManche={changeManche}
                       onSeconds={setSeconds}
                       onMustAnswer={() => setMustAnswer((v) => !v)}
+                      onDisplayScale={(n) => {
+                        const display = clampTypeScale(n);
+                        typeScale.updatePrefs({ display });
+                        if (live.pinReady && live.pin) {
+                          void patchEventConfig(
+                            eventCode,
+                            { displayTypeScale: display },
+                            live.pin,
+                          );
+                        }
+                      }}
+                      onPlanciaScale={(n) => {
+                        const plancia = clampTypeScale(n);
+                        typeScale.updatePrefs({ plancia });
+                        if (live.pinReady && live.pin) {
+                          void patchEventConfig(
+                            eventCode,
+                            { planciaTypeScale: plancia },
+                            live.pin,
+                          );
+                        }
+                      }}
                     />
                     {beat === "casa" ? (
                       <button type="button" className="casa-hit" onClick={() => setOpen("prep")}>

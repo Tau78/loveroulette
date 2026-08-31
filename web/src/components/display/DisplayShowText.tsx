@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 
 const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
 
-/** Titolo prova finale — massimo impatto sul proiettore (+20% type scale). */
+/** Titolo prova finale — massimo impatto sul proiettore (scala via CSS var). */
 export const DISPLAY_CHALLENGE_TITLE_CLASS =
-  "max-w-full text-[clamp(4.8rem,13.2vw,14.4rem)] leading-[0.92] tracking-wide";
+  "max-w-full lr-dt-challenge-title leading-[0.92] tracking-wide";
 
 interface DisplayPhaseHeroProps {
   kicker?: string;
