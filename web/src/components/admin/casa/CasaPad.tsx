@@ -673,12 +673,20 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
   const liveQuizActive =
     live.runtimeState === "quiz" && Boolean(live.quizState);
-  const { displayPhase: liveQuizPhase } = useQuizPhaseSync({
-    eventSlug: eventCode,
-    quizState: live.quizState,
-    enabled: liveQuizActive && !live.controlsDisabled,
-    driveTicks: false,
-  });
+  const { displayPhase: liveQuizPhase, remaining: liveQuizRemaining } =
+    useQuizPhaseSync({
+      eventSlug: eventCode,
+      quizState: live.quizState,
+      enabled: liveQuizActive && !live.controlsDisabled,
+      // Backup tick driver (TransportBar also drives when autoplay is on).
+      driveTicks:
+        liveQuizActive &&
+        !live.controlsDisabled &&
+        live.quizState?.autoplayEnabled === true,
+      onTick: (quiz, runtime) => {
+        live.applyQuizUpdate(quiz, runtime);
+      },
+    });
   const { currentQuestion: liveQuestion } = useCurrentQuizQuestion(
     eventCode,
     live.quizState,
@@ -838,6 +846,15 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     return () => window.clearInterval(id);
   }, [beat, quizGate, seconds, asked]);
 
+  // Countdown locale: a zero passa alla slide tema successiva.
+  useEffect(() => {
+    if (beat !== "quiz" || quizGate !== "play") return;
+    if (live.runtimeState === "quiz") return; // live autoplay gestisce
+    if (quizLeftSec > 0) return;
+    setLeft((n) => Math.max(0, n - 1));
+    setQuizGate("tema");
+  }, [beat, quizGate, quizLeftSec, live.runtimeState]);
+
   useEffect(() => {
     setSlides(loadSlides(eventCode));
     setPrep(loadPrep(eventCode));
@@ -891,9 +908,10 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   }, [eventCode, live.pin, live.pinReady]);
 
   // Push opening slides / presenti cards to the real /display (sticky overlay).
+  // Also when the session was left mid-quiz: opening beats still cover the maxi.
   useEffect(() => {
     if (!live.pinReady || live.controlsDisabled) return;
-    if (live.runtimeState !== "lobby") return;
+    if (beat === "quiz" && live.runtimeState !== "lobby") return;
 
     const slideIds: CasaSlideId[] = [
       "pres",
@@ -1004,6 +1022,20 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   useEffect(() => {
     if (beat !== "quiz") setGoBusy(false);
   }, [beat]);
+
+  // Serata già in quiz con autoplay spento → riaccendi il countdown fasi.
+  useEffect(() => {
+    if (!live.pinReady || live.controlsDisabled) return;
+    if (live.runtimeState !== "quiz" || !live.quizState) return;
+    if (live.quizState.autoplayEnabled) return;
+    void live.runQuizAction("setAutoplayEnabled", { enabled: true });
+  }, [
+    live.controlsDisabled,
+    live.pinReady,
+    live.quizState,
+    live.runtimeState,
+    live.runQuizAction,
+  ]);
 
   useEffect(() => {
     if (open === "questions") return;
@@ -1227,6 +1259,13 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           if (!result.ok) {
             setGoError(result.error);
             return;
+          }
+          // Countdown fasi live: senza autoplay il quiz resta fermo.
+          const auto = await live.runQuizAction("setAutoplayEnabled", {
+            enabled: true,
+          });
+          if (!auto.ok) {
+            setGoError(auto.error);
           }
           void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
         } catch (err) {
@@ -1726,6 +1765,14 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           <div className={liveOff}>
             <div className="casa-clock-widget">
               <em className="casa-pill">{current.label}</em>
+              {liveQuizActive ? (
+                <span>
+                  Fase{" "}
+                  <b>
+                    {liveQuizRemaining}s
+                  </b>
+                </span>
+              ) : null}
               {clockPrefs.showElapsed ? (
                 <span>
                   Tempo <b>{elapsedNow}</b>
@@ -1736,7 +1783,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                   Ora <b>{exactNow}</b>
                 </span>
               ) : null}
-              {!clockPrefs.showElapsed && !clockPrefs.showExact ? (
+              {!liveQuizActive &&
+              !clockPrefs.showElapsed &&
+              !clockPrefs.showExact ? (
                 <span>Tempo</span>
               ) : null}
             </div>
