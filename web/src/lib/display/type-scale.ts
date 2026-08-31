@@ -95,6 +95,15 @@ export function saveTypeScalePrefs(
   return next;
 }
 
+/**
+ * Box inverso per il fallback `transform: scale` (motori senza `zoom`).
+ * Chromium non lo usa: lì `width/height: 100%` + `zoom` basta.
+ * `inverse × scale = 100`.
+ */
+export function casaFitInversePercent(scale: number): number {
+  return 100 / clampTypeScale(scale);
+}
+
 export function typeScaleStyleVars(prefs: Partial<TypeScalePrefs>): {
   [DISPLAY_TYPE_SCALE_CSS_VAR]?: string;
   [PLANCIA_TYPE_SCALE_CSS_VAR]?: string;
