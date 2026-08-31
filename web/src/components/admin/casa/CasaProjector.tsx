@@ -148,11 +148,12 @@ export function CasaProjector({
   const mountSigla = siglaFullscreen && shouldMountSiglaVideo(siglaSrc, siglaMissing);
   const mediaVideoOn = Boolean(mediaOnScreen && isVideoMedia(mediaOnScreen));
   /** Never keep the ambient loop while another video is the hero. */
-  const suspendBgVideo = mountSigla || mediaVideoOn || beat === "stacco";
+  const heroVideoOn = mountSigla || mediaVideoOn;
+  const [bgVideoHeld, setBgVideoHeld] = useState(false);
   const theme = categoryThemeLabel(quizQuestion?.category ?? FALLBACK_QUIZ.category);
   const previewQuizPhase: QuizDisplayPhase | null =
     beat === "quiz"
-      ? quizPhase ?? (quizGate === "tema" ? "theme_intro" : "answers")
+      ? quizPhase ?? (quizGate === "tema" ? "theme_intro" : "question")
       : null;
 
   useEffect(() => {
@@ -165,6 +166,17 @@ export function CasaProjector({
       cancelled = true;
     };
   }, [siglaSrc]);
+
+  useEffect(() => {
+    if (heroVideoOn || beat === "stacco") {
+      setBgVideoHeld(true);
+      return;
+    }
+    const id = window.setTimeout(() => setBgVideoHeld(false), 480);
+    return () => window.clearTimeout(id);
+  }, [heroVideoOn, beat]);
+
+  const suspendBgVideo = heroVideoOn || beat === "stacco" || bgVideoHeld;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -183,16 +195,21 @@ export function CasaProjector({
       });
     }
     if (sigla === "hold") {
+      // Pause only — seeking an ended video kills WKWebView's decoder.
       video.pause();
-      if (video.duration && Number.isFinite(video.duration)) {
-        video.currentTime = Math.max(0, video.duration - 0.05);
-      }
     }
-
-    return () => {
-      video.pause();
-    };
   }, [beat, sigla, siglaSrc, mountSigla]);
+
+  useEffect(() => {
+    if (!mountSigla) return;
+    const video = videoRef.current;
+    return () => {
+      if (!video) return;
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [mountSigla, siglaSrc]);
 
   return (
     <div
@@ -416,16 +433,6 @@ function QuizPreview({
           >
             {body}
           </motion.p>
-          <div className="casa-proj-opts" aria-hidden>
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="casa-proj-opt casa-proj-opt-skel">
-                <span className={QUIZ_ANSWER_LETTER_CLASS}>
-                  {String.fromCharCode(65 + i)}
-                </span>
-                <span className="casa-proj-skel-bar" />
-              </div>
-            ))}
-          </div>
         </div>
         <DisplayQuizFooter countdown={null} heartProgress={0.16} />
       </div>
