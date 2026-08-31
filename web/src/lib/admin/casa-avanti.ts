@@ -57,9 +57,9 @@ export function stepAvanti(input: {
 }
 
 /**
- * Live GO (skipPhase / matching / …) only after the session left lobby.
- * Opening beats + local tema stay on local AVANTI so we can start the quiz
- * with real feedback (instead of a silent handoff at beat===quiz).
+ * Live GO only after opening is done AND the live session left lobby.
+ * Opening beats (casa → stacco) always stay on local AVANTI, even if a
+ * previous serata left runtimeState on quiz/matching/etc.
  */
 export function shouldUseLiveGo(input: {
   live: boolean;
@@ -67,6 +67,7 @@ export function shouldUseLiveGo(input: {
   runtimeState: string;
 }): boolean {
   if (!input.live) return false;
+  if (input.beat !== "quiz") return false;
   return input.runtimeState !== "lobby";
 }
 

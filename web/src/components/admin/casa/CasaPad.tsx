@@ -70,6 +70,7 @@ import {
   type CasaAudioRoute,
 } from "@/lib/admin/casa-audio-route";
 import { avantiLabel, stepAvanti } from "@/lib/admin/casa-avanti";
+import { categoryThemeLabel } from "@/lib/musicpro/quiz-display";
 import { casaAutoBedLabel, resolveCasaBed } from "@/lib/admin/casa-beds";
 import {
   CANVAS_HEIGHT,
@@ -903,86 +904,92 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       "stasera",
     ];
 
-    async function pushOverlay() {
-      try {
-        if (beat === "casa" || help) {
-          await postDisplayCommand(eventCode, { type: "show_qr" }, live.pin);
-          return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        if (cancelled) return;
+        try {
+          if (beat === "casa" || help) {
+            await postDisplayCommand(eventCode, { type: "show_qr" }, live.pin);
+            return;
+          }
+          if (beat === "sigla" && sigla === "warn") {
+            await postDisplayCommand(
+              eventCode,
+              { type: "slide", kicker: "Tra un attimo", title: "SIGLA" },
+              live.pin,
+            );
+            return;
+          }
+          if (beat === "sigla") {
+            await postDisplayCommand(eventCode, { type: "clear" }, live.pin);
+            return;
+          }
+          if (beat === "presenti" && onStage) {
+            await postDisplayCommand(
+              eventCode,
+              {
+                type: "slide",
+                kicker: onStage.gender,
+                title: onStage.nick.toUpperCase(),
+              },
+              live.pin,
+            );
+            return;
+          }
+          if (beat === "stacco") {
+            await postDisplayCommand(
+              eventCode,
+              {
+                type: "slide",
+                kicker: "Si parte",
+                title: count != null ? String(count) : "…",
+              },
+              live.pin,
+            );
+            return;
+          }
+          if (slideIds.includes(beat as CasaSlideId)) {
+            const slide = slides[beat as CasaSlideId];
+            await postDisplayCommand(
+              eventCode,
+              {
+                type: "slide",
+                kicker: slide.kicker,
+                title: slide.headline,
+                body: slide.sub || "",
+              },
+              live.pin,
+            );
+            return;
+          }
+          if (beat === "quiz") {
+            const theme = categoryThemeLabel(currentQ.category);
+            await postDisplayCommand(
+              eventCode,
+              {
+                type: "slide",
+                kicker: "Manche",
+                title: theme.title,
+                body: theme.subtitle,
+              },
+              live.pin,
+            );
+          }
+        } catch {
+          // non-blocking: preview still works
         }
-        if (beat === "sigla" && sigla === "warn") {
-          await postDisplayCommand(
-            eventCode,
-            { type: "slide", kicker: "Tra un attimo", title: "SIGLA" },
-            live.pin,
-          );
-          return;
-        }
-        if (beat === "sigla") {
-          await postDisplayCommand(eventCode, { type: "clear" }, live.pin);
-          return;
-        }
-        if (beat === "presenti" && onStage) {
-          await postDisplayCommand(
-            eventCode,
-            {
-              type: "slide",
-              kicker: onStage.gender,
-              title: onStage.nick.toUpperCase(),
-            },
-            live.pin,
-          );
-          return;
-        }
-        if (beat === "stacco") {
-          await postDisplayCommand(
-            eventCode,
-            {
-              type: "slide",
-              kicker: "Si parte",
-              title: count != null ? String(count) : "…",
-            },
-            live.pin,
-          );
-          return;
-        }
-        if (slideIds.includes(beat as CasaSlideId)) {
-          const slide = slides[beat as CasaSlideId];
-          await postDisplayCommand(
-            eventCode,
-            {
-              type: "slide",
-              kicker: slide.kicker,
-              title: slide.headline,
-              body: slide.sub || "",
-            },
-            live.pin,
-          );
-          return;
-        }
-        if (beat === "quiz") {
-          // Local tema still in lobby — show theme on maxi until start succeeds.
-          const theme = currentQ;
-          await postDisplayCommand(
-            eventCode,
-            {
-              type: "slide",
-              kicker: "Manche",
-              title: theme.category.toUpperCase(),
-              body: theme.text.slice(0, 120),
-            },
-            live.pin,
-          );
-        }
-      } catch {
-        // non-blocking: preview still works
-      }
-    }
+      })();
+    }, 120);
 
-    void pushOverlay();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [
     beat,
     count,
-    currentQ,
+    currentQ.category,
     eventCode,
     help,
     live.controlsDisabled,
@@ -995,9 +1002,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   ]);
 
   useEffect(() => {
-    if (open === "questions") return;
-    setPack(loadQuestions(eventCode));
-  }, [open, eventCode]);
+    if (beat !== "quiz") setGoBusy(false);
+  }, [beat]);
 
   const flash = msgQueue[0] ?? null;
 
@@ -1168,55 +1174,71 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     stopGongAtmo();
     setShowPct(false);
     setGoError(null);
-    if (beat === "quiz") {
-      if (quizGate === "tema") {
-        if (live.runtimeState === "lobby") {
-          setGoBusy(true);
-          try {
-            await fetch(
-              `/api/events/${encodeURIComponent(eventCode)}/questions`,
-            );
-            const result = await live.runQuizAction("start", {
-              questionCount: live.event?.quizSetup.questionCount ?? undefined,
-              questionSeconds:
-                live.event?.quizSetup.questionSeconds ?? undefined,
-              hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
-            });
-            if (!result.ok) {
-              setGoError(result.error);
-              return;
-            }
-            await postDisplayCommand(
-              eventCode,
-              { type: "clear" },
-              live.pin,
-            ).catch(() => undefined);
-          } finally {
-            setGoBusy(false);
-          }
-        }
-        setQuizGate("play");
-        return;
+
+    // Opening beats: pure local, never blocked by network / quiz start.
+    if (beat !== "quiz") {
+      setGoBusy(false);
+      const step = stepAvanti({
+        beat,
+        sigla,
+        roll,
+        guestCount: guests.length,
+      });
+      setBeat(step.beat);
+      setSigla(step.sigla);
+      setRoll(step.roll);
+      if (step.stacco) setCount(5);
+      if (step.beat === "quiz") {
+        setCount(null);
+        setQuizGate("tema");
       }
-      setLeft((n) => Math.max(0, n - 1));
-      setQuizGate("tema");
+      if (step.beat !== "casa" && open === "prep") setOpen(null);
       return;
     }
-    const step = stepAvanti({
-      beat,
-      sigla,
-      roll,
-      guestCount: guests.length,
-    });
-    setBeat(step.beat);
-    setSigla(step.sigla);
-    setRoll(step.roll);
-    if (step.stacco) setCount(5);
-    if (step.beat === "quiz") {
-      setCount(null);
-      setQuizGate("tema");
+
+    if (quizGate === "tema") {
+      if (live.runtimeState === "lobby") {
+        setGoBusy(true);
+        try {
+          const questionsRes = await Promise.race([
+            fetch(`/api/events/${encodeURIComponent(eventCode)}/questions`),
+            new Promise<Response>((_, reject) =>
+              window.setTimeout(
+                () => reject(new Error("Timeout caricamento domande.")),
+                10_000,
+              ),
+            ),
+          ]);
+          if (!questionsRes.ok) {
+            setGoError("Impossibile caricare le domande.");
+            return;
+          }
+          const result = await live.runQuizAction("start", {
+            questionCount: live.event?.quizSetup.questionCount ?? undefined,
+            questionSeconds:
+              live.event?.quizSetup.questionSeconds ?? undefined,
+            hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
+          });
+          if (!result.ok) {
+            setGoError(result.error);
+            return;
+          }
+          void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
+        } catch (err) {
+          setGoError(
+            err instanceof Error ? err.message : "Avvio quiz non riuscito.",
+          );
+          return;
+        } finally {
+          setGoBusy(false);
+        }
+      }
+      setQuizGate("play");
+      return;
     }
-    if (step.beat !== "casa" && open === "prep") setOpen(null);
+
+    setLeft((n) => Math.max(0, n - 1));
+    setQuizGate("tema");
   }
 
   const goLabel =

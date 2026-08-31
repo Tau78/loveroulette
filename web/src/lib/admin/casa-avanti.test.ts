@@ -49,7 +49,7 @@ describe("AVANTI flow", () => {
     );
   });
 
-  it("uses live GO only after the session left lobby", () => {
+  it("uses live GO only on quiz beat after leaving lobby", () => {
     expect(
       shouldUseLiveGo({ live: false, beat: "quiz", runtimeState: "lobby" }),
     ).toBe(false);
@@ -61,7 +61,7 @@ describe("AVANTI flow", () => {
     ).toBe(false);
     expect(
       shouldUseLiveGo({ live: true, beat: "casa", runtimeState: "quiz" }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       shouldUseLiveGo({ live: true, beat: "quiz", runtimeState: "quiz" }),
     ).toBe(true);
