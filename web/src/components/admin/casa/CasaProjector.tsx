@@ -7,6 +7,7 @@ import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
 import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
 import { DisplayPlayerPresentSwitch } from "@/components/display/DisplayPlayerPresent";
+import { DisplayStaccoStage } from "@/components/display/DisplayStaccoStage";
 import { DisplayQuizFooter } from "@/components/display/DisplayQuizFooter";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { PROJECTOR_CANVAS } from "@/lib/display/projector-canvas";
@@ -263,7 +264,7 @@ export function CasaProjector({
             />
           </div>
         ) : beat === "stacco" && count != null ? (
-          <div className="casa-proj-count">{count}</div>
+          <DisplayStaccoStage value={count} />
         ) : beat === "quiz" ? (
           <QuizPreview
             gate={quizGate}

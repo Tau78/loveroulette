@@ -1,0 +1,22 @@
+Gemini / Imagen — Love Roulette · canvas stacco (5–4–3–2–1)
+
+OUTPUT
+- 1920×1080 (16:9), landscape, still frame (or 4–6s seamless loop if video)
+- Photoreal cinematic, broadcast game-show, no text, no letters, no numbers, no logos, no watermarks, no UI, no QR, no people faces in focus
+- Empty safe zone in the exact center (soft darker pocket ~40% of frame) so a giant white countdown digit can sit on top
+- Do not draw a roulette wheel as the hero — only as a faint out-of-focus hint in the deep background
+
+SCENE
+A dark Italian nightclub stage seen from the audience, just before the show explodes. Deep black and burgundy velvet, haze in the air, volumetric spotlights. Magenta / fuchsia beams (#E91E8C) cross with a touch of warm gold (#C9A96E) and a thin cyan rim. Bokeh orbs, lens dust, gentle smoke. A huge circular light rig high above, slightly out of focus. Floor reflects pink. Mood: tension, romance, “take your seats — it starts now”. Not a casino, not slot machines, not cards, not dice. Live entertainment, not gambling.
+
+CAMERA
+Wide, locked-off, slight low angle. Center of frame kept clear and darker. Vignette on the edges. Anamorphic subtle flares, no dirty lens covering the middle.
+
+LIGHTING
+Key: two magenta spots from upper left and right, not crossing the center. Rim gold from behind. Soft red wash on curtains. No blown-out white core.
+
+NEGATIVE
+text, typography, letters, numbers, logo, watermark, heart icon, crown logo, phone, screenshot, UI chrome, cartoon, anime, illustration, slot machine, poker, chips, dice, casino carpet, bright daylight, empty white studio
+
+FILE
+Save as canvas.webp (or canvas.mp4 loop, muted, 1920×1080). Drop into web/public/grafiche/stacco/ — the app picks it up automatically.

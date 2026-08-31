@@ -21,6 +21,7 @@ export function isSiglaWarnSlide(overlay: {
   type?: string;
   title?: string;
   body?: string;
+  kicker?: string;
 }): boolean {
   return (
     overlay.type === "slide" &&

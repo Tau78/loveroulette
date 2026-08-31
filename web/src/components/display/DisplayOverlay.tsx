@@ -8,7 +8,9 @@ import {
 } from "@/components/display/DisplayShowText";
 import { DisplayPlayerPresentSwitch } from "@/components/display/DisplayPlayerPresent";
 import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
+import { DisplayStaccoStage } from "@/components/display/DisplayStaccoStage";
 import { isSiglaWarnSlide } from "@/lib/display/sigla-warn";
+import { isStaccoSlide } from "@/lib/display/stacco";
 import { JoinQrCode } from "./JoinQrCode";
 
 const CUSTOM_DURATION_MS = 8000;
@@ -81,6 +83,14 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
             gender={gender}
             photo={overlay.imageUrl}
           />
+        </div>
+      );
+    }
+
+    if (isStaccoSlide(overlay) && overlay.title) {
+      return (
+        <div className="fixed inset-0 z-50">
+          <DisplayStaccoStage value={Number(overlay.title)} />
         </div>
       );
     }

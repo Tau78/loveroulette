@@ -146,6 +146,7 @@ import {
   type CasaSlideId,
 } from "@/lib/admin/casa-slides";
 import { SIGLA_WARN_SLIDE } from "@/lib/display/sigla-warn";
+import { STACCO_KICKER } from "@/lib/display/stacco";
 import "@/components/admin/casa/casa.css";
 
 type Beat =
@@ -1030,7 +1031,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
               eventCode,
               {
                 type: "slide",
-                kicker: "Si parte",
+                kicker: STACCO_KICKER,
                 title: count != null ? String(count) : "…",
               },
               live.pin,
