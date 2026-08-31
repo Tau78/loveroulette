@@ -1093,6 +1093,20 @@ html.casa-native-chrome .casa {
   backdrop-filter: blur(10px);
 }
 
+.casa-proj-opt-skel {
+  background: rgba(0, 0, 0, 0.28);
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.casa-proj-skel-bar {
+  display: block;
+  height: 18px;
+  width: 42%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .casa-proj-pct {
   margin-left: auto;
   font-size: 50px;

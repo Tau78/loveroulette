@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { EventState } from "@/lib/types";
 import type { LoveRouletteQuestion } from "@/lib/musicpro/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
@@ -23,6 +23,12 @@ import {
   QUIZ_RESULT_LABEL_CLASS,
   QUIZ_RESULT_PERCENT_CLASS,
 } from "@/lib/display/quiz-display-typography";
+import {
+  QUIZ_ANSWER_SLIDE,
+  QUIZ_QUESTION_SLIDE,
+  quizAnswerEnterX,
+  quizAnswersRevealMs,
+} from "@/lib/display/quiz-reveal-motion";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { cn } from "@/lib/utils";
 import {
@@ -49,29 +55,49 @@ function DisplayQuizGameLayout({
   footerCountdown,
   heartProgress,
   centerKey,
+  instantCenter = false,
 }: {
   header: ReactNode;
   center: ReactNode;
   footerCountdown?: { value: number; total: number } | null;
   heartProgress?: number;
   centerKey?: string;
+  /** Evita fade sul centro (es. reveal risposte con slide laterali). */
+  instantCenter?: boolean;
 }) {
   return (
     <div className="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
-      <div className="mx-auto flex min-h-0 w-full max-w-[1280px] flex-1 flex-col overflow-hidden">
+      <div
+        className={cn(
+          "mx-auto flex min-h-0 w-full max-w-[1280px] flex-1 flex-col",
+          instantCenter
+            ? "overflow-x-visible overflow-y-hidden"
+            : "overflow-hidden",
+        )}
+      >
         <header className={cn("shrink-0 px-4 pt-2", PROJECTOR_QUIZ_HEADER_HEIGHT)}>
-          <div className="flex h-full min-h-0 flex-col justify-center">{header}</div>
+          <div className="flex h-full min-h-0 flex-col justify-center overflow-hidden">
+            {header}
+          </div>
         </header>
 
-        <section className={cn("min-h-0 flex-1 overflow-hidden", PROJECTOR_QUIZ_MAIN_PAD)}>
+        <section
+          className={cn(
+            "min-h-0 flex-1",
+            PROJECTOR_QUIZ_MAIN_PAD,
+            instantCenter
+              ? "overflow-x-visible overflow-y-hidden"
+              : "overflow-hidden",
+          )}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={centerKey ?? "center"}
               className="flex h-full min-h-0 w-full flex-col"
-              initial={{ opacity: 0 }}
+              initial={instantCenter ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              exit={instantCenter ? undefined : { opacity: 0 }}
+              transition={{ duration: instantCenter ? 0 : 0.18 }}
             >
               {center}
             </motion.div>
@@ -94,17 +120,36 @@ function QuestionHeaderPanel({
   body,
   progressLabel,
   compact = false,
+  slideIn = false,
+  motionKey,
 }: {
   body: string;
   progressLabel: string | null;
   compact?: boolean;
+  /** Domanda che entra da sinistra (fase question). */
+  slideIn?: boolean;
+  motionKey?: string;
 }) {
+  const reduceMotion = useReducedMotion();
+  const shouldSlide = slideIn && !reduceMotion;
+
   return (
-    <div
+    <motion.div
+      key={motionKey ?? body}
       className={cn(
         "flex h-full min-h-0 flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-8 py-3 backdrop-blur-md shadow-[0_12px_48px_rgba(0,0,0,0.5)]",
         compact && "border-white/10 bg-black/45 py-2",
       )}
+      initial={
+        shouldSlide
+          ? { opacity: 0, x: QUIZ_QUESTION_SLIDE.fromX }
+          : false
+      }
+      animate={{ opacity: 1, x: 0 }}
+      transition={{
+        duration: QUIZ_QUESTION_SLIDE.duration,
+        ease: QUIZ_QUESTION_SLIDE.ease,
+      }}
     >
       <p
         className={cn(
@@ -117,7 +162,7 @@ function QuestionHeaderPanel({
       <p className={cn(QUIZ_QUESTION_TEXT_CLASS, compact && "text-white/90")}>
         {body}
       </p>
-    </div>
+    </motion.div>
   );
 }
 
@@ -158,12 +203,106 @@ function CountdownHeaderPanel() {
   );
 }
 
-function QuestionPhaseCenter() {
+function AnswerRowShell({
+  index,
+  children,
+  skeleton = false,
+}: {
+  index: number;
+  children?: ReactNode;
+  skeleton?: boolean;
+}) {
   return (
     <div
-      className="flex h-full min-h-0 items-center justify-center px-2"
-      aria-hidden
-    />
+      className={cn(
+        "flex min-h-0 items-center rounded-xl border px-5 font-sans backdrop-blur-sm",
+        skeleton
+          ? "border-dashed border-white/20 bg-black/25"
+          : "border-white/15 bg-black/50 text-white",
+      )}
+    >
+      <span
+        className={cn(
+          QUIZ_ANSWER_LETTER_CLASS,
+          "mr-3",
+          skeleton && "text-primary/55",
+        )}
+      >
+        {String.fromCharCode(65 + index)}.
+      </span>
+      {children}
+    </div>
+  );
+}
+
+/** Scheletro A–D vuoto: la domanda è già leggibile, le risposte arrivano al prossimo AVANTI. */
+function AnswerSkeleton() {
+  return (
+    <ul className="grid h-full min-h-0 w-full grid-rows-4 gap-2" aria-hidden>
+      {[0, 1, 2, 3].map((index) => (
+        <li key={index} className="min-h-0">
+          <AnswerRowShell index={index} skeleton>
+            <span className="h-3 w-[42%] rounded-full bg-white/10" />
+          </AnswerRowShell>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function QuestionPhaseCenter() {
+  return (
+    <div className="flex h-full min-h-0 flex-col px-2">
+      <AnswerSkeleton />
+    </div>
+  );
+}
+
+function AnswerOptions({
+  options,
+  onRevealComplete,
+}: {
+  options: LoveRouletteQuestion["options"];
+  onRevealComplete?: () => void;
+}) {
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (!onRevealComplete) return;
+    if (reduceMotion) {
+      onRevealComplete();
+      return;
+    }
+    const timer = window.setTimeout(onRevealComplete, quizAnswersRevealMs());
+    return () => window.clearTimeout(timer);
+  }, [onRevealComplete, reduceMotion, options]);
+
+  return (
+    <ul className="grid h-full min-h-0 w-full grid-rows-4 gap-2">
+      {options.map((option, index) => (
+        <motion.li
+          key={option.id}
+          className="min-h-0"
+          initial={
+            reduceMotion
+              ? false
+              : { opacity: 0, x: quizAnswerEnterX(index) }
+          }
+          animate={{ opacity: 1, x: 0 }}
+          transition={{
+            delay: reduceMotion ? 0 : index * QUIZ_ANSWER_SLIDE.stagger,
+            duration: QUIZ_ANSWER_SLIDE.duration,
+            ease: QUIZ_ANSWER_SLIDE.ease,
+          }}
+        >
+          <AnswerRowShell index={index}>
+            <span className={cn(QUIZ_ANSWER_TEXT_CLASS, "min-w-0 flex-1")}>
+              {option.label}
+            </span>
+          </AnswerRowShell>
+        </motion.li>
+      ))}
+    </ul>
   );
 }
 
@@ -255,33 +394,6 @@ function PairingRanking({
         </ol>
       )}
     </div>
-  );
-}
-
-function AnswerOptions({
-  options,
-}: {
-  options: LoveRouletteQuestion["options"];
-}) {
-  return (
-    <ul className="grid h-full min-h-0 w-full grid-rows-4 gap-2">
-      {options.map((option, index) => (
-        <motion.li
-          key={option.id}
-          className="flex min-h-0 items-center rounded-xl border border-white/15 bg-black/50 px-5 font-sans text-white backdrop-blur-sm"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.06 + index * 0.05, duration: 0.3 }}
-        >
-          <span className={cn(QUIZ_ANSWER_LETTER_CLASS, "mr-3")}>
-            {String.fromCharCode(65 + index)}.
-          </span>
-          <span className={cn(QUIZ_ANSWER_TEXT_CLASS, "min-w-0 flex-1")}>
-            {option.label}
-          </span>
-        </motion.li>
-      ))}
-    </ul>
   );
 }
 
@@ -403,6 +515,7 @@ export function DisplayQuizStage({
     pairs: PreviewPairRow[];
     questionCount: number;
   } | null>(null);
+  const [answersCountdownReady, setAnswersCountdownReady] = useState(false);
   const serverPhase = quizState.displayPhase as QuizDisplayPhase;
   const timing = quizState.timing;
   const heartProgress = resolveEveningHeartProgress("quiz", quizState);
@@ -421,9 +534,22 @@ export function DisplayQuizStage({
       if (nextPhase === "results") {
         setResults(null);
       }
+      if (nextPhase === "answers") {
+        setAnswersCountdownReady(false);
+      }
     },
     onTick: (quiz, runtimeState) => onQuizUpdate?.(quiz, runtimeState),
   });
+
+  useEffect(() => {
+    if (phase !== "answers") {
+      setAnswersCountdownReady(false);
+    }
+  }, [phase, quizState.currentIndex]);
+
+  const handleAnswersRevealed = useCallback(() => {
+    setAnswersCountdownReady(true);
+  }, []);
 
   useEffect(() => {
     if (phase !== "results" || !currentQuestion) return;
@@ -495,7 +621,7 @@ export function DisplayQuizStage({
   );
 
   const footerCountdown =
-    phase === "answers"
+    phase === "answers" && answersCountdownReady
       ? { value: remaining, total: timing.questionSeconds }
       : null;
 
@@ -569,10 +695,13 @@ export function DisplayQuizStage({
     return (
       <DisplayQuizGameLayout
         centerKey={`question-stem-${quizState.currentIndex}`}
+        instantCenter
         header={
           <QuestionHeaderPanel
             body={currentQuestion.body}
             progressLabel={progressLabel}
+            slideIn
+            motionKey={`q-${quizState.currentIndex}`}
           />
         }
         center={<QuestionPhaseCenter />}
@@ -587,16 +716,21 @@ export function DisplayQuizStage({
     return (
       <DisplayQuizGameLayout
         centerKey={`answers-${quizState.currentIndex}`}
+        instantCenter
         header={
           <QuestionHeaderPanel
             body={currentQuestion.body}
             progressLabel={progressLabel}
+            motionKey={`q-${quizState.currentIndex}`}
           />
         }
         center={
           <div className="relative h-full min-h-0">
             <div className={locked ? "h-full min-h-0 opacity-40" : "h-full min-h-0"}>
-              <AnswerOptions options={currentQuestion.options} />
+              <AnswerOptions
+                options={currentQuestion.options}
+                onRevealComplete={handleAnswersRevealed}
+              />
             </div>
             {locked ? <AnswersStopOverlay /> : null}
           </div>

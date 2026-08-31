@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
@@ -13,6 +14,12 @@ import {
   QUIZ_ANSWER_TEXT_CLASS,
   QUIZ_QUESTION_TEXT_CLASS,
 } from "@/lib/display/quiz-display-typography";
+import {
+  QUIZ_ANSWER_SLIDE,
+  QUIZ_QUESTION_SLIDE,
+  quizAnswerEnterX,
+  quizAnswersRevealMs,
+} from "@/lib/display/quiz-reveal-motion";
 import { projectorPreviewScale } from "@/lib/display/embed";
 import {
   DEFAULT_SLIDES,
@@ -396,8 +403,27 @@ function QuizPreview({
     return (
       <div className="casa-proj-quiz-shell" data-phase="question">
         <div className="casa-proj-quiz">
-          <p className={QUIZ_QUESTION_TEXT_CLASS}>{body}</p>
-          <p className="casa-proj-quiz-wait">Le risposte tra poco</p>
+          <motion.p
+            className={QUIZ_QUESTION_TEXT_CLASS}
+            initial={{ opacity: 0, x: QUIZ_QUESTION_SLIDE.fromX }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{
+              duration: QUIZ_QUESTION_SLIDE.duration,
+              ease: QUIZ_QUESTION_SLIDE.ease,
+            }}
+          >
+            {body}
+          </motion.p>
+          <div className="casa-proj-opts" aria-hidden>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="casa-proj-opt casa-proj-opt-skel">
+                <span className={QUIZ_ANSWER_LETTER_CLASS}>
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className="casa-proj-skel-bar" />
+              </div>
+            ))}
+          </div>
         </div>
         <DisplayQuizFooter countdown={null} heartProgress={0.16} />
       </div>
@@ -442,29 +468,90 @@ function QuizPreview({
     );
   }
 
-  // answers — countdown centro basso (pre-gong), stesso footer del /display
+  // answers — countdown dopo reveal slide (allineato a /display)
+  return (
+    <QuizAnswersPreview
+      body={body}
+      options={options}
+      remaining={remaining}
+      secondsTotal={secondsTotal}
+      showPct={showPct}
+    />
+  );
+}
+
+function QuizAnswersPreview({
+  body,
+  options,
+  remaining,
+  secondsTotal,
+  showPct,
+}: {
+  body: string;
+  options: readonly string[];
+  remaining: number | null;
+  secondsTotal: number;
+  showPct: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  const [countdownReady, setCountdownReady] = useState(false);
   const locked = remaining != null && remaining <= 0;
   const total = Math.max(1, secondsTotal);
   const value = Math.max(0, remaining ?? total);
 
+  useEffect(() => {
+    setCountdownReady(false);
+    if (reduceMotion) {
+      setCountdownReady(true);
+      return;
+    }
+    const timer = window.setTimeout(
+      () => setCountdownReady(true),
+      quizAnswersRevealMs(),
+    );
+    return () => window.clearTimeout(timer);
+  }, [body, options, reduceMotion]);
+
   return (
-    <div className="casa-proj-quiz-shell" data-phase="answers" data-locked={locked ? "1" : undefined}>
+    <div
+      className="casa-proj-quiz-shell"
+      data-phase="answers"
+      data-locked={locked ? "1" : undefined}
+    >
       <div className="casa-proj-quiz">
         <p className={QUIZ_QUESTION_TEXT_CLASS}>{body}</p>
-        <div className={locked ? "casa-proj-opts casa-proj-opts-dim" : "casa-proj-opts"}>
+        <div
+          className={
+            locked ? "casa-proj-opts casa-proj-opts-dim" : "casa-proj-opts"
+          }
+        >
           {options.map((opt, i) => (
-            <div key={`${opt}-${i}`} className="casa-proj-opt">
+            <motion.div
+              key={`${opt}-${i}`}
+              className="casa-proj-opt"
+              initial={
+                reduceMotion ? false : { opacity: 0, x: quizAnswerEnterX(i) }
+              }
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                delay: reduceMotion ? 0 : i * QUIZ_ANSWER_SLIDE.stagger,
+                duration: QUIZ_ANSWER_SLIDE.duration,
+                ease: QUIZ_ANSWER_SLIDE.ease,
+              }}
+            >
               <span className={QUIZ_ANSWER_LETTER_CLASS}>
                 {String.fromCharCode(65 + i)}
               </span>
               <span className={QUIZ_ANSWER_TEXT_CLASS}>{opt.toUpperCase()}</span>
-              {showPct ? <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span> : null}
-            </div>
+              {showPct ? (
+                <span className="casa-proj-pct">{[18, 31, 27, 24][i]}%</span>
+              ) : null}
+            </motion.div>
           ))}
         </div>
       </div>
       <DisplayQuizFooter
-        countdown={{ value, total }}
+        countdown={countdownReady ? { value, total } : null}
         heartProgress={0.2}
       />
     </div>
