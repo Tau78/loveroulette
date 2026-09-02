@@ -11,7 +11,11 @@ const KEY_PATH = join(homedir(), ".app-store/asc-api/AuthKey_5WS8U99P9G.p8");
 const KEY_ID = "5WS8U99P9G";
 const ISSUER = "a5c2ff50-1df7-493e-a4fa-50ae13cbe810";
 const APP_ID = "6805227768";
-const GROUP_ID = "85d69403-b714-4acb-b532-4036d6f5f2e8";
+// Internal "Test" + external "Test Email" (andreoni.mauro@gmail.com).
+const GROUP_IDS = [
+  "85d69403-b714-4acb-b532-4036d6f5f2e8", // Test (internal)
+  "df91ddaa-a949-46ae-9cd0-96c6e10c1ce0", // Test Email (external)
+];
 const API = "https://api.appstoreconnect.apple.com";
 const WANT = process.argv[2] || "";
 
