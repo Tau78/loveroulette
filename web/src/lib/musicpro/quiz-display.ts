@@ -166,7 +166,7 @@ export function isPhaseExpired(
 
 /**
  * AVANTI-BINARY-LOCKED — prossima fase quiz (proiettore = anteprima = player).
- * Non modificare senza autorizzazione espressa di Mauro.
+ * Autorizzato Mauro 2026-08-31: ogni domanda riparte da SLIDE ARGOMENTO.
  * Vedi `.cursor/rules/avanti-binary.mdc`.
  */
 export function nextQuizDisplayPhase(
@@ -327,7 +327,7 @@ export function resolveThemeForQuizIndex(
   return resolveThemeForQuestion(questionId, category ?? "", manche);
 }
 
-/** Slide tematica solo alla prima domanda di ogni manche (non tra domande successive). */
+/** Slide tematica alla prima domanda di ogni manche (metadata Generatore). */
 export function isMancheThemeIntroForIndex(
   questionIds: string[],
   index: number,
@@ -348,12 +348,15 @@ export function isMancheThemeIntroForIndex(
   return index === 0;
 }
 
+/**
+ * AVANTI-BINARY-LOCKED — fase dopo advance_index.
+ * Autorizzato Mauro 2026-08-31: dopo le % si riparte sempre da SLIDE ARGOMENTO
+ * (theme_intro). Il countdown 5-4-3 resta solo all'avvio quiz (start_countdown).
+ */
 export function resolvePhaseAfterQuestionAdvance(
-  questionIds: string[],
-  newIndex: number,
-  manche?: QuizMancheTheme[] | null,
+  _questionIds: string[],
+  _newIndex: number,
+  _manche?: QuizMancheTheme[] | null,
 ): QuizDisplayPhase {
-  return isMancheThemeIntroForIndex(questionIds, newIndex, manche)
-    ? "start_countdown"
-    : "question";
+  return "theme_intro";
 }

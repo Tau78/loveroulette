@@ -132,8 +132,9 @@ export function CasaProjector({
     const el = box.current;
     if (!el) return;
     const fit = () => {
-      const r = el.getBoundingClientRect();
-      setScale(projectorPreviewScale(r.width, r.height));
+      // clientWidth/Height = layout px (pre-zoom). getBoundingClientRect is
+      // post-zoom under .casa { zoom }, which double-scales and crops the stage.
+      setScale(projectorPreviewScale(el.clientWidth, el.clientHeight));
     };
     fit();
     const ro = new ResizeObserver(fit);

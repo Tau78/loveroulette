@@ -127,7 +127,18 @@ export function CasaWidgetDeck({
     e: ReactPointerEvent<HTMLElement>,
   ) {
     if (!edit) return;
-    if ((e.target as HTMLElement).closest("button")) return;
+    const target = e.target as HTMLElement;
+    // Grip is a <button> but must drag bare widgets (AVANTI). Block only chrome actions.
+    if (
+      target.closest(
+        ".casa-w-remove, .casa-w-resize, .casa-w-collapse, .casa-w-title-btn",
+      )
+    ) {
+      return;
+    }
+    if (target.closest("button") && !target.closest(".casa-w-grip")) {
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     const pointerId = e.pointerId;

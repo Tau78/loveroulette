@@ -78,19 +78,20 @@ Il pulsante **AVANTI** in regia guida la manche. Solo il countdown di avvio e il
 
 | Passo | Regia | Proiettore | Tastiere |
 |-------|--------|------------|----------|
-| **0** | AVANTI lancia la **nuova manche** | Countdown 5 s, poi slide tema | Bloccate |
-| **1** | AVANTI | Testo domanda (+ media se presente) | Bloccate |
-| **2** | AVANTI | Opzioni + countdown | **Attive** |
-| **3** | Automatico a fine timer | Stop visivo/sonoro | **Chiuse** |
-| **4** | AVANTI | Percentuali in sala + SFX | Chiuse |
-| **5** | AVANTI | Classifica di accoppiamento temporanea | Chiuse |
-| **6** | AVANTI | Chiude la classifica → domanda successiva dal passo 1 | Chiuse |
+| **0** | AVANTI lancia la **nuova manche** | Countdown 5 s (solo all’avvio quiz) | Bloccate |
+| **1** | AVANTI | Slide argomento / tema | Bloccate |
+| **2** | AVANTI | Testo domanda (+ media se presente), senza risposte | Bloccate |
+| **3** | AVANTI | Opzioni + countdown | **Attive** |
+| **4** | Automatico a fine timer | Stop visivo/sonoro | **Chiuse** |
+| **5** | AVANTI | Percentuali in sala + SFX | Chiuse |
+| **6** | AVANTI | Classifica di accoppiamento temporanea | Chiuse |
+| **7** | AVANTI | Chiude la classifica → riparte dal passo **1** (slide argomento) | Chiuse |
 
-Nuova manche (prima domanda del blocco): `start_countdown → theme_intro → question → …`
+Nuova manche / avvio quiz: `start_countdown → theme_intro → question → answers → results → …`
 
-Domanda successiva nella stessa manche: `question → answers → (lock) → results → next_question → question`
+Domanda successiva: `theme_intro → question → answers → (lock) → results → next_question* → theme_intro`
 
-Le **ultime N domande** (default **5**, impostabile in setup / Generatore `hide_ranking_last_n`) **saltano il punto 5** (classifica). Dopo i risultati si passa alla domanda successiva o al matching.
+Le **ultime N domande** (default **5**, impostabile in setup / Generatore `hide_ranking_last_n`) **saltano il punto 6** (classifica). Dopo i risultati si passa alla slide argomento successiva o al matching.
 
 Con **Auto** acceso, le fasi in hold (tema, domanda, risultati, classifica) possono avanzare da sole. Il timer risposte **non** rivela mai le % da solo: serve AVANTI.
 

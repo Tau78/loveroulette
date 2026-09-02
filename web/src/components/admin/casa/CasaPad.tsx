@@ -638,14 +638,17 @@ function PadHits({
 
 function CasaSizeSlider({
   value,
-  onLive,
   onCommit,
 }: {
   value: number;
-  onLive: (n: number) => void;
   onCommit: (n: number) => void;
 }) {
-  const pct = Math.round(clampTypeScale(value) * 100);
+  // Draft only while dragging — live zoom on .casa resizes the track under the finger.
+  const [draft, setDraft] = useState(value);
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+  const pct = Math.round(clampTypeScale(draft) * 100);
   return (
     <label className="casa-top-mod casa-top-size">
       <span className="casa-top-size-kicker">Dim</span>
@@ -655,11 +658,13 @@ function CasaSizeSlider({
         max={Math.round(TYPE_SCALE_MAX * 100)}
         step={10}
         value={pct}
-        onChange={(e) => onLive(Number(e.target.value) / 100)}
+        onChange={(e) => setDraft(Number(e.target.value) / 100)}
         onPointerUp={(e) =>
           onCommit(Number((e.currentTarget as HTMLInputElement).value) / 100)
         }
-        onKeyUp={() => onCommit(value)}
+        onKeyUp={(e) =>
+          onCommit(Number((e.currentTarget as HTMLInputElement).value) / 100)
+        }
         aria-valuemin={Math.round(TYPE_SCALE_MIN * 100)}
         aria-valuemax={Math.round(TYPE_SCALE_MAX * 100)}
         aria-valuenow={pct}
@@ -2293,7 +2298,6 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
         <CasaSizeSlider
           value={typeScale.prefs.plancia}
-          onLive={(n) => typeScale.updatePrefs({ plancia: clampTypeScale(n) })}
           onCommit={(n) => {
             const plancia = clampTypeScale(n);
             typeScale.updatePrefs({ plancia });
