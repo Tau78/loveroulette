@@ -16,3 +16,7 @@ mobile/.expo/
 mobile/ios/
 mobile/android/
 mobile/dist/
+desktop/node_modules/
+desktop/dist/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/

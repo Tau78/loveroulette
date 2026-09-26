@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "default",
+  "description": "Capability for the CasaPad main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "http:default",
+    {
+      "identifier": "http:allow-fetch",
+      "allow": [
+        { "url": "https://loveroulette.vercel.app/*" },
+        { "url": "https://loveroulette.vercel.app/**" },
+        { "url": "http://localhost:*/*" },
+        { "url": "http://localhost:*/**" },
+        { "url": "http://127.0.0.1:*/*" },
+        { "url": "http://127.0.0.1:*/**" }
+      ]
+    }
+  ]
+}

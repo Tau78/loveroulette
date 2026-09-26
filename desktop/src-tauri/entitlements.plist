@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements per Developer ID + Hardened Runtime (distribuzione fuori Mac App Store).
+  Non abilitare App Sandbox qui: il Mac App Store è una fase successiva (vedi DISTRIBUTION.md).
+  Path riferito da tauri.conf.json → bundle.macOS.entitlements
+-->
+<plist version="1.0">
+<dict>
+  <!-- WKWebView / JS: necessari con hardened runtime su molte build Tauri -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <!-- Plugin nativi / dylib caricate dal bundle -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>
