@@ -38,6 +38,7 @@ describe("Home (/) production entry", () => {
     expect(markup).toContain("DEMO01");
     expect(markup).toContain("Demo evento");
     expect(markup).toContain("/admin/plancia");
+    expect(markup).toContain("/admin/DEMO01/board");
     expect(markup).toContain("/admin/DEMO01/serata");
   });
 });

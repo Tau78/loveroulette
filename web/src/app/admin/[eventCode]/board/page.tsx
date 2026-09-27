@@ -7,7 +7,8 @@ import { normalizeEventSlug } from "@/lib/musicpro/slug";
 
 /**
  * Plancia ufficiale (unificata): scheletro /board + tab Regia / Giocatori /
- * Domande / Setup. /serata, /admin/{code} e /admin/plancia restano per raffronto.
+ * Domande / Setup. TestFlight apre solo questa. /serata e /admin/plancia
+ * restano in web per raffronto desktop (non nel guscio iOS).
  */
 export default function BoardPlanciaPage() {
   const params = useParams();

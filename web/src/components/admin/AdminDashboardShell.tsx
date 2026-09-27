@@ -155,7 +155,7 @@ export function AdminDashboardShell({
           ) : null}
 
           <Link
-            href={`/admin/${eventCode}/serata`}
+            href={`/admin/${eventCode}/board`}
             className={cn(adminButtonVariants({ variant: "outline", size: "default" }), "h-7 px-2 text-[10px]")}
           >
             Evento

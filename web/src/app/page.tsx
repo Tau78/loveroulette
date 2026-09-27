@@ -62,14 +62,19 @@ export default function Home() {
                 Dashboard animatore
               </Button>
             </Link>
-            <Link href="/admin/DEMO01/serata">
+            <Link href="/admin/DEMO01/board">
               <Button size="lg" className="w-full h-12 text-base">
-                Plancia evento
+                Plancia ufficiale (/board)
+              </Button>
+            </Link>
+            <Link href="/admin/DEMO01/serata">
+              <Button variant="outline" size="lg" className="w-full h-12">
+                Plancia widget (/serata)
               </Button>
             </Link>
             <Link href="/admin/plancia">
               <Button variant="outline" size="lg" className="w-full h-12">
-                Plancia animatore (demo)
+                Plancia demo offline
               </Button>
             </Link>
           </CardContent>
