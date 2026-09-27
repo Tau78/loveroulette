@@ -1,7 +1,7 @@
 {
   "pool_id": "pool_v2026_09",
   "locale": "it",
-  "question_count": 92,
+  "question_count": 100,
   "questions": [
     {
       "id": "q01",
@@ -3231,6 +3231,294 @@
       "tags": [
         "musica",
         "relazione",
+        "pool-v2026-09"
+      ]
+    },
+    {
+      "id": "q93",
+      "body": "Ti piace pianificare una sorpresa per qualcuno?",
+      "options": [
+        {
+          "id": "a",
+          "label": "Adoro — i dettagli mi eccitano"
+        },
+        {
+          "id": "b",
+          "label": "Sì, ma solo se so che gli piacerà"
+        },
+        {
+          "id": "c",
+          "label": "Preferisco sorprese spontanee, non programmate"
+        },
+        {
+          "id": "d",
+          "label": "Meglio chiedere cosa vuole"
+        }
+      ],
+      "mood": [
+        "romance"
+      ],
+      "energy": 2,
+      "intimacy_level": 2,
+      "category": "romantic",
+      "pairing_weight": 1.2,
+      "phase_hint": "build",
+      "tags": [
+        "gesti",
+        "sorpresa",
+        "pool-v2026-09"
+      ]
+    },
+    {
+      "id": "q94",
+      "body": "Sei in ascensore con il crush: cosa fai?",
+      "options": [
+        {
+          "id": "a",
+          "label": "Battuta leggera per rompere il ghiaccio"
+        },
+        {
+          "id": "b",
+          "label": "Silenzio e sorriso"
+        },
+        {
+          "id": "c",
+          "label": "Complimento soft e via"
+        },
+        {
+          "id": "d",
+          "label": "Fingo di guardare il telefono"
+        }
+      ],
+      "mood": [
+        "relax",
+        "romance"
+      ],
+      "energy": 3,
+      "intimacy_level": 1,
+      "category": "fun",
+      "pairing_weight": 0.8,
+      "phase_hint": "warmup",
+      "tags": [
+        "ironico",
+        "flirt-soft",
+        "pool-v2026-09"
+      ]
+    },
+    {
+      "id": "q95",
+      "body": "Il tuo emoji preferito per flirtare?",
+      "options": [
+        {
+          "id": "a",
+          "label": "😏 — classico intramontabile"
+        },
+        {
+          "id": "b",
+          "label": "😂 — ridere insieme"
+        },
+        {
+          "id": "c",
+          "label": "❤️ — diretto ma efficace"
+        },
+        {
+          "id": "d",
+          "label": "Non uso emoji, sono old school"
+        }
+      ],
+      "mood": [
+        "relax",
+        "spicy"
+      ],
+      "energy": 2,
+      "intimacy_level": 1,
+      "category": "fun",
+      "pairing_weight": 0.8,
+      "phase_hint": "any",
+      "tags": [
+        "messaggi",
+        "ironico",
+        "flirt-soft",
+        "spicy-l1",
+        "pool-v2026-09"
+      ]
+    },
+    {
+      "id": "q96",
+      "body": "Ti ritrovano a cantare sotto la doccia: reazione?",
+      "options": [
+        {
+          "id": "a",
+          "label": "Continuo — sono in confidenza"
+        },
+        {
+          "id": "b",
+          "label": "Rido e chiedo di unirmi"
+        },
+        {
+          "id": "c",
+          "label": "Mi imbarazzo e taccio"
+        },
+        {
+          "id": "d",
+          "label": "Faccio finta di niente"
+        }
+      ],
+      "mood": [
+        "relax"
+      ],
+      "energy": 3,
+      "intimacy_level": 1,
+      "category": "fun",
+      "pairing_weight": 0.8,
+      "phase_hint": "cooldown",
+      "tags": [
+        "ironico",
+        "musica",
+        "pool-v2026-09"
+      ]
+    },
+    {
+      "id": "q97",
+      "body": "Se fossi un animale in coppia, saresti…",
+      "options": [
+        {
+          "id": "a",
+          "label": "Delfino — giocoso e affettuoso"
+        },
+        {
+          "id": "b",
+          "label": "Gufo — fedele e notturno"
+        },
+        {
+          "id": "c",
+          "label": "Volpe — furbo/a e affascinante"
+        },
+        {
+          "id": "d",
+          "label": "Panda — coccolone e un po' pigro/a"
+        }
+      ],
+      "mood": [
+        "relax"
+      ],
+      "energy": 3,
+      "intimacy_level": 1,
+      "category": "fun",
+      "pairing_weight": 0.8,
+      "phase_hint": "warmup",
+      "tags": [
+        "ironico",
+        "fantasy",
+        "pool-v2026-09"
+      ]
+    },
+    {
+      "id": "q98",
+      "body": "Hai mai stalkerato leggermente qualcuno sui social?",
+      "options": [
+        {
+          "id": "a",
+          "label": "Ammetto — un po' tutti lo fanno"
+        },
+        {
+          "id": "b",
+          "label": "Solo per curiosità innocua"
+        },
+        {
+          "id": "c",
+          "label": "Mai — troppo invasivo"
+        },
+        {
+          "id": "d",
+          "label": "Preferisco conoscere dal vivo"
+        }
+      ],
+      "mood": [
+        "relax",
+        "spicy"
+      ],
+      "energy": 2,
+      "intimacy_level": 1,
+      "category": "fun",
+      "pairing_weight": 0.8,
+      "phase_hint": "cooldown",
+      "tags": [
+        "ironico",
+        "social",
+        "flirt-soft",
+        "spicy-l1",
+        "pool-v2026-09"
+      ]
+    },
+    {
+      "id": "q99",
+      "body": "Il peggior appuntamento immaginabile sarebbe…",
+      "options": [
+        {
+          "id": "a",
+          "label": "Silenzio imbarazzante per ore"
+        },
+        {
+          "id": "b",
+          "label": "Parlare solo del proprio ex"
+        },
+        {
+          "id": "c",
+          "label": "Posto rumoroso dove non senti niente"
+        },
+        {
+          "id": "d",
+          "label": "Arrivare in ritardo di un'ora"
+        }
+      ],
+      "mood": [
+        "relax"
+      ],
+      "energy": 2,
+      "intimacy_level": 1,
+      "category": "fun",
+      "pairing_weight": 0.8,
+      "phase_hint": "cooldown",
+      "tags": [
+        "ironico",
+        "appuntamento",
+        "pool-v2026-09"
+      ]
+    },
+    {
+      "id": "q100",
+      "body": "Stasera esci con qualcuno di speciale: cosa indossi?",
+      "options": [
+        {
+          "id": "a",
+          "label": "Il look che mi fa sentire al top"
+        },
+        {
+          "id": "b",
+          "label": "Comodo ma curato — equilibrio"
+        },
+        {
+          "id": "c",
+          "label": "Qualcosa che attiri lo sguardo"
+        },
+        {
+          "id": "d",
+          "label": "Quello che avevo già in programma"
+        }
+      ],
+      "mood": [
+        "relax",
+        "romance"
+      ],
+      "energy": 2,
+      "intimacy_level": 1,
+      "category": "fun",
+      "pairing_weight": 0.8,
+      "phase_hint": "peak",
+      "tags": [
+        "serata",
+        "meta-gioco",
         "pool-v2026-09"
       ]
     }

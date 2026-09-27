@@ -1,7 +1,7 @@
 # Love Roulette — Banca Domande
 
 > Modulo 06 · Template domande, categorie, branching, pool taggato  
-> Versione: 2.1 · Giugno 2026 · Pool `pool_v2026_06` (50 domande)
+> Versione: 2.2 · Settembre 2026 · Pool `pool_v2026_09` (100 domande)
 
 ## 1. Linee guida contenuto
 
@@ -1107,9 +1107,9 @@ Domande `spicy` nel pool v2026_06 sono **Spicy L1** (flirt leggero, PG-18). Spic
 
 | Metrica | Valore |
 |---------|--------|
-| Domande totali | **50** (q01–q50) |
-| Da set esempio §3 | 27 |
-| Nuove (q28–q50) | **23** |
+| Domande totali | **100** (q01–q100) |
+| Da pool `pool_v2026_06` | 50 |
+| Nuove (q51–q100) | **50** |
 | Mood `relax` | 27 |
 | Mood `romance` | 28 |
 | Mood `spicy` (L1) | 10 |
@@ -1123,8 +1123,8 @@ Domande `spicy` nel pool v2026_06 sono **Spicy L1** (flirt leggero, PG-18). Spic
 
 | Campo | Valore |
 |-------|--------|
-| `pool_id` | `pool_v2026_06` |
-| Release | Giugno 2026 |
+| `pool_id` | `pool_v2026_09` |
+| Release | Settembre 2026 |
 | Locale | `it` |
 | Stato | Curato — pronto seed M1 / engine adattivo M2 |
 
