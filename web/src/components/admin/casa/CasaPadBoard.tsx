@@ -1723,6 +1723,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }
 
   return (
+    <div className="casa-board-shell" data-casa-board-shell="">
     <div className="casa-board" data-casa-board="">
       <audio ref={bedAudio} hidden />
       <input
@@ -3027,6 +3028,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           ) : null}
         </div>
       ) : null}
+    </div>
     </div>
   );
 }

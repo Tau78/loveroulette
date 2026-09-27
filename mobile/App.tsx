@@ -47,6 +47,49 @@ const DEFAULT_HOST = "https://loveroulette.vercel.app";
 const DEFAULT_EVENT_CODE = "DEMO01";
 const CASA_BG = "#1a1d24";
 
+/** Solo la plancia ufficiale /board — niente /serata, /plancia, dashboard. */
+function isOfficialBoardUrl(url: string, adminUrl: string | null): boolean {
+  if (adminUrl && url === adminUrl) return true;
+  try {
+    const path = new URL(url).pathname;
+    return /\/admin\/[^/]+\/board\/?$/.test(path);
+  } catch {
+    return false;
+  }
+}
+
+function shouldAllowWebViewNav(url: string, adminUrl: string): boolean {
+  if (
+    url.startsWith("about:") ||
+    url.startsWith("blob:") ||
+    url.startsWith("data:")
+  ) {
+    return true;
+  }
+  try {
+    const target = new URL(url);
+    const host = new URL(DEFAULT_HOST);
+    if (target.origin !== host.origin) return false;
+    const path = target.pathname;
+    if (
+      path.startsWith("/_next/") ||
+      path.startsWith("/api/") ||
+      path.startsWith("/grafiche/") ||
+      path.startsWith("/audio/") ||
+      path.startsWith("/favicon")
+    ) {
+      return true;
+    }
+    // Sotto /admin solo la plancia ufficiale /board.
+    if (path.startsWith("/admin")) {
+      return isOfficialBoardUrl(url, adminUrl);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function safeAreaScript(insets: {
   top: number;
   right: number;
@@ -207,6 +250,12 @@ function WebPlancia({
   const allowed = canRunPlancia(status);
   const crashReloadsRef = useRef(0);
 
+  // Re-inject quando notch/home indicator cambiano (rotate / primo layout).
+  useEffect(() => {
+    if (!allowed || !adminUrl) return;
+    webRef.current?.injectJavaScript(insetJs);
+  }, [allowed, adminUrl, insetJs, webRef]);
+
   const recoverFromCrash = () => {
     const next = crashReloadsRef.current + 1;
     crashReloadsRef.current = next;
@@ -283,7 +332,26 @@ function WebPlancia({
               <Text style={styles.webCoverText}>Apro la plancia…</Text>
             </View>
           )}
-          onLoadEnd={() => setWebLoading(false)}
+          onShouldStartLoadWithRequest={(request) => {
+            const next = request.url || "";
+            if (!next || shouldAllowWebViewNav(next, adminUrl)) return true;
+            // Qualsiasi altra route /admin → solo /board
+            try {
+              const path = new URL(next).pathname;
+              if (path.startsWith("/admin") && next !== adminUrl) {
+                webRef.current?.injectJavaScript(
+                  `window.location.replace(${JSON.stringify(adminUrl)});true;`,
+                );
+              }
+            } catch {
+              /* ignore */
+            }
+            return false;
+          }}
+          onLoadEnd={() => {
+            setWebLoading(false);
+            webRef.current?.injectJavaScript(insetJs);
+          }}
           onContentProcessDidTerminate={recoverFromCrash}
           onRenderProcessGone={recoverFromCrash}
           onError={(event) => {
@@ -294,8 +362,7 @@ function WebPlancia({
           onHttpError={(event) => {
             const { statusCode, url } = event.nativeEvent;
             const failedUrl = url || adminUrl;
-            const isPlancia =
-              failedUrl === adminUrl || /\/admin\/[^/]+\/serata/.test(failedUrl);
+            const isPlancia = isOfficialBoardUrl(failedUrl, adminUrl);
             if (!isPlancia) return;
             setWebLoading(false);
             setWebError(
@@ -405,7 +472,7 @@ export function App() {
   const adminUrl = useMemo(() => {
     if (!session) return null;
     if (!canRunPlancia(status)) return null;
-    return `${DEFAULT_HOST}/admin/${DEFAULT_EVENT_CODE}/serata`;
+    return `${DEFAULT_HOST}/admin/${DEFAULT_EVENT_CODE}/board`;
   }, [session, status]);
 
   useEffect(() => {

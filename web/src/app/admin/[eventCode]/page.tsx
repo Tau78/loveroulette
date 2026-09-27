@@ -47,7 +47,7 @@ export default function AdminDashboardPage() {
     const coarse = window.matchMedia("(pointer: coarse)").matches;
     const landscape = window.matchMedia("(orientation: landscape)").matches;
     if (coarse && landscape) {
-      window.location.replace(`/admin/${encodeURIComponent(eventCode)}/serata`);
+      window.location.replace(`/admin/${encodeURIComponent(eventCode)}/board`);
     }
   }, [eventCode]);
 

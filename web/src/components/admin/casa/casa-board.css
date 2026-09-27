@@ -1,4 +1,30 @@
-/* Plancia fissa big-button (/board) — riempie la finestra, mai overflow. */
+/* Plancia fissa big-button (/board) — riempie il WebView, mai overflow. */
+
+/*
+ * Shell: fixed inset 0 + safe-area. Evita height:100dvh sotto chrome nativo
+ * TestFlight (Evento): 100dvh è più alto del WebView → footer/AVANTI si sovrappongono.
+ * --lr-sa* arrivano da mobile/App.tsx (inject); env() copre Safari.
+ */
+.casa-board-shell {
+  --sa-t: max(env(safe-area-inset-top, 0px), var(--lr-sat, 0px));
+  --sa-r: max(env(safe-area-inset-right, 0px), var(--lr-sar, 0px));
+  --sa-b: max(env(safe-area-inset-bottom, 0px), var(--lr-sab, 0px));
+  --sa-l: max(env(safe-area-inset-left, 0px), var(--lr-sal, 0px));
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: auto;
+  height: auto;
+  padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l);
+  overflow: hidden;
+  background: #0d0d12;
+}
+
+/* Top gestito dalla barra nativa «Evento» — niente doppio padding. */
+html.casa-native-chrome .casa-board-shell {
+  --sa-t: 0px;
+  padding-top: 0;
+}
 
 .casa-board {
   --board-accent: #e91e8c;
@@ -26,8 +52,8 @@
   grid-template-columns: var(--board-rail) minmax(0, 1fr);
   width: 100%;
   max-width: 100%;
-  height: 100dvh;
-  max-height: 100dvh;
+  height: 100%;
+  max-height: 100%;
   overflow: hidden;
   background:
     radial-gradient(120% 80% at 10% -10%, rgba(233, 30, 140, 0.18), transparent 55%),
@@ -1811,7 +1837,8 @@ body.casa-board-resizing iframe {
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
-  padding: 0 var(--board-pad) calc(var(--board-gap) + env(safe-area-inset-bottom, 0px));
+  /* Safe-area bottom è sullo shell — qui solo gap interno. */
+  padding: 0 var(--board-pad) var(--board-gap);
   color: #a0a0b0;
   font-size: clamp(10px, 1.3vh, 12px);
   font-weight: 800;
@@ -2044,6 +2071,8 @@ body.casa-board-resizing iframe {
 @media (max-height: 720px) {
   .casa-board {
     --board-hit: clamp(36px, 5.5vh, 56px);
+    --board-gap: clamp(4px, 0.7vh, 8px);
+    --board-pad: clamp(4px, 0.8vh, 10px);
   }
 
   .casa-board-audio-meta {
@@ -2051,7 +2080,77 @@ body.casa-board-resizing iframe {
   }
 }
 
-@media (max-width: 980px) {
+/* iPhone landscape (~390px alti): rail + header + card senza overflow */
+@media (max-height: 500px) {
+  .casa-board {
+    --board-rail: clamp(44px, 5.5vw, 58px);
+    --board-gap: 4px;
+    --board-pad: 4px;
+    --board-radius: 10px;
+    --board-hit: clamp(30px, 5vh, 44px);
+    --board-fs-label: clamp(9px, 1.15vh, 11px);
+    --board-fs-body: clamp(11px, 1.4vh, 13px);
+    --board-fs-cta: clamp(14px, 2.6vh, 20px);
+    --board-fs-go: clamp(16px, 3.2vh, 24px);
+  }
+
+  .casa-board-rail {
+    gap: 2px;
+    padding: 4px 3px;
+  }
+
+  .casa-board-rail-btn {
+    min-height: clamp(36px, 7.5vh, 52px);
+    padding: 4px 2px;
+    gap: 2px;
+    border-radius: 10px;
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .casa-board-rail-ico,
+  .casa-board-rail-ico svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .casa-board-mod {
+    height: clamp(28px, 4.4vh, 34px);
+    padding: 0 8px;
+  }
+
+  .casa-board-chip {
+    height: clamp(24px, 3.6vh, 30px);
+    padding: 0 8px;
+    font-size: 9px;
+  }
+
+  .casa-board-cues {
+    max-width: min(42vw, 380px);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .casa-board-top {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 4px;
+  }
+
+  .casa-board-event {
+    display: none;
+  }
+
+  .casa-board-card {
+    gap: 2px;
+  }
+
+  .casa-board-card-h {
+    min-height: 0;
+  }
+}
+
+/* Portrait / stretto: stack verticale. Landscape phone resta a 3 colonne. */
+@media (max-width: 980px) and (max-aspect-ratio: 4/3) {
   .casa-board-grid {
     grid-template-columns: 1fr;
     grid-auto-rows: minmax(0, auto);
@@ -2069,6 +2168,7 @@ body.casa-board-resizing iframe {
 
   .casa-board-event {
     grid-column: 1 / -1;
+    display: flex;
   }
 
   .casa-board-center {
