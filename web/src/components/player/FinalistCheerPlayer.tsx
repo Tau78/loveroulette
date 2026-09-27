@@ -12,13 +12,14 @@ import {
 } from "@/components/ui/card";
 import { FINALS_COPY } from "@/lib/game/late-game-copy";
 import { cn } from "@/lib/utils";
+import type { LoveRouletteGender } from "@/lib/player/identity";
 
 const CARD_CLASS =
   "bg-card/85 backdrop-blur-md border-primary/25 shadow-[0_0_32px_rgba(236,72,153,0.12)]";
 
 interface FinalistCheerPlayerProps {
   participantId: string;
-  gender: "male" | "female";
+  gender: LoveRouletteGender;
 }
 
 export function FinalistCheerPlayer({

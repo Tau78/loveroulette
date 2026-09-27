@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  loveRouletteAgeBandSchema,
+  loveRouletteGenderSchema,
+  loveRouletteSeekingSchema,
+} from "@/lib/player/identity";
+import {
   createParticipantAdmin,
   listEventParticipants,
 } from "@/lib/musicpro/participant-admin";
@@ -12,7 +17,9 @@ import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 const createSchema = z.object({
   nickname: z.string().min(1).max(40),
   realName: z.string().trim().max(80).optional().nullable(),
-  gender: z.enum(["male", "female"]),
+  gender: loveRouletteGenderSchema,
+  seeking: loveRouletteSeekingSchema.optional(),
+  ageBand: loveRouletteAgeBandSchema.optional().nullable(),
   badgeCode: z.string().max(20).nullable().optional(),
   role: z
     .enum(["player", "finalist", "audience", "jury", "animator"])
@@ -120,6 +127,8 @@ export async function POST(
       nickname: body.nickname,
       realName: body.realName,
       gender: body.gender,
+      seeking: body.seeking,
+      ageBand: body.ageBand,
       badgeCode: body.badgeCode ?? null,
       role: body.role,
     });

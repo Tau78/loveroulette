@@ -5,10 +5,13 @@ import type {
   LoveRouletteParticipant,
   LoveRouletteParticipantRole,
 } from "./types";
+import { missingOptionalParticipantColumn } from "./participant-schema";
 import {
-  isDataVisibilitySchemaError,
-  isRealNameSchemaError,
-} from "./participant-schema";
+  parseLoveRouletteAgeBand,
+  parseLoveRouletteGender,
+  parseLoveRouletteSeeking,
+} from "@/lib/player/identity";
+import type { LoveRouletteAgeBand, LoveRouletteSeeking } from "@/lib/player/identity";
 import { JoinParticipantError } from "./participants";
 
 const PARTICIPANT_ADMIN_SELECT_BASE =
@@ -16,6 +19,14 @@ const PARTICIPANT_ADMIN_SELECT_BASE =
 
 const PARTICIPANT_ADMIN_SELECT_VISIBILITY = `${PARTICIPANT_ADMIN_SELECT_BASE}, data_visibility`;
 const PARTICIPANT_ADMIN_SELECT = `${PARTICIPANT_ADMIN_SELECT_VISIBILITY}, real_name`;
+const PARTICIPANT_ADMIN_SELECT_IDENTITY = `${PARTICIPANT_ADMIN_SELECT}, seeking, age_band`;
+
+const ADMIN_SELECTS = [
+  PARTICIPANT_ADMIN_SELECT_IDENTITY,
+  PARTICIPANT_ADMIN_SELECT,
+  PARTICIPANT_ADMIN_SELECT_VISIBILITY,
+  PARTICIPANT_ADMIN_SELECT_BASE,
+] as const;
 
 type AdminParticipantQueryResult = {
   data: unknown;
@@ -26,26 +37,22 @@ async function withParticipantAdminSelectFallback<T>(
   run: (select: string) => PromiseLike<AdminParticipantQueryResult>,
   map: (rows: Record<string, unknown>[]) => T,
 ): Promise<T> {
-  const primary = await run(PARTICIPANT_ADMIN_SELECT);
-  if (!primary.error) {
-    return map(normalizeRows(primary.data));
-  }
-
-  if (isRealNameSchemaError(primary.error)) {
-    const withVisibility = await run(PARTICIPANT_ADMIN_SELECT_VISIBILITY);
-    if (!withVisibility.error) {
-      return map(normalizeRows(withVisibility.data));
+  let lastError: { message: string; code?: string } | null = null;
+  for (const select of ADMIN_SELECTS) {
+    const result = await run(select);
+    if (!result.error) {
+      return map(normalizeRows(result.data));
     }
-    if (!isDataVisibilitySchemaError(withVisibility.error)) {
-      throw new Error(withVisibility.error.message);
+    lastError = result.error;
+    const optional = ["age_band", "seeking", "real_name", "data_visibility"];
+    const missing = optional.some((column) =>
+      missingOptionalParticipantColumn(result.error!, { [column]: true }),
+    );
+    if (!missing) {
+      throw new Error(result.error.message);
     }
-  } else if (!isDataVisibilitySchemaError(primary.error)) {
-    throw new Error(primary.error.message);
   }
-
-  const fallback = await run(PARTICIPANT_ADMIN_SELECT_BASE);
-  if (fallback.error) throw new Error(fallback.error.message);
-  return map(normalizeRows(fallback.data));
+  throw new Error(lastError?.message ?? "Participant query failed");
 }
 
 function normalizeRows(data: unknown): Record<string, unknown>[] {
@@ -63,6 +70,8 @@ export interface CreateParticipantAdminInput {
   eventId: string;
   nickname: string;
   gender: LoveRouletteGender;
+  seeking?: LoveRouletteSeeking | null;
+  ageBand?: LoveRouletteAgeBand | null;
   badgeCode?: string | null;
   role?: LoveRouletteParticipantRole;
   realName?: string | null;
@@ -71,6 +80,8 @@ export interface CreateParticipantAdminInput {
 export interface UpdateParticipantAdminInput {
   nickname?: string;
   gender?: LoveRouletteGender;
+  seeking?: LoveRouletteSeeking | null;
+  ageBand?: LoveRouletteAgeBand | null;
   badgeCode?: string | null;
   role?: LoveRouletteParticipantRole;
   realName?: string | null;
@@ -85,7 +96,12 @@ function mapRow(row: Record<string, unknown>): AdminParticipantRow {
       row.real_name === null || row.real_name === undefined
         ? null
         : String(row.real_name),
-    gender: row.gender === "female" ? "female" : "male",
+    gender: parseLoveRouletteGender(row.gender),
+    seeking: parseLoveRouletteSeeking(
+      row.seeking,
+      parseLoveRouletteGender(row.gender),
+    ),
+    age_band: parseLoveRouletteAgeBand(row.age_band),
     badge_code: (row.badge_code as string | null) ?? null,
     role: (row.role as LoveRouletteParticipantRole) ?? "player",
     is_online: Boolean(row.is_online),
@@ -186,25 +202,31 @@ export async function createParticipantAdmin(
   await assertNicknameAvailable(supabase, input.eventId, nickname);
   await assertBadgeAvailable(supabase, input.eventId, badge_code);
 
-  const insertBase = {
+  const payload: Record<string, unknown> = {
     event_id: input.eventId,
     nickname,
     gender: input.gender,
+    seeking: input.seeking ?? null,
+    age_band: input.ageBand ?? null,
     badge_code,
     role: input.role ?? "player",
     is_online: false,
+    real_name,
   };
 
   let insertResult = await supabase
     .from("love_roulette_participants")
-    .insert({ ...insertBase, real_name })
+    .insert(payload)
     .select("id")
     .single();
 
-  if (insertResult.error && isRealNameSchemaError(insertResult.error)) {
+  for (let attempt = 0; attempt < 4 && insertResult.error; attempt++) {
+    const missing = missingOptionalParticipantColumn(insertResult.error, payload);
+    if (!missing) break;
+    delete payload[missing];
     insertResult = await supabase
       .from("love_roulette_participants")
-      .insert(insertBase)
+      .insert(payload)
       .select("id")
       .single();
   }
@@ -254,6 +276,8 @@ export async function updateParticipantAdmin(
   const update: Record<string, unknown> = {};
   if (input.nickname !== undefined) update.nickname = nickname;
   if (input.gender !== undefined) update.gender = input.gender;
+  if (input.seeking !== undefined) update.seeking = input.seeking;
+  if (input.ageBand !== undefined) update.age_band = input.ageBand;
   if (input.badgeCode !== undefined) update.badge_code = badge_code;
   if (input.role !== undefined) update.role = input.role;
   if (input.realName !== undefined) {
@@ -266,11 +290,13 @@ export async function updateParticipantAdmin(
     .eq("id", participantId)
     .eq("event_id", eventId);
 
-  if (error && isRealNameSchemaError(error) && "real_name" in update) {
-    const { real_name: _rn, ...withoutReal } = update;
+  for (let attempt = 0; attempt < 4 && error; attempt++) {
+    const missing = missingOptionalParticipantColumn(error, update);
+    if (!missing) break;
+    delete update[missing];
     ({ error } = await supabase
       .from("love_roulette_participants")
-      .update(withoutReal)
+      .update(update)
       .eq("id", participantId)
       .eq("event_id", eventId));
   }

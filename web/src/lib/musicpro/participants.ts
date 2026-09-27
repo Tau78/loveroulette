@@ -4,11 +4,21 @@ import {
   normalizeParticipantDataVisibility,
 } from "@/lib/player/data-visibility";
 import type {
+  LoveRouletteAgeBand,
   LoveRouletteGender,
   LoveRouletteParticipant,
+  LoveRouletteSeeking,
   ParticipantDataVisibility,
 } from "./types";
-import { isDataVisibilitySchemaError, isRealNameSchemaError } from "./participant-schema";
+import {
+  isDataVisibilitySchemaError,
+  missingOptionalParticipantColumn,
+} from "./participant-schema";
+import {
+  parseLoveRouletteAgeBand,
+  parseLoveRouletteGender,
+  parseLoveRouletteSeeking,
+} from "@/lib/player/identity";
 
 export type JoinParticipantErrorCode =
   | "NICKNAME_TAKEN"
@@ -28,6 +38,9 @@ export interface JoinParticipantInput {
   eventId: string;
   nickname: string;
   gender: LoveRouletteGender;
+  seeking?: LoveRouletteSeeking | null;
+  /** Fascia raccolta in ingresso. Non filtra il matching. */
+  ageBand?: LoveRouletteAgeBand | null;
   badgeCode?: string | null;
   dataVisibility?: ParticipantDataVisibility;
   /** Nome anagrafico opzionale (non mostrato a schermo). */
@@ -40,9 +53,26 @@ const PARTICIPANT_SELECT_BASE =
   "id, event_id, nickname, gender, badge_code, role, is_online";
 
 const PARTICIPANT_SELECT_WITH_VISIBILITY = `${PARTICIPANT_SELECT_BASE}, data_visibility`;
-const PARTICIPANT_SELECT_FULL = `${PARTICIPANT_SELECT_WITH_VISIBILITY}, real_name`;
+
+function participantSelectFor(payload: Record<string, unknown>): string {
+  const columns = [
+    "id",
+    "event_id",
+    "nickname",
+    "gender",
+    "badge_code",
+    "role",
+    "is_online",
+  ];
+  if ("data_visibility" in payload) columns.push("data_visibility");
+  if ("real_name" in payload) columns.push("real_name");
+  if ("seeking" in payload) columns.push("seeking");
+  if ("age_band" in payload) columns.push("age_band");
+  return columns.join(", ");
+}
 
 function mapParticipantRow(row: Record<string, unknown>): LoveRouletteParticipant {
+  const gender = parseLoveRouletteGender(row.gender);
   return {
     id: String(row.id),
     event_id: String(row.event_id),
@@ -51,7 +81,9 @@ function mapParticipantRow(row: Record<string, unknown>): LoveRouletteParticipan
       row.real_name === null || row.real_name === undefined
         ? null
         : String(row.real_name),
-    gender: row.gender === "female" ? "female" : "male",
+    gender,
+    seeking: parseLoveRouletteSeeking(row.seeking, gender),
+    age_band: parseLoveRouletteAgeBand(row.age_band),
     badge_code:
       row.badge_code === null || row.badge_code === undefined
         ? null
@@ -184,11 +216,54 @@ async function findParticipantByBadge(
     : null;
 }
 
+async function writeParticipantRow(
+  supabase: SupabaseClient,
+  mode: "insert" | "update",
+  participantId: string | null,
+  payload: Record<string, unknown>,
+): Promise<{ data: unknown; error: { message: string; code?: string } | null }> {
+  let body = { ...payload };
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const select = participantSelectFor(body);
+    const query =
+      mode === "insert"
+        ? supabase
+            .from("love_roulette_participants")
+            .insert(body)
+            .select(select)
+            .single()
+        : supabase
+            .from("love_roulette_participants")
+            .update(body)
+            .eq("id", participantId ?? "")
+            .select(select)
+            .single();
+    const result = await query;
+    if (!result.error) {
+      return {
+        data: result.data,
+        error: null,
+      };
+    }
+    const missing = missingOptionalParticipantColumn(result.error, body);
+    if (!missing) {
+      return {
+        data: result.data,
+        error: result.error,
+      };
+    }
+    delete body[missing];
+  }
+  return { data: null, error: { message: "Participant write failed" } };
+}
+
 async function markParticipantOnline(
   supabase: SupabaseClient,
   participantId: string,
   input: {
     gender: LoveRouletteGender;
+    seeking?: LoveRouletteSeeking | null;
+    ageBand?: LoveRouletteAgeBand | null;
     nickname?: string;
     badgeCode?: string | null;
     dataVisibility?: ParticipantDataVisibility;
@@ -200,6 +275,14 @@ async function markParticipantOnline(
     gender: input.gender,
     last_seen_at: new Date().toISOString(),
   };
+
+  if (input.seeking !== undefined) {
+    update.seeking = input.seeking;
+  }
+
+  if (input.ageBand !== undefined) {
+    update.age_band = input.ageBand;
+  }
 
   if (input.nickname !== undefined) {
     update.nickname = input.nickname;
@@ -218,33 +301,12 @@ async function markParticipantOnline(
     update.real_name = trimmed || null;
   }
 
-  let result = await supabase
-    .from("love_roulette_participants")
-    .update(update)
-    .eq("id", participantId)
-    .select(PARTICIPANT_SELECT_FULL)
-    .single();
-
-  if (result.error && isRealNameSchemaError(result.error)) {
-    const { real_name: _rn, ...withoutReal } = update;
-    result = await supabase
-      .from("love_roulette_participants")
-      .update(withoutReal)
-      .eq("id", participantId)
-      .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
-      .single();
-  }
-
-  if (result.error && isDataVisibilitySchemaError(result.error)) {
-    const { data_visibility: _removed, real_name: _rn, ...updateWithoutVisibility } =
-      update;
-    result = await supabase
-      .from("love_roulette_participants")
-      .update(updateWithoutVisibility)
-      .eq("id", participantId)
-      .select(PARTICIPANT_SELECT_BASE)
-      .single();
-  }
+  const result = await writeParticipantRow(
+    supabase,
+    "update",
+    participantId,
+    update,
+  );
 
   if (result.error) throw new Error(result.error.message);
   return mapParticipantRow(result.data as Record<string, unknown>);
@@ -309,6 +371,8 @@ export async function joinParticipant(
 
       return markParticipantOnline(supabase, existingById.id, {
         gender: input.gender,
+        seeking: input.seeking,
+        ageBand: input.ageBand,
         nickname,
         badgeCode: badge_code,
         dataVisibility: data_visibility,
@@ -354,6 +418,8 @@ export async function joinParticipant(
 
     return markParticipantOnline(supabase, existingNick.id, {
       gender: input.gender,
+      seeking: input.seeking,
+      ageBand: input.ageBand,
       nickname,
       badgeCode: badge_code,
       dataVisibility: data_visibility,
@@ -375,40 +441,22 @@ export async function joinParticipant(
     }
   }
 
-  const insertBase = {
+  const result = await writeParticipantRow(supabase, "insert", null, {
     event_id: input.eventId,
     nickname,
     gender: input.gender,
+    seeking: input.seeking ?? null,
+    age_band: input.ageBand ?? null,
     badge_code,
     is_online: true,
     last_seen_at: new Date().toISOString(),
-  };
-
-  let result = await supabase
-    .from("love_roulette_participants")
-    .insert({ ...insertBase, data_visibility, real_name })
-    .select(PARTICIPANT_SELECT_FULL)
-    .single();
-
-  if (result.error && isRealNameSchemaError(result.error)) {
-    result = await supabase
-      .from("love_roulette_participants")
-      .insert({ ...insertBase, data_visibility })
-      .select(PARTICIPANT_SELECT_WITH_VISIBILITY)
-      .single();
-  }
-
-  if (result.error && isDataVisibilitySchemaError(result.error)) {
-    result = await supabase
-      .from("love_roulette_participants")
-      .insert(insertBase)
-      .select(PARTICIPANT_SELECT_BASE)
-      .single();
-  }
+    data_visibility,
+    real_name,
+  });
 
   if (result.error) {
+    const msg = result.error.message.toLowerCase();
     if (result.error.code === "23505") {
-      const msg = result.error.message.toLowerCase();
       if (msg.includes("badge")) {
         throw new JoinParticipantError(
           "BADGE_TAKEN",
@@ -418,6 +466,14 @@ export async function joinParticipant(
       throw new JoinParticipantError(
         "NICKNAME_TAKEN",
         "Questo nickname è già in sala — scegline un altro.",
+      );
+    }
+    if (
+      msg.includes("gender_enum") ||
+      msg.includes("invalid input value for enum")
+    ) {
+      throw new Error(
+        "Il database non accetta ancora «non binary». Applica la migration identity.",
       );
     }
     throw new Error(result.error.message);

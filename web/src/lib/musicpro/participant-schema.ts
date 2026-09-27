@@ -13,6 +13,40 @@ export function isRealNameSchemaError(error: {
   return isMissingColumnSchemaError(error, "real_name");
 }
 
+const OPTIONAL_PARTICIPANT_COLUMNS = [
+  "age_band",
+  "seeking",
+  "real_name",
+  "data_visibility",
+] as const;
+
+/** Colonna opzionale assente nel DB remoto, se il payload la sta scrivendo. */
+export function missingOptionalParticipantColumn(
+  error: { message?: string; code?: string },
+  payload: Record<string, unknown>,
+): (typeof OPTIONAL_PARTICIPANT_COLUMNS)[number] | null {
+  for (const column of OPTIONAL_PARTICIPANT_COLUMNS) {
+    if (column in payload && isMissingColumnSchemaError(error, column)) {
+      return column;
+    }
+  }
+  return null;
+}
+
+export function isSeekingSchemaError(error: {
+  message?: string;
+  code?: string;
+}): boolean {
+  return isMissingColumnSchemaError(error, "seeking");
+}
+
+export function isAgeBandSchemaError(error: {
+  message?: string;
+  code?: string;
+}): boolean {
+  return isMissingColumnSchemaError(error, "age_band");
+}
+
 function isMissingColumnSchemaError(
   error: { message?: string; code?: string },
   column: string,

@@ -123,11 +123,8 @@ function FooterCountdown({
 
       <motion.span
         key={value}
-        className={cn(
-          QUIZ_FOOTER_COUNTDOWN_DIGIT_CLASS,
-          urgent && "text-primary",
-          critical && "drop-shadow-[0_0_12px_rgba(236,72,153,0.95)]",
-        )}
+        className="relative z-[1] grid size-full place-items-center"
+        style={{ transformOrigin: "50% 50%" }}
         initial={
           reduceMotion
             ? false
@@ -140,7 +137,15 @@ function FooterCountdown({
           damping: urgent ? 22 : 24,
         }}
       >
-        {value}
+        <span
+          className={cn(
+            QUIZ_FOOTER_COUNTDOWN_DIGIT_CLASS,
+            urgent && "text-primary",
+            critical && "drop-shadow-[0_0_12px_rgba(236,72,153,0.95)]",
+          )}
+        >
+          {value}
+        </span>
       </motion.span>
 
       {!reduceMotion && ticked ? (
@@ -172,11 +177,11 @@ function FooterMaskShape() {
           <stop offset="100%" stopColor="rgba(8,4,10,0.88)" />
         </linearGradient>
         <linearGradient id="quiz-footer-rim" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
-          <stop offset="18%" stopColor="rgba(236,72,153,0.22)" />
-          <stop offset="50%" stopColor="rgba(255,255,255,0.18)" />
-          <stop offset="82%" stopColor="rgba(236,72,153,0.22)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.06)" />
+          <stop offset="0%" stopColor="rgba(255,255,255,0.04)" />
+          <stop offset="18%" stopColor="rgba(236,72,153,0.14)" />
+          <stop offset="50%" stopColor="rgba(255,255,255,0.1)" />
+          <stop offset="82%" stopColor="rgba(236,72,153,0.14)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.04)" />
         </linearGradient>
         <filter id="quiz-footer-glow" x="-20%" y="-40%" width="140%" height="180%">
           <feDropShadow
@@ -196,7 +201,7 @@ function FooterMaskShape() {
         d={QUIZ_FOOTER_MASK_PATH}
         fill="none"
         stroke="url(#quiz-footer-rim)"
-        strokeWidth="1.5"
+        strokeWidth="1.15"
         vectorEffect="non-scaling-stroke"
       />
     </svg>

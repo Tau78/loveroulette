@@ -7,6 +7,9 @@ import {
   setQuizAutoplayEnabled,
   setQuizAutoplaySeconds,
   setQuizDisplayPhase,
+  setQuizSkipResults,
+  replaceNextQuizQuestion,
+  resumeQuizAtIndex,
   skipQuizPhase,
   startQuizSession,
   tickQuizPhase,
@@ -27,12 +30,20 @@ const bodySchema = z.object({
     "tick",
     "skipPhase",
     "setPhase",
+    "replaceNextQuestion",
+    "setSkipResults",
+    "resumeAt",
   ]),
   autoplaySeconds: z.number().int().min(3).max(120).optional(),
   questionCount: z.number().int().min(1).max(200).optional(),
   questionSeconds: z.number().int().min(5).max(120).optional(),
   hideRankingLastN: z.number().int().min(0).max(30).optional(),
+  rankingEveryN: z.number().int().min(0).max(30).optional(),
   enabled: z.boolean().optional(),
+  skipResults: z.boolean().optional(),
+  skipStartCountdown: z.boolean().optional(),
+  targetIndex: z.number().int().min(0).max(199).optional(),
+  questionIds: z.array(z.string().min(1)).min(1).max(200).optional(),
   displayPhase: z
     .enum([
       "start_countdown",
@@ -100,6 +111,9 @@ export async function POST(
           questionCount: body.questionCount,
           questionSeconds: body.questionSeconds,
           hideRankingLastN: body.hideRankingLastN,
+          rankingEveryN: body.rankingEveryN,
+          skipStartCountdown: body.skipStartCountdown,
+          questionIds: body.questionIds,
         });
         return NextResponse.json({
           quiz,
@@ -168,6 +182,42 @@ export async function POST(
           supabase,
           event.id,
           body.displayPhase as QuizDisplayPhase,
+        );
+        return NextResponse.json({ quiz, runtimeState: "quiz" as const });
+      }
+      case "replaceNextQuestion": {
+        const quiz = await replaceNextQuizQuestion(
+          supabase,
+          event.id,
+          body.targetIndex,
+        );
+        return NextResponse.json({ quiz, runtimeState: "quiz" as const });
+      }
+      case "setSkipResults": {
+        if (typeof body.skipResults !== "boolean") {
+          return NextResponse.json(
+            { error: "skipResults required" },
+            { status: 400 },
+          );
+        }
+        const result = await setQuizSkipResults(
+          supabase,
+          event.id,
+          body.skipResults,
+        );
+        return NextResponse.json(result);
+      }
+      case "resumeAt": {
+        if (typeof body.targetIndex !== "number") {
+          return NextResponse.json(
+            { error: "targetIndex required" },
+            { status: 400 },
+          );
+        }
+        const quiz = await resumeQuizAtIndex(
+          supabase,
+          event.id,
+          body.targetIndex,
         );
         return NextResponse.json({ quiz, runtimeState: "quiz" as const });
       }

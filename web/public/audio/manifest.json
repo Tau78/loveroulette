@@ -21,7 +21,18 @@
         "A": "dark_fuchsia/loops/LR_02_Quiz_Tension_A.mp3",
         "B": "dark_fuchsia/loops/LR_02_Quiz_Tension_B.mp3"
       },
-      "notes": "Prompt 1 (2026-06-19): A «The Final Question (2)», B «The Final Question (3)». Primary A — cambia in manifest se preferisci B."
+      "notes": "Prompt 1 (2026-06-19): A «The Final Question (2)», B «The Final Question (3)». Primary A — cambia in manifest se preferisci B. Tema + lettura domanda."
+    },
+    "LR_03_Quiz_Countdown": {
+      "phase": "quiz",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_03_Quiz_Countdown_A.mp3",
+        "B": "dark_fuchsia/loops/LR_03_Quiz_Countdown_B.mp3"
+      },
+      "notes": "Fase answers (A–D + timer). Placeholder 2026-09-27: A=copia LR_05 energy, B=copia LR_02_B — sostituire con SUNO countdown dedicato (ex LR_03 Anticipation / nuovo prompt)."
     },
     "LR_05_Extraction_Underscore": {
       "phase": "extraction",
@@ -36,14 +47,14 @@
     },
     "LR_25_Quiz_Results_Reveal": {
       "phase": "quiz",
-      "loop": true,
+      "loop": false,
       "primary": "A",
       "alternate": "B",
       "files": {
         "A": "dark_fuchsia/loops/LR_25_Quiz_Results_Reveal_A.mp3",
         "B": "dark_fuchsia/loops/LR_25_Quiz_Results_Reveal_B.mp3"
       },
-      "notes": "Prompt 2 v2 (2026-06-19): A «The Final Question (8)», B «The Final Question (9)». Fase quiz results (%). Styles+Lyrics SUNO."
+      "notes": "Prompt 2 v2 (2026-06-19): A «The Final Question (8)», B «The Final Question (9)». One-shot hit all’ingresso % (~10 s) — NON loopare. Poi bed lungo (LR_02 hold)."
     },
     "LR_06_Extraction_Drumroll": {
       "phase": "extraction",

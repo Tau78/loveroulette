@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import type { LoveRouletteGender } from "@/lib/player/identity";
 import type { EventState } from "@/lib/types";
 import type { QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
 import { playerWelcomeLabel } from "@/lib/player/presence-copy";
@@ -8,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface PlayerPresenceHeroProps {
   nickname: string;
-  gender: "male" | "female";
+  gender: LoveRouletteGender;
   runtimeState: EventState;
   quizPhase?: QuizDisplayPhase | null;
   votingOpen?: boolean;

@@ -3,9 +3,9 @@ import {
   calculateSimpleAffinity,
   collectLockedParticipantIds,
   filterPairsAvailableForExtraction,
-  filterValidMaleFemalePairs,
+  filterValidExtractablePairs,
   getBottomNonFinalistPairs,
-  isValidMaleFemalePair,
+  isValidExtractablePair,
   maxAllowedExtractions,
   rankPairs,
   selectNextPair,
@@ -119,60 +119,63 @@ describe("selectNextPair", () => {
   });
 });
 
-describe("isValidMaleFemalePair", () => {
+describe("isValidExtractablePair", () => {
   const genderById = new Map([
     ["m1", "male"],
     ["f1", "female"],
     ["f2", "female"],
+    ["n1", "nonbinary"],
   ] as const);
 
-  it("accepts 1 male + 1 female", () => {
-    expect(isValidMaleFemalePair("m1", "f1", genderById)).toBe(true);
+  it("accepts any two distinct players in the room", () => {
+    expect(isValidExtractablePair("m1", "f1", genderById)).toBe(true);
+    expect(isValidExtractablePair("f1", "f2", genderById)).toBe(true);
+    expect(isValidExtractablePair("m1", "n1", genderById)).toBe(true);
+    expect(isValidExtractablePair("f1", "m1", genderById)).toBe(true);
   });
 
-  it("rejects same id or wrong genders", () => {
-    expect(isValidMaleFemalePair("m1", "m1", genderById)).toBe(false);
-    expect(isValidMaleFemalePair("f1", "f2", genderById)).toBe(false);
-    expect(isValidMaleFemalePair("f1", "m1", genderById)).toBe(false);
+  it("rejects the same id or someone not in the room", () => {
+    expect(isValidExtractablePair("m1", "m1", genderById)).toBe(false);
+    expect(isValidExtractablePair("m1", "missing", genderById)).toBe(false);
   });
 });
 
-describe("filterValidMaleFemalePairs", () => {
-  it("drops rows with invalid gender composition", () => {
+describe("filterValidExtractablePairs", () => {
+  it("drops rows with an unknown player", () => {
     const genderById = new Map([
       ["m1", "male"],
       ["f1", "female"],
-      ["x1", "female"],
+      ["f2", "female"],
     ] as const);
 
     const pairs = [
       {
         id: "ok",
-        participant_male_id: "m1",
-        participant_female_id: "f1",
+        participant_male_id: "f1",
+        participant_female_id: "f2",
       },
       {
         id: "bad",
-        participant_male_id: "x1",
+        participant_male_id: "missing",
         participant_female_id: "f1",
       },
     ];
 
-    expect(filterValidMaleFemalePairs(pairs, genderById).map((p) => p.id)).toEqual(
+    expect(filterValidExtractablePairs(pairs, genderById).map((p) => p.id)).toEqual(
       ["ok"],
     );
   });
 });
 
 describe("maxAllowedExtractions", () => {
-  it("caps by min males and females", () => {
-    expect(maxAllowedExtractions(5, 3, null)).toBe(3);
-    expect(maxAllowedExtractions(2, 8, null)).toBe(2);
+  it("caps by floor of players over two", () => {
+    expect(maxAllowedExtractions(8, null)).toBe(4);
+    expect(maxAllowedExtractions(5, null)).toBe(2);
   });
 
   it("respects extraction_count config", () => {
-    expect(maxAllowedExtractions(10, 10, 4)).toBe(4);
-    expect(maxAllowedExtractions(2, 10, 4)).toBe(2);
+    expect(maxAllowedExtractions(20, 4)).toBe(4);
+    expect(maxAllowedExtractions(3, 4)).toBe(1);
   });
 });
 

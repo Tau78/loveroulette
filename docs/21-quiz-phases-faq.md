@@ -103,7 +103,13 @@ Il gong suona **solo** quando scade il timer della fase **Domanda + risposte** (
 
 Allineato al **countdown del proiettore**: stesso orologio `resolveSyncedQuizClock`, trigger quando `answers` arriva a remaining 0 (lock tastiere, overlay Stop). File: `LR_Quiz_Question_Gong` — [Pixabay Zildjian gong](https://pixabay.com/sound-effects/musical-old-zildjian-gong-quite-natural-34294/), trim ~4 s.
 
-In fase **results** la colonna sonora passa a **`LR_25_Quiz_Results_Reveal`** (bed reveal %, crossfade ~1,5 s).
+Durante **Tema** (`theme_intro`) e **Domanda** (`question`): bed misterioso **`LR_02_Quiz_Tension`**.
+
+All’ingresso **Risposte + countdown** (`answers`): passa a **`LR_03_Quiz_Countdown`** (crossover snappy).
+
+In fase **results**: hit one-shot **`LR_25_Quiz_Results_Reveal`** (~10 s, **senza loop**), poi resta il bed lungo (mystery `LR_02`) sotto le barre %.
+
+**Classifiche intermedie:** ogni N domande (default 5), mai sull’ultima (c’è la finale matching), e non nelle ultime «Al Buio». Con 15 / ogni 5 / Al Buio 5 → hold classifica a domanda **5** e **10**.
 
 ## Audio: sottofondo per tema manche
 

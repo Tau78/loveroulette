@@ -67,7 +67,7 @@ type Props = {
   sigla: "idle" | "warn" | "on" | "hold";
   help: boolean;
   count: number | null;
-  onStage: { nick: string; gender: "M" | "F"; photo?: string } | undefined;
+  onStage: { nick: string; gender: "M" | "F" | "N"; photo?: string } | undefined;
   showPct?: boolean;
   enlarge?: boolean;
   slides?: Record<CasaSlideId, CasaSlide>;
@@ -88,6 +88,8 @@ type Props = {
   } | null;
   mediaOnScreen?: { url: string; name: string; muted?: boolean } | null;
   onClearMediaOnScreen?: () => void;
+  /** Solo plancia admin: notifica se l’asset bundled manca (mai testo pubblico). */
+  onSiglaAvailability?: (available: boolean) => void;
 };
 
 function isVideoMedia(media: { url: string; name: string } | null | undefined) {
@@ -118,6 +120,7 @@ export function CasaProjector({
   quizQuestion = null,
   mediaOnScreen = null,
   onClearMediaOnScreen,
+  onSiglaAvailability,
 }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
@@ -158,12 +161,14 @@ export function CasaProjector({
     let cancelled = false;
     setSiglaMissing(false);
     void probeSiglaMissing(siglaSrc).then((missing) => {
-      if (!cancelled) setSiglaMissing(missing);
+      if (cancelled) return;
+      setSiglaMissing(missing);
+      onSiglaAvailability?.(!missing);
     });
     return () => {
       cancelled = true;
     };
-  }, [siglaSrc]);
+  }, [siglaSrc, onSiglaAvailability]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -241,11 +246,12 @@ export function CasaProjector({
             <DisplaySiglaWarn />
           </div>
         ) : siglaFullscreen && (!mountSigla || siglaMissing) ? (
+          /* Hold pubblico: niente istruzioni admin sul proiettore. */
           <div className="casa-proj-center">
             <DisplayPhaseHero
-              kicker="Sigla"
-              headline="MANCA IL VIDEO"
-              subline="Caricalo da Slide e sigla"
+              kicker="Love Roulette"
+              headline="SI PARTE"
+              subline="La serata sta per iniziare"
               uppercase
             />
           </div>
@@ -258,7 +264,10 @@ export function CasaProjector({
             playsInline
             preload="metadata"
             onEnded={onSiglaEnded}
-            onError={() => setSiglaMissing(true)}
+            onError={() => {
+              setSiglaMissing(true);
+              onSiglaAvailability?.(false);
+            }}
           />
         ) : beat === "presenti" && onStage ? (
           <div className="casa-proj-center">
@@ -351,7 +360,7 @@ export function CasaProjector({
 }
 
 function QuizPreview({
-  gate,
+  gate: _gate,
   phase,
   remaining,
   secondsTotal,
@@ -367,12 +376,12 @@ function QuizPreview({
   showPct: boolean;
   theme: { title: string; subtitle: string };
 }) {
+  void _gate;
   const body = (question?.text ?? FALLBACK_QUIZ.text).toUpperCase();
   const options = question?.options ?? FALLBACK_QUIZ.options;
   const category = question?.category ?? FALLBACK_QUIZ.category;
-  const effective =
-    phase ??
-    (gate === "tema" ? "theme_intro" : "answers");
+  // Senza fase live: sempre tema — mai risposte/FALLBACK (flash post-stacco).
+  const effective = phase ?? "theme_intro";
 
   if (effective === "start_countdown") {
     return (
@@ -507,7 +516,8 @@ function QuizAnswersPreview({
       quizAnswersRevealMs(),
     );
     return () => window.clearTimeout(timer);
-  }, [body, options, reduceMotion]);
+    // Solo al cambio domanda — non a ogni tick del remaining (altrimenti il footer non compare mai).
+  }, [body, options[0], options[1], options[2], options[3], reduceMotion]);
 
   return (
     <div

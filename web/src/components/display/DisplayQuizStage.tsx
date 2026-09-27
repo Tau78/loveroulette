@@ -232,6 +232,7 @@ function AnswerOptions({
   onRevealComplete?: () => void;
 }) {
   const reduceMotion = useReducedMotion();
+  const optionsKey = options.map((o) => o.id).join("|");
 
   useEffect(() => {
     if (!onRevealComplete) return;
@@ -241,7 +242,8 @@ function AnswerOptions({
     }
     const timer = window.setTimeout(onRevealComplete, quizAnswersRevealMs());
     return () => window.clearTimeout(timer);
-  }, [onRevealComplete, reduceMotion, options]);
+    // optionsKey stabile per domanda — evita reset a ogni poll/sync.
+  }, [onRevealComplete, reduceMotion, optionsKey]);
 
   return (
     <ul className="grid h-full min-h-0 w-full grid-rows-4 gap-2">
@@ -492,10 +494,11 @@ export function DisplayQuizStage({
     eventSlug,
     quizState,
     enabled: true,
+    // Binario: start_countdown + answers→% sempre; hold su AVANTI salvo Auto.
     driveTicks:
-      autoplayEnabled &&
-      serverPhase !== "start_countdown" &&
-      serverPhase !== "answers",
+      serverPhase === "start_countdown" ||
+      serverPhase === "answers" ||
+      autoplayEnabled,
     onPhaseChange: (nextPhase) => {
       if (nextPhase === "results") {
         setResults(null);

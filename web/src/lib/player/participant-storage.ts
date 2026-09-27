@@ -1,10 +1,20 @@
 import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
 import { normalizeParticipantDataVisibility } from "@/lib/player/data-visibility";
+import {
+  parseLoveRouletteAgeBand,
+  parseLoveRouletteGender,
+  parseLoveRouletteSeeking,
+  type LoveRouletteAgeBand,
+  type LoveRouletteGender,
+  type LoveRouletteSeeking,
+} from "@/lib/player/identity";
 
 export interface StoredParticipantProfile {
   id: string;
   nickname: string;
-  gender: "male" | "female";
+  gender: LoveRouletteGender;
+  seeking: LoveRouletteSeeking;
+  ageBand: LoveRouletteAgeBand | null;
   badgeCode: string;
   dataVisibility: ParticipantDataVisibility;
 }
@@ -35,10 +45,15 @@ function readFromStorage(
       return null;
     }
 
+    const gender = parseLoveRouletteGender(profile.gender);
+    const seeking = parseLoveRouletteSeeking(profile.seeking, gender);
+
     return {
       id: profile.id,
       nickname: profile.nickname,
-      gender: profile.gender === "female" ? "female" : "male",
+      gender,
+      seeking,
+      ageBand: parseLoveRouletteAgeBand(profile.ageBand),
       badgeCode: profile.badgeCode ?? "",
       dataVisibility: normalizeParticipantDataVisibility(profile.dataVisibility),
     };

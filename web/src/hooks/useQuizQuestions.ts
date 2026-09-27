@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { LoveRouletteQuestion } from "@/lib/musicpro/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
+import { orderOptionsForQuizDisplay } from "@/lib/musicpro/quiz-option-shuffle";
 
 export function useQuizQuestions(
   eventSlug: string,
@@ -60,16 +61,39 @@ export function useQuizQuestions(
   return { questions, loading, error };
 }
 
+/** Domanda con opzioni mischiate per la serata (A–D ≠ sortOrder editor). */
 export function resolveQuizQuestion(
   quizState: QuizSessionState | null,
   questions: LoveRouletteQuestion[],
+  eventSlug: string,
 ): LoveRouletteQuestion | null {
   if (!quizState || questions.length === 0) return null;
 
   const questionId = quizState.questionIds[quizState.currentIndex];
   if (!questionId) return null;
 
-  return questions.find((q) => q.id === questionId) ?? null;
+  const raw = questions.find((q) => q.id === questionId) ?? null;
+  if (!raw) return null;
+
+  return {
+    ...raw,
+    options: orderOptionsForQuizDisplay(raw.options, eventSlug, raw.id),
+  };
+}
+
+/** Stessa permutazione per anteprima «Prossima domanda». */
+export function questionWithShuffledOptions(
+  question: LoveRouletteQuestion,
+  eventSlug: string,
+): LoveRouletteQuestion {
+  return {
+    ...question,
+    options: orderOptionsForQuizDisplay(
+      question.options,
+      eventSlug,
+      question.id,
+    ),
+  };
 }
 
 export function quizProgressLabel(
@@ -88,8 +112,8 @@ export function useCurrentQuizQuestion(
   const { questions, loading, error } = useQuizQuestions(eventSlug, enabled);
 
   const currentQuestion = useMemo(
-    () => resolveQuizQuestion(quizState, questions),
-    [quizState, questions],
+    () => resolveQuizQuestion(quizState, questions, eventSlug),
+    [quizState, questions, eventSlug],
   );
 
   return {

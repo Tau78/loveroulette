@@ -8,7 +8,7 @@ export type EventState =
   | "winner"
   | "closed";
 
-export type Gender = "male" | "female";
+export type Gender = "male" | "female" | "nonbinary";
 
 export type PlayerRole = "player" | "finalist" | "audience" | "jury" | "animator";
 

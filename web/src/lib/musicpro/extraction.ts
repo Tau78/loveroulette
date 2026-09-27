@@ -1,13 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   collectLockedParticipantIds,
-  filterValidMaleFemalePairs,
-  isValidMaleFemalePair,
+  filterValidExtractablePairs,
+  isValidExtractablePair,
   maxAllowedExtractions,
   selectNextPair,
   type ExtractionMode,
   type ParticipantGender,
 } from "@/lib/matching/affinity";
+import { parseLoveRouletteGender } from "@/lib/player/identity";
 import { parseLoveRouletteConfig } from "./event-config";
 import type { DisplayOverlay } from "./display-overlay";
 
@@ -120,11 +121,10 @@ async function loadParticipantGenderContext(
 
   for (const row of data ?? []) {
     const id = String(row.id);
-    const gender: ParticipantGender =
-      row.gender === "female" ? "female" : "male";
+    const gender: ParticipantGender = parseLoveRouletteGender(row.gender);
     genderById.set(id, gender);
     if (gender === "male") maleCount++;
-    else femaleCount++;
+    else if (gender === "female") femaleCount++;
   }
 
   return { genderById, maleCount, femaleCount };
@@ -215,12 +215,11 @@ export async function extractNextCouple(
 
   const typedPairs = pairs as PairRow[];
 
-  const { genderById, maleCount, femaleCount } =
-    await loadParticipantGenderContext(supabase, eventId);
+  const { genderById } = await loadParticipantGenderContext(supabase, eventId);
 
-  if (maleCount === 0 || femaleCount === 0) {
+  if (genderById.size < 2) {
     throw new ExtractionError(
-      "Servono almeno un uomo e una donna per formare le coppie.",
+      "Servono almeno due giocatori per formare le coppie.",
       404,
     );
   }
@@ -239,8 +238,7 @@ export async function extractNextCouple(
   const config = parseLoveRouletteConfig(metadata);
   const randomShownCount = typedPairs.filter((pair) => pair.was_shown).length;
   const maxExtractions = maxAllowedExtractions(
-    maleCount,
-    femaleCount,
+    genderById.size,
     config.extraction_count,
   );
 
@@ -251,7 +249,7 @@ export async function extractNextCouple(
     );
   }
 
-  const eligiblePairs = filterValidMaleFemalePairs(
+  const eligiblePairs = filterValidExtractablePairs(
     typedPairs.map((row) => ({
       id: row.id,
       rank: row.rank,
@@ -272,7 +270,7 @@ export async function extractNextCouple(
 
   if (!selected) {
     throw new ExtractionError(
-      "Non restano coppie disponibili: ogni uomo e ogni donna possono essere estratti una sola volta.",
+      "Non restano coppie disponibili: ogni giocatore può essere estratto una sola volta.",
       404,
     );
   }
@@ -283,14 +281,14 @@ export async function extractNextCouple(
   }
 
   if (
-    !isValidMaleFemalePair(
+    !isValidExtractablePair(
       pair.participant_male_id,
       pair.participant_female_id,
       genderById,
     )
   ) {
     throw new ExtractionError(
-      "Coppia non valida: ogni coppia deve essere 1 uomo + 1 donna.",
+      "Coppia non valida: servono due giocatori distinti in sala.",
       400,
     );
   }

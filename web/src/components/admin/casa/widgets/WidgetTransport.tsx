@@ -67,6 +67,7 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
         questionCount: event?.quizSetup.questionCount ?? undefined,
         questionSeconds: event?.quizSetup.questionSeconds ?? undefined,
         hideRankingLastN: event?.quizSetup.hideRankingLastN,
+        rankingEveryN: event?.quizSetup.rankingEveryN,
       });
       if (!result.ok) {
         throw new Error(result.error);

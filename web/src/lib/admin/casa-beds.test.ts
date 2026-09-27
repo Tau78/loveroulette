@@ -7,6 +7,11 @@ describe("casa auto beds", () => {
     expect(casaAutoBedSrc("pres")).toContain("LR_01_Lobby_Ambient");
     expect(casaAutoBedSrc("presenti")).toContain("LR_05_Extraction");
     expect(casaAutoBedSrc("quiz")).toContain("LR_02_Quiz_Tension");
+    expect(casaAutoBedSrc("quiz", "answers")).toContain("LR_03_Quiz_Countdown");
+    expect(casaAutoBedLabel("quiz", "answers")).toMatch(/countdown/i);
+    expect(casaAutoBedSrc("quiz", "results")).toContain("LR_02_Quiz_Tension");
+    expect(casaAutoBedLabel("quiz", "results")).toMatch(/hold/i);
+    expect(casaAutoBedSrc("quiz", "theme_intro")).toContain("LR_02_Quiz_Tension");
     expect(casaAutoBedSrc("sigla")).toBeNull();
   });
 

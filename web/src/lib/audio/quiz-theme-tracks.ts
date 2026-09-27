@@ -20,8 +20,17 @@ export const QUIZ_THEME_CATEGORIES: readonly QuizThemeCategory[] = [
 
 const DEFAULT_QUIZ_BED = "LR_02_Quiz_Tension";
 
-/** Bed risultati quiz — ingresso a volume pieno (no fade-in). */
-export const QUIZ_RESULTS_BED_ID = "LR_25_Quiz_Results_Reveal";
+/** Bed countdown risposte — parte quando appaiono A–D (fase `answers`). */
+export const QUIZ_ANSWERS_COUNTDOWN_BED_ID = "LR_03_Quiz_Countdown";
+
+/**
+ * Hit one-shot all’ingresso % (non loop — ~10 s, altrimenti riparte in loop fastidioso).
+ * Dopo l’hit resta il bed lungo (`quizResultsHoldTrackId`).
+ */
+export const QUIZ_RESULTS_REVEAL_ID = "LR_25_Quiz_Results_Reveal";
+
+/** @deprecated usa QUIZ_RESULTS_REVEAL_ID — era il bed looping, ora è solo l’hit. */
+export const QUIZ_RESULTS_BED_ID = QUIZ_RESULTS_REVEAL_ID;
 
 /**
  * Bed per manche/tema — oggi fallback su LR_02 finché non esporti loop SUNO dedicati.
@@ -52,23 +61,28 @@ export function quizBedTrackForCategory(
   return DEFAULT_QUIZ_BED;
 }
 
-/** Track quiz in base a fase display sincronizzata + categoria domanda corrente. */
+/** Bed lungo sotto le barre % (dopo l’hit LR_25). */
+export function quizResultsHoldTrackId(
+  category: string | null | undefined,
+): string {
+  return quizBedTrackForCategory(category);
+}
+
+/**
+ * Track quiz per fase (bed continuo):
+ * - tema / lettura domanda → misteriosa (LR_02)
+ * - risposte + countdown → LR_03 countdown
+ * - % risultati → hold misteriosa; l’hit LR_25 è one-shot a parte
+ */
 export function trackIdForQuizPhase(
   quizPhase: QuizDisplayPhase | null | undefined,
   category: string | null | undefined,
 ): string | null {
-  if (quizPhase === "results") {
-    return QUIZ_RESULTS_BED_ID;
+  if (quizPhase === "answers") {
+    return QUIZ_ANSWERS_COUNTDOWN_BED_ID;
   }
-
-  if (
-    quizPhase === "theme_intro" ||
-    quizPhase === "question" ||
-    quizPhase === "answers" ||
-    quizPhase === "next_question" ||
-    quizPhase === "start_countdown"
-  ) {
-    return quizBedTrackForCategory(category);
+  if (quizPhase === "results") {
+    return quizResultsHoldTrackId(category);
   }
 
   return quizBedTrackForCategory(category);

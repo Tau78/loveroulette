@@ -2,6 +2,8 @@
  * AVANTI-BINARY-LOCKED — macchina a stati apertura serata (casa → quiz).
  * Non modificare ordine/gate/label senza autorizzazione espressa di Mauro.
  * Vedi `.cursor/rules/avanti-binary.mdc`.
+ *
+ * Label 2026-09-27 (Mauro): casa → «Partenza» (warn/slide); warn → «Sigla» (video on).
  */
 export type CasaBeat =
   | "casa"
@@ -83,8 +85,8 @@ export function avantiLabel(input: {
   guestCount: number;
 }): string {
   const { beat, sigla, roll, guestCount } = input;
-  if (beat === "casa") return "Sigla";
-  if (beat === "sigla" && sigla === "warn") return "Parte ora";
+  if (beat === "casa") return "Partenza";
+  if (beat === "sigla" && sigla === "warn") return "Sigla";
   if (beat === "presenti") {
     return roll < guestCount - 1 ? "Prossimo" : "Si comincia";
   }

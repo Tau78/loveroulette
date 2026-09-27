@@ -14,7 +14,6 @@ import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import type { QuestionResults } from "@/lib/musicpro/quiz-results";
 import { QUIZ_PHASE_LABELS } from "@/lib/musicpro/quiz-display";
-import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import { cn } from "@/lib/utils";
 import { AdminQuizQuestionReel } from "@/components/admin/AdminQuizQuestionReel";
 import {
@@ -201,13 +200,17 @@ export function AdminQuizPanel({
   }
 
   return (
-    <AdminPanelShell
-      variant={variant}
-      title="Quiz"
-      cardTitle="Quiz — regia domande"
-      cardDescription={`${progressLabel ?? "…"} · ${phaseLabel} · ${remaining}s`}
-      actions={
-        showAnswerCount ? (
+    <div
+      className={cn(
+        "space-y-2",
+        variant === "card" && "rounded-xl border border-primary/20 p-3",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary/90">
+          Manche · {progressLabel ?? "…"} · {phaseLabel}
+        </p>
+        {showAnswerCount ? (
           <span
             className={cn(
               "text-[10px] font-semibold tabular-nums whitespace-nowrap",
@@ -217,12 +220,9 @@ export function AdminQuizPanel({
           >
             {totalAnswers}/{answerCap}
           </span>
-        ) : undefined
-      }
-      accent
-      collapsible={false}
-      className={variant === "card" ? "border-primary/20" : undefined}
-    >
+        ) : null}
+      </div>
+
       {loading ? (
         <p className="text-[10px] text-muted-foreground">…</p>
       ) : orderedQuestions.length > 0 ? (
@@ -241,7 +241,7 @@ export function AdminQuizPanel({
           <AdminButton
             type="button"
             size="sm"
-            className="w-full min-w-[120px]"
+            className="h-8"
             disabled={disabled || busy}
             onClick={() => void runAction("skipPhase")}
           >
@@ -269,11 +269,14 @@ export function AdminQuizPanel({
         onQuestionSecondsBlur={commitQuestionSeconds}
         hideRankingLastN={quizState.hideRankingLastN}
         hideRankingReadOnly
+        rankingEveryN={quizState.rankingEveryN}
+        rankingEveryReadOnly
         questionCountReadOnly
         disabled={disabled || busy}
+        title="Manche in corso"
       />
 
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/40 px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <AdminButton
           type="button"
           variant={autoplayEnabled ? "default" : "outline"}
@@ -288,21 +291,20 @@ export function AdminQuizPanel({
         >
           Auto {autoplayEnabled ? "On" : "Off"}
         </AdminButton>
-        <span className="text-[10px] text-primary ml-auto tabular-nums">{remaining}s</span>
+        <span className="text-[10px] text-primary tabular-nums">{remaining}s</span>
+        <AdminButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-[10px] ml-auto"
+          disabled={disabled || busy}
+          onClick={() => void runAction("finish")}
+        >
+          Salta matching
+        </AdminButton>
       </div>
 
-      <AdminButton
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-7 text-[10px] w-full"
-        disabled={disabled || busy}
-        onClick={() => void runAction("finish")}
-      >
-        Salta matching
-      </AdminButton>
-
       {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
-    </AdminPanelShell>
+    </div>
   );
 }

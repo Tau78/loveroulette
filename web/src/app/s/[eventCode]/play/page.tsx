@@ -11,9 +11,19 @@ import { PlayerPresenceHero } from "@/components/player/PlayerPresenceHero";
 import { PlayerRuntimeGlow } from "@/components/player/PlayerRuntimeGlow";
 import { PlayerStageTransition } from "@/components/player/PlayerStageTransition";
 import { QuizPlayer } from "@/components/player/QuizPlayer";
+import { SpecialTrialTeaser } from "@/components/player/SpecialTrialTeaser";
 import { VotingPlayer } from "@/components/player/VotingPlayer";
 import { FinalistCheerPlayer } from "@/components/player/FinalistCheerPlayer";
+import { PlayerIdentityFields } from "@/components/player/PlayerIdentityFields";
 import { FINALS_COPY } from "@/lib/game/late-game-copy";
+import {
+  parseLoveRouletteAgeBand,
+  parseLoveRouletteGender,
+  parseLoveRouletteSeeking,
+  type LoveRouletteAgeBand,
+  type LoveRouletteGender,
+  type LoveRouletteSeeking,
+} from "@/lib/player/identity";
 import { CoupleTakeover } from "@/components/player/CoupleTakeover";
 import type { WaveMode } from "@/components/player/ColorWave";
 import {
@@ -57,7 +67,7 @@ import {
   resolveNicknameOnSave,
 } from "@/lib/player/nickname-save";
 
-type JoinField = "realName" | "nickname" | "badge" | "dataVisibility";
+type JoinField = "realName" | "nickname" | "badge" | "dataVisibility" | "identity";
 
 type RestoreState = "pending" | "ready";
 
@@ -67,7 +77,9 @@ interface JoinResponse {
   participant?: {
     id: string;
     nickname?: string;
-    gender?: "male" | "female";
+    gender?: LoveRouletteGender;
+    seeking?: LoveRouletteSeeking;
+    age_band?: LoveRouletteAgeBand | null;
     badge_code?: string | null;
     data_visibility?: ParticipantDataVisibility;
   };
@@ -81,7 +93,9 @@ async function postJoin(
   payload: {
     nickname: string;
     realName?: string | null;
-    gender: "male" | "female";
+    gender: LoveRouletteGender;
+    seeking?: LoveRouletteSeeking | null;
+    ageBand?: LoveRouletteAgeBand | null;
     badgeCode: string | null;
     dataVisibility: ParticipantDataVisibility;
     participantId?: string | null;
@@ -94,6 +108,8 @@ async function postJoin(
       nickname: payload.nickname,
       realName: payload.realName,
       gender: payload.gender,
+      seeking: payload.seeking,
+      ageBand: payload.ageBand,
       badgeCode: payload.badgeCode,
       dataVisibility: payload.dataVisibility,
       ...(payload.participantId ? { participantId: payload.participantId } : {}),
@@ -117,10 +133,13 @@ function readAnimatorTestProfile(): StoredParticipantProfile | null {
   const nickname = params.get("nick");
   if (!id || !nickname) return null;
 
+  const gender = parseLoveRouletteGender(params.get("gender"));
   return {
     id,
     nickname: decodeURIComponent(nickname),
-    gender: params.get("gender") === "female" ? "female" : "male",
+    gender,
+    seeking: parseLoveRouletteSeeking(params.get("seeking"), gender),
+    ageBand: parseLoveRouletteAgeBand(params.get("age")),
     badgeCode: params.get("badge") ?? "",
     dataVisibility: DEFAULT_PARTICIPANT_DATA_VISIBILITY,
   };
@@ -140,7 +159,9 @@ export default function PlayerPlayPage() {
 
   const [nickname, setNickname] = useState("");
   const [realName, setRealName] = useState("");
-  const [gender, setGender] = useState<"male" | "female">("male");
+  const [gender, setGender] = useState<LoveRouletteGender | null>(null);
+  const [seeking, setSeeking] = useState<LoveRouletteSeeking | null>(null);
+  const [ageBand, setAgeBand] = useState<LoveRouletteAgeBand | null>(null);
   const [badgeCode, setBadgeCode] = useState("");
   const [dataVisibility, setDataVisibility] = useState<ParticipantDataVisibility>(
     DEFAULT_PARTICIPANT_DATA_VISIBILITY,
@@ -157,11 +178,18 @@ export default function PlayerPlayPage() {
   const joinedRef = useRef(false);
   const lastRevealAtRef = useRef<string | null>(null);
 
-  const { runtimeState, quizState, lastReveal, voting, finalsShow, syncStatus } =
-    useLoveRouletteSession({
-      eventSlug,
-      enabled: joined,
-    });
+  const {
+    runtimeState,
+    quizState,
+    specialTrial,
+    lastReveal,
+    voting,
+    finalsShow,
+    syncStatus,
+  } = useLoveRouletteSession({
+    eventSlug,
+    enabled: joined,
+  });
 
   const { remaining: quizPhaseRemaining, displayPhase: quizDisplayPhase } =
     useQuizPhaseSync({
@@ -235,7 +263,9 @@ export default function PlayerPlayPage() {
     (
       participant: NonNullable<JoinResponse["participant"]>,
       nick: string,
-      g: "male" | "female",
+      g: LoveRouletteGender,
+      seek: LoveRouletteSeeking,
+      age: LoveRouletteAgeBand | null,
       badge: string,
       visibility: ParticipantDataVisibility,
     ) => {
@@ -243,12 +273,16 @@ export default function PlayerPlayPage() {
         id: participant.id,
         nickname: nick,
         gender: g,
+        seeking: seek,
+        ageBand: age,
         badgeCode: badge,
         dataVisibility: visibility,
       });
       setParticipantId(participant.id);
       setNickname(nick);
       setGender(g);
+      setSeeking(seek);
+      setAgeBand(age);
       setBadgeCode(badge);
       setDataVisibility(visibility);
       setJoined(true);
@@ -285,7 +319,9 @@ export default function PlayerPlayPage() {
     async (input: {
       nickname: string;
       realName?: string | null;
-      gender: "male" | "female";
+      gender: LoveRouletteGender;
+      seeking?: LoveRouletteSeeking | null;
+      ageBand?: LoveRouletteAgeBand | null;
       badgeCode: string;
       dataVisibility: ParticipantDataVisibility;
       participantId?: string | null;
@@ -299,6 +335,8 @@ export default function PlayerPlayPage() {
         nickname: nick,
         realName: input.realName?.trim() || null,
         gender: input.gender,
+        seeking: input.seeking,
+        ageBand: input.ageBand,
         badgeCode: badge || null,
         dataVisibility: input.dataVisibility,
         participantId: storedId,
@@ -312,6 +350,8 @@ export default function PlayerPlayPage() {
         result.participant,
         nick,
         input.gender,
+        input.seeking ?? parseLoveRouletteSeeking(undefined, input.gender),
+        input.ageBand ?? null,
         badge,
         input.dataVisibility,
       );
@@ -337,6 +377,8 @@ export default function PlayerPlayPage() {
 
       setNickname(profile.nickname);
       setGender(profile.gender);
+      setSeeking(profile.seeking);
+      setAgeBand(profile.ageBand);
       setBadgeCode(profile.badgeCode);
       setDataVisibility(profile.dataVisibility);
       setJoining(true);
@@ -344,6 +386,8 @@ export default function PlayerPlayPage() {
       const result = await performJoin({
         nickname: profile.nickname,
         gender: profile.gender,
+        seeking: profile.seeking,
+        ageBand: profile.ageBand,
         badgeCode: profile.badgeCode,
         dataVisibility: profile.dataVisibility,
         participantId: profile.id,
@@ -440,6 +484,12 @@ export default function PlayerPlayPage() {
     setNickConfirmOpen(false);
     setNickname(resolved.nickname);
 
+    if (!gender || !seeking || !ageBand) {
+      setFieldError("identity");
+      setJoinError("Scegli chi sei, chi cerchi e la fascia d’età.");
+      return;
+    }
+
     if (!dataVisibility) {
       setFieldError("dataVisibility");
       setJoinError("Scegli chi può vedere i tuoi dati personali.");
@@ -461,6 +511,8 @@ export default function PlayerPlayPage() {
         nickname: resolved.nickname,
         realName: resolved.realName || null,
         gender,
+        seeking,
+        ageBand,
         badgeCode,
         dataVisibility,
       });
@@ -507,7 +559,7 @@ export default function PlayerPlayPage() {
               <PlayerStageTransition stageKey={playerStageKey}>
                 <PlayerPresenceHero
                   nickname={nickname}
-                  gender={gender}
+                  gender={gender ?? "male"}
                   runtimeState={runtimeState}
                   quizPhase={quizDisplayPhase ?? null}
                   votingOpen={finalsVotingOpen}
@@ -546,12 +598,17 @@ export default function PlayerPlayPage() {
                     session={voting.current}
                   />
                 ) : participantId ? (
-                  <QuizPlayer
-                    eventSlug={eventSlug}
-                    participantId={participantId}
-                    quizState={quizState}
-                    runtimeState={runtimeState}
-                  />
+                  <>
+                    {specialTrial ? (
+                      <SpecialTrialTeaser trial={specialTrial} />
+                    ) : null}
+                    <QuizPlayer
+                      eventSlug={eventSlug}
+                      participantId={participantId}
+                      quizState={quizState}
+                      runtimeState={runtimeState}
+                    />
+                  </>
                 ) : null}
               </PlayerStageTransition>
             </div>
@@ -693,26 +750,34 @@ export default function PlayerPlayPage() {
                   </div>
                 ) : null}
 
-                <div className="space-y-2">
-                  <Label>Genere</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(["male", "female"] as const).map((g) => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => setGender(g)}
-                        className={cn(
-                          "rounded-lg py-3 font-medium border transition-all",
-                          gender === g
-                            ? "border-primary bg-primary/15 text-primary shadow-[0_0_20px_rgba(236,72,153,0.25)]"
-                            : "border-border bg-background/50 hover:bg-muted/50",
-                        )}
-                      >
-                        {g === "male" ? "Uomo" : "Donna"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <PlayerIdentityFields
+                  gender={gender}
+                  seeking={seeking}
+                  ageBand={ageBand}
+                  disabled={joining}
+                  invalid={fieldError === "identity"}
+                  onGender={(value) => {
+                    setGender(value);
+                    if (fieldError === "identity") {
+                      setFieldError(null);
+                      setJoinError(null);
+                    }
+                  }}
+                  onSeeking={(value) => {
+                    setSeeking(value);
+                    if (fieldError === "identity") {
+                      setFieldError(null);
+                      setJoinError(null);
+                    }
+                  }}
+                  onAgeBand={(value) => {
+                    setAgeBand(value);
+                    if (fieldError === "identity") {
+                      setFieldError(null);
+                      setJoinError(null);
+                    }
+                  }}
+                />
 
                 <DataVisibilitySelector
                   value={dataVisibility}

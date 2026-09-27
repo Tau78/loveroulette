@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useCasaLiveSession } from "@/components/admin/casa/casa-live-session-context";
-import { useQuizQuestions } from "@/hooks/useQuizQuestions";
+import { useQuizQuestions, questionWithShuffledOptions } from "@/hooks/useQuizQuestions";
 
 export type WidgetCueProps = {
   className?: string;
@@ -39,8 +39,10 @@ export function WidgetCue({ className }: WidgetCueProps) {
     }
     const id = quizState.questionIds[nextIndex];
     if (!id) return null;
-    return questions.find((q) => q.id === id) ?? null;
-  }, [nextIndex, questions, quizState]);
+    const raw = questions.find((q) => q.id === id) ?? null;
+    if (!raw) return null;
+    return questionWithShuffledOptions(raw, eventCode);
+  }, [eventCode, nextIndex, questions, quizState]);
 
   async function handleSkip() {
     if (!canSkip || controlsDisabled || busy) return;

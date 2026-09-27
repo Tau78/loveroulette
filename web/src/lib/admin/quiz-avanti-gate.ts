@@ -1,8 +1,10 @@
 import type { QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
 
 /**
- * Quando AVANTI quiz è cliccabile — allineato al modello finali (countdown = wait).
- * Non cambia l'ordine del binario: solo gate del pulsante.
+ * Quando AVANTI quiz è cliccabile — allineato al binario Mauro 2026-09-27.
+ * Non cambia l'ordine: solo gate del pulsante.
+ *
+ * Durante answers (countdown) AVANTI è off: le % arrivano da sole a fine timer.
  */
 export function quizAvantiState(
   phase: QuizDisplayPhase | null | undefined,
@@ -15,14 +17,17 @@ export function quizAvantiState(
   if (phase === "start_countdown" && remaining > 0) {
     return {
       enabled: false,
-      hint: `Countdown avvio · ${remaining}s`,
+      hint: `Attendi countdown · ${remaining}s`,
     };
   }
 
-  if (phase === "answers" && remaining > 0) {
+  if (phase === "answers") {
     return {
       enabled: false,
-      hint: `Risposte aperte · ${remaining}s`,
+      hint:
+        remaining > 0
+          ? `Attendi countdown · ${remaining}s`
+          : "Attendi chiusura…",
     };
   }
 

@@ -12,6 +12,7 @@ import { DisplayStaccoStage } from "@/components/display/DisplayStaccoStage";
 import { isSiglaWarnSlide } from "@/lib/display/sigla-warn";
 import { isStaccoSlide } from "@/lib/display/stacco";
 import { JoinQrCode } from "./JoinQrCode";
+import type { StageGender } from "@/lib/player/identity";
 
 const CUSTOM_DURATION_MS = 8000;
 
@@ -22,9 +23,12 @@ interface DisplayOverlayProps {
 
 function playerGenderFromOverlay(
   overlay: DisplayOverlayData,
-): "M" | "F" | null {
+): StageGender | null {
   const raw = (overlay.kicker ?? overlay.body ?? "").trim().toLowerCase();
   if (raw === "f" || raw === "lei" || raw === "female") return "F";
+  if (raw === "n" || raw === "nb" || raw === "non binary" || raw === "nonbinary") {
+    return "N";
+  }
   if (raw === "m" || raw === "lui" || raw === "male") return "M";
   return null;
 }

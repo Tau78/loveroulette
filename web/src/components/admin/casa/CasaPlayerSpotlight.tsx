@@ -1,12 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { stageSexLabel, type StageGender } from "@/lib/player/identity";
 
 export type CasaSpotlight = {
   key: number;
   id: string;
   nick: string;
-  gender: "M" | "F";
+  gender: StageGender;
   photo?: string;
   score: number;
 };
@@ -87,7 +88,7 @@ export function CasaPlayerSpotlight({ spot }: { spot: CasaSpotlight | null }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: reduce ? 0 : 0.42, duration: 0.4, ease: EASE }}
             >
-              {spot.gender === "F" ? "Lei" : "Lui"}
+              {stageSexLabel(spot.gender)}
             </motion.p>
 
             <motion.p

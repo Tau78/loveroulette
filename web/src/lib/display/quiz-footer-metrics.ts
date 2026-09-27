@@ -2,20 +2,23 @@
  * Footer quiz unificato — maschera SVG + countdown + cuore/logo (1920×1080).
  * La maschera copre tutta la larghezza canvas fino a cuore e logo ai lati.
  * Digit size: classe `lr-dt-64` × `--lr-display-type-scale`.
+ *
+ * Bump centrale = culla dell’anello countdown (un solo arco, niente linea che taglia).
  */
 export const QUIZ_FOOTER_MASK_VIEWBOX = { width: 1920, height: 108 } as const;
 
-export const QUIZ_FOOTER_MASK_BUMP_RADIUS = 58;
+/** Raggio arco culla — allineato allo slot countdown (~120px a 1920). */
+export const QUIZ_FOOTER_MASK_BUMP_RADIUS = 72;
 
 export const QUIZ_FOOTER_MASK_PATH = [
   "M 40 108",
   "L 40 56",
   "Q 40 44 56 42",
   "Q 140 24 280 34",
-  "Q 420 42 580 40",
-  "L 902 40",
-  `A ${QUIZ_FOOTER_MASK_BUMP_RADIUS} ${QUIZ_FOOTER_MASK_BUMP_RADIUS} 0 0 1 1018 40`,
-  "L 1340 40",
+  "Q 420 42 560 40",
+  "L 888 40",
+  `A ${QUIZ_FOOTER_MASK_BUMP_RADIUS} ${QUIZ_FOOTER_MASK_BUMP_RADIUS} 0 0 1 1032 40`,
+  "L 1360 40",
   "Q 1500 42 1640 34",
   "Q 1780 24 1864 42",
   "Q 1880 44 1880 56",
@@ -26,16 +29,20 @@ export const QUIZ_FOOTER_MASK_PATH = [
 export const QUIZ_FOOTER_COUNTDOWN_RING_RADIUS = 32;
 export const QUIZ_FOOTER_COUNTDOWN_VIEWBOX = 68;
 export const QUIZ_FOOTER_COUNTDOWN_SLOT_CLASS =
-  "relative flex size-[120px] items-center justify-center";
+  "relative grid size-[120px] place-items-center";
 
+/** Cifra centrata otticamente (serif display: un filo più in alto e a sinistra). */
 export const QUIZ_FOOTER_COUNTDOWN_DIGIT_CLASS =
-  "relative font-display font-bold tabular-nums text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] lr-dt-64";
+  "font-display font-bold tabular-nums leading-none text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] lr-dt-64 translate-x-[-0.04em] translate-y-[-0.06em]";
 
 export const QUIZ_FOOTER_MASK_BAR_CLASS = "relative h-[88px] w-full";
 
-/** Offset verticale countdown — centrato nel bump della maschera. */
+/**
+ * Offset verticale: centro anello ≈ apice del bump (culla).
+ * Prima era troppo alto → anello e arco si sovrapponevano “pasticciati”.
+ */
 export const QUIZ_FOOTER_COUNTDOWN_OFFSET_CLASS =
-  "translate-y-[calc(-38%+0.35rem)]";
+  "translate-y-[calc(-28%+0.15rem)]";
 
 export const QUIZ_FOOTER_BRAND_HEART_CLASS = "size-[104px]";
 

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  loveRouletteAgeBandSchema,
+  loveRouletteGenderSchema,
+  loveRouletteSeekingSchema,
+} from "@/lib/player/identity";
+import {
   deleteParticipantAdmin,
   getEventParticipant,
   setParticipantOfflineAdmin,
@@ -14,7 +19,9 @@ import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 const patchSchema = z.object({
   nickname: z.string().min(1).max(40).optional(),
   realName: z.string().trim().max(80).optional().nullable(),
-  gender: z.enum(["male", "female"]).optional(),
+  gender: loveRouletteGenderSchema.optional(),
+  seeking: loveRouletteSeekingSchema.optional(),
+  ageBand: loveRouletteAgeBandSchema.optional().nullable(),
   badgeCode: z.string().max(20).nullable().optional(),
   role: z
     .enum(["player", "finalist", "audience", "jury", "animator"])
@@ -143,6 +150,8 @@ export async function PATCH(
         nickname: body.nickname,
         realName: body.realName,
         gender: body.gender,
+        seeking: body.seeking,
+        ageBand: body.ageBand,
         badgeCode: body.badgeCode,
         role: body.role,
       },

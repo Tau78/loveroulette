@@ -4,6 +4,14 @@ import {
   type AnswerMap,
   type QuestionMeta,
 } from "@/lib/matching/affinity";
+import {
+  mutuallyCompatible,
+  parseLoveRouletteGender,
+  parseLoveRouletteSeeking,
+  type LoveRouletteGender,
+  type LoveRouletteSeeking,
+} from "@/lib/player/identity";
+import { isSeekingSchemaError } from "./participant-schema";
 import { getQuestionsForEvent } from "./questions";
 
 export interface ComputePairsOptions {
@@ -38,22 +46,55 @@ async function countExistingPairs(
   return count ?? 0;
 }
 
-async function loadParticipantsByGender(
-  supabase: SupabaseClient,
-  eventId: string,
-  gender: "male" | "female",
-): Promise<Array<{ id: string; nickname: string }>> {
-  const { data, error } = await supabase
-    .from("love_roulette_participants")
-    .select("id, nickname")
-    .eq("event_id", eventId)
-    .eq("gender", gender);
+interface MatchPerson {
+  id: string;
+  nickname: string;
+  gender: LoveRouletteGender;
+  seeking: LoveRouletteSeeking;
+}
 
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => ({
+function mapMatchPerson(row: Record<string, unknown>): MatchPerson {
+  const gender = parseLoveRouletteGender(row.gender);
+  return {
     id: String(row.id),
     nickname: typeof row.nickname === "string" ? row.nickname : "—",
-  }));
+    gender,
+    seeking: parseLoveRouletteSeeking(row.seeking, gender),
+  };
+}
+
+/**
+ * Carica la sala. `age_band` non entra nel punteggio: il filtro età arriva col check-in.
+ * Senza colonna `seeking`, i giocatori già salvati restano sul match uomo↔donna.
+ */
+async function loadMatchPeople(
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<MatchPerson[]> {
+  const withSeeking = await supabase
+    .from("love_roulette_participants")
+    .select("id, nickname, gender, seeking")
+    .eq("event_id", eventId);
+
+  if (!withSeeking.error) {
+    return (withSeeking.data ?? []).map((row) =>
+      mapMatchPerson(row as Record<string, unknown>),
+    );
+  }
+
+  if (!isSeekingSchemaError(withSeeking.error)) {
+    throw new Error(withSeeking.error.message);
+  }
+
+  const fallback = await supabase
+    .from("love_roulette_participants")
+    .select("id, nickname, gender")
+    .eq("event_id", eventId);
+
+  if (fallback.error) throw new Error(fallback.error.message);
+  return (fallback.data ?? []).map((row) =>
+    mapMatchPerson(row as Record<string, unknown>),
+  );
 }
 
 export interface PreviewPairRow {
@@ -82,14 +123,13 @@ async function scoreAllPairs(
   }>;
   questionCount: number;
 }> {
-  const males = await loadParticipantsByGender(supabase, eventId, "male");
-  const females = await loadParticipantsByGender(supabase, eventId, "female");
+  const people = await loadMatchPeople(supabase, eventId);
 
-  if (males.length === 0 || females.length === 0) {
+  if (people.length < 2) {
     return { ranked: [], questionCount: 0 };
   }
 
-  const participantIds = [...males, ...females].map((p) => p.id);
+  const participantIds = people.map((p) => p.id);
   const answersByParticipant = await loadAnswersMap(supabase, participantIds);
 
   let ids = questionIds;
@@ -106,20 +146,26 @@ async function scoreAllPairs(
     .map((q) => ({ id: q.id, weight: q.weight, category: q.category }));
 
   const candidates = [];
-  for (const male of males) {
-    const answersMale = answersByParticipant[male.id] ?? {};
-    for (const female of females) {
-      const answersFemale = answersByParticipant[female.id] ?? {};
+  for (let i = 0; i < people.length; i++) {
+    const left = people[i];
+    if (!left) continue;
+    const answersLeft = answersByParticipant[left.id] ?? {};
+    for (let j = i + 1; j < people.length; j++) {
+      const right = people[j];
+      if (!right || !mutuallyCompatible(left, right)) continue;
+      const [slotA, slotB] =
+        left.id < right.id ? [left, right] : [right, left];
+      const answersRight = answersByParticipant[right.id] ?? {};
       const score = calculateSimpleAffinity(
-        answersMale,
-        answersFemale,
+        answersLeft,
+        answersRight,
         questionMeta,
       );
       candidates.push({
-        maleId: male.id,
-        femaleId: female.id,
-        maleNickname: male.nickname,
-        femaleNickname: female.nickname,
+        maleId: slotA.id,
+        femaleId: slotB.id,
+        maleNickname: slotA.nickname,
+        femaleNickname: slotB.nickname,
         score,
       });
     }
@@ -191,7 +237,9 @@ function deriveQuestionIdsFromAnswers(
 }
 
 /**
- * Compute male×female affinity from quiz answers and persist ranked pairs.
+ * Affinità sulle coppie il cui «cerco» è reciproco (M-F, M-M, F-F, non binary).
+ * Le colonne participant_male_id / participant_female_id restano i due slot,
+ * ordinati per id: non implicano più il genere.
  * Schema: love_roulette_pairs (event_id, participant_male_id, participant_female_id,
  * affinity_score, rank, is_finalist, is_eliminated, was_shown).
  */
@@ -226,7 +274,9 @@ export async function computeAndPersistPairs(
   );
 
   if (ranked.length === 0) {
-    throw new MatchingError("Nessun partecipante per il matching.");
+    throw new MatchingError(
+      "Nessuna coppia compatibile con le preferenze in sala.",
+    );
   }
 
   if (questionCount === 0) {

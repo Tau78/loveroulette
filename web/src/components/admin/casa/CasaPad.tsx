@@ -34,6 +34,7 @@ import { WidgetPreflight } from "@/components/admin/casa/widgets/WidgetPreflight
 import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
 import { useCasaLiveSession } from "@/components/admin/casa/casa-live-session-context";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
+import { stageLetter, stageSexLabel, type StageGender } from "@/lib/player/identity";
 import {
   fetchParticipants,
   patchEventConfig,
@@ -86,6 +87,11 @@ import { avantiLabel, stepAvanti } from "@/lib/admin/casa-avanti";
 import { logAvantiBinary } from "@/lib/admin/avanti-binary-log";
 import { categoryThemeLabel } from "@/lib/musicpro/quiz-display";
 import { casaAutoBedLabel, resolveCasaBed } from "@/lib/admin/casa-beds";
+import {
+  playCasaResultsRevealHit,
+  resetCasaResultsRevealHit,
+} from "@/lib/admin/casa-results-reveal";
+import { CROSSFADE_MS } from "@/lib/audio/types";
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
@@ -168,7 +174,7 @@ type Beat =
   | "stacco"
   | "quiz";
 
-type Gender = "M" | "F";
+type Gender = StageGender;
 type Guest = {
   id: string;
   nick: string;
@@ -768,6 +774,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const shotFile = useRef<HTMLInputElement>(null);
   const libFile = useRef<HTMLInputElement>(null);
   const bedAudio = useRef<HTMLAudioElement | null>(null);
+  const bedFadeRaf = useRef<number | null>(null);
   const gongAudioRef = useRef<HTMLAudioElement | null>(null);
   const bedInput = useRef<HTMLInputElement>(null);
   const bedFilesInput = useRef<HTMLInputElement>(null);
@@ -776,6 +783,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const deckWrapRef = useRef<HTMLDivElement>(null);
   const expandViewport = useVisualViewportRect(open != null);
   const videoTapRef = useRef<{ url: string; at: number } | null>(null);
+  const staccoLaunchRef = useRef(false);
 
   const index = BEATS.findIndex((b) => b.id === beat);
   const current = BEATS[index] ?? BEATS[0];
@@ -786,7 +794,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
 
   const liveQuizActive =
     live.runtimeState === "quiz" && Boolean(live.quizState);
-  // start_countdown tick sempre; hold solo se Auto acceso.
+  // Binario: start_countdown + answers (timer→%) tickano sempre; hold solo con Auto.
   const { displayPhase: liveQuizPhase, remaining: liveQuizRemaining } =
     useQuizPhaseSync({
       eventSlug: eventCode,
@@ -796,7 +804,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         liveQuizActive &&
         !live.controlsDisabled &&
         (live.quizState?.autoplayEnabled === true ||
-          live.quizState?.displayPhase === "start_countdown"),
+          live.quizState?.displayPhase === "start_countdown" ||
+          live.quizState?.displayPhase === "answers"),
       onTick: (quiz, runtime) => {
         live.applyQuizUpdate(quiz, runtime);
       },
@@ -806,24 +815,51 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     live.quizState,
     live.runtimeState,
   );
+
+  useEffect(() => {
+    if (!liveQuizActive || liveQuizPhase !== "results") {
+      if (liveQuizPhase !== "results") resetCasaResultsRevealHit();
+      return;
+    }
+    const cue = `${live.quizState?.currentIndex ?? 0}:${live.quizState?.phaseStartedAt ?? "results"}`;
+    playCasaResultsRevealHit({ cueKey: cue });
+  }, [
+    live.quizState?.currentIndex,
+    live.quizState?.phaseStartedAt,
+    liveQuizActive,
+    liveQuizPhase,
+  ]);
+
   const projectorQuizGate: "tema" | "play" = liveQuizActive
     ? liveQuizPhase === "theme_intro" || liveQuizPhase === "start_countdown"
       ? "tema"
       : "play"
     : quizGate;
-  const projectorQuestion =
-    liveQuizActive && liveQuestion
-      ? {
-          text: liveQuestion.body,
-          category: liveQuestion.category,
-          options: [
-            liveQuestion.options[0]?.label ?? "",
-            liveQuestion.options[1]?.label ?? "",
-            liveQuestion.options[2]?.label ?? "",
-            liveQuestion.options[3]?.label ?? "",
-          ] as [string, string, string, string],
-        }
-      : currentQ;
+  const projectorQuestion = useMemo(() => {
+    if (liveQuizActive && liveQuestion) {
+      return {
+        text: liveQuestion.body,
+        category: liveQuestion.category,
+        options: [
+          liveQuestion.options[0]?.label ?? "",
+          liveQuestion.options[1]?.label ?? "",
+          liveQuestion.options[2]?.label ?? "",
+          liveQuestion.options[3]?.label ?? "",
+        ] as [string, string, string, string],
+      };
+    }
+    return currentQ;
+  }, [
+    liveQuizActive,
+    liveQuestion?.id,
+    liveQuestion?.body,
+    liveQuestion?.category,
+    liveQuestion?.options[0]?.label,
+    liveQuestion?.options[1]?.label,
+    liveQuestion?.options[2]?.label,
+    liveQuestion?.options[3]?.label,
+    currentQ,
+  ]);
 
   const activeProfile = getActiveProfile(layouts);
   const compactDeck = isCompactPlanciaView(deckView.w, deckView.h);
@@ -846,8 +882,14 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     mute[id] ? 0 : (vols[id] / 100) * masterScale;
 
   const activeBed = useMemo(
-    () => resolveCasaBed(beat, bedFolder ? bedList : null, bedIndex),
-    [beat, bedFolder, bedList, bedIndex],
+    () =>
+      resolveCasaBed(
+        beat,
+        bedFolder ? bedList : null,
+        bedIndex,
+        liveQuizActive ? liveQuizPhase : null,
+      ),
+    [beat, bedFolder, bedList, bedIndex, liveQuizActive, liveQuizPhase],
   );
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -996,7 +1038,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             id: string;
             nickname: string;
             real_name?: string | null;
-            gender: "male" | "female";
+            gender: "male" | "female" | "nonbinary";
           }[];
         };
         const rows = data.participants ?? [];
@@ -1006,7 +1048,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             id: p.id,
             nick: p.nickname,
             realName: p.real_name?.trim() || undefined,
-            gender: p.gender === "female" ? "F" : "M",
+            gender: stageLetter(p.gender),
             score: 0,
           })),
         );
@@ -1056,7 +1098,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             return;
           }
           if (beat === "presenti" && onStage) {
-            const sex = onStage.gender === "F" ? "Lei" : "Lui";
+            const sex = stageSexLabel(onStage.gender);
             const photo =
               onStage.photo &&
               !onStage.photo.startsWith("blob:") &&
@@ -1174,20 +1216,82 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   // possono killare il content process (schermo nero + solo «Evento»).
 
   useEffect(() => {
-    if (beat !== "stacco" || count == null) return;
-    if (count <= 0) {
-      setBeat("quiz");
-      setCount(null);
-      setQuizGate("tema");
+    if (beat !== "stacco") {
+      staccoLaunchRef.current = false;
       return;
     }
-    const id = window.setTimeout(() => setCount((n) => (n == null ? n : n - 1)), 1000);
-    return () => window.clearTimeout(id);
-  }, [beat, count]);
+    if (count == null) return;
+
+    if (count > 0) {
+      const id = window.setTimeout(
+        () => setCount((n) => (n == null ? n : n - 1)),
+        1000,
+      );
+      return () => window.clearTimeout(id);
+    }
+
+    // Fine stacco → argomento prima domanda, senza click.
+    if (staccoLaunchRef.current) return;
+    staccoLaunchRef.current = true;
+    setBeat("quiz");
+    setCount(null);
+    setQuizGate("tema");
+
+    void (async () => {
+      if (live.runtimeState !== "lobby") return;
+      setGoBusy(true);
+      setGoError(null);
+      try {
+        const questionsRes = await Promise.race([
+          fetch(`/api/events/${encodeURIComponent(eventCode)}/questions`),
+          new Promise<Response>((_, reject) =>
+            window.setTimeout(
+              () => reject(new Error("Timeout caricamento domande.")),
+              10_000,
+            ),
+          ),
+        ]);
+        if (!questionsRes.ok) {
+          setGoError("Impossibile caricare le domande.");
+          return;
+        }
+        const result = await live.runQuizAction("start", {
+          questionCount: live.event?.quizSetup.questionCount ?? undefined,
+          questionSeconds: live.event?.quizSetup.questionSeconds ?? undefined,
+          hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
+              rankingEveryN: live.event?.quizSetup.rankingEveryN,
+          skipStartCountdown: true,
+        });
+        if (!result.ok) {
+          setGoError(result.error);
+          return;
+        }
+        setQuizGate("play");
+        void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
+      } catch (err) {
+        setGoError(
+          err instanceof Error ? err.message : "Avvio quiz non riuscito.",
+        );
+      } finally {
+        setGoBusy(false);
+      }
+    })();
+  }, [
+    beat,
+    count,
+    eventCode,
+    live.event?.quizSetup.hideRankingLastN,
+    live.event?.quizSetup.questionCount,
+    live.event?.quizSetup.questionSeconds,
+    live.pin,
+    live.runQuizAction,
+    live.runtimeState,
+  ]);
 
   useEffect(() => {
     const el = bedAudio.current;
     if (!el) return;
+    if (bedFadeRaf.current != null) return;
     el.volume = effVol("bed");
   }, [mute.bed, vols.bed, masterVol]);
 
@@ -1206,16 +1310,71 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       return;
     }
     const abs = new URL(activeBed.url, window.location.origin).href;
-    if (el.src !== abs) {
-      el.src = activeBed.url;
-    }
-    // Auto-phase bed always loops; playlist uses onEnded + nextIndex except "one".
+    const shouldPlay = bedPlaying && !remoteAudio;
+    const targetVol = Math.min(1, Math.max(0, effVol("bed")));
     el.loop = !bedFolder || bedRepeat === "one";
-    if (bedPlaying && !remoteAudio) {
-      void el.play().catch(() => {});
-    } else {
-      el.pause();
+
+    if (el.src === abs) {
+      if (shouldPlay) {
+        void el.play().catch(() => {});
+      } else {
+        el.pause();
+      }
+      return;
     }
+
+    if (bedFadeRaf.current != null) {
+      cancelAnimationFrame(bedFadeRaf.current);
+      bedFadeRaf.current = null;
+    }
+
+    const swapIn = () => {
+      el.src = activeBed.url;
+      el.loop = !bedFolder || bedRepeat === "one";
+      el.volume = 0;
+      if (!shouldPlay) {
+        el.pause();
+        el.volume = targetVol;
+        return;
+      }
+      void el
+        .play()
+        .then(() => {
+          const t0 = performance.now();
+          const tick = (now: number) => {
+            const t = Math.min(1, (now - t0) / CROSSFADE_MS);
+            el.volume = targetVol * t;
+            if (t < 1) {
+              bedFadeRaf.current = requestAnimationFrame(tick);
+              return;
+            }
+            bedFadeRaf.current = null;
+            el.volume = targetVol;
+          };
+          bedFadeRaf.current = requestAnimationFrame(tick);
+        })
+        .catch(() => {});
+    };
+
+    if (!el.paused && el.currentSrc) {
+      const startVol = el.volume;
+      const t0 = performance.now();
+      const tickOut = (now: number) => {
+        const t = Math.min(1, (now - t0) / CROSSFADE_MS);
+        el.volume = startVol * (1 - t);
+        if (t < 1) {
+          bedFadeRaf.current = requestAnimationFrame(tickOut);
+          return;
+        }
+        bedFadeRaf.current = null;
+        el.pause();
+        swapIn();
+      };
+      bedFadeRaf.current = requestAnimationFrame(tickOut);
+      return;
+    }
+
+    swapIn();
   }, [activeBed, bedFolder, bedRepeat, bedPlaying, remoteAudio]);
 
   useEffect(() => {
@@ -1366,6 +1525,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             questionSeconds:
               live.event?.quizSetup.questionSeconds ?? undefined,
             hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
+              rankingEveryN: live.event?.quizSetup.rankingEveryN,
           });
           if (!result.ok) {
             setGoError(result.error);
@@ -2050,7 +2210,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             <p className="casa-sub">
               {bedFolder
                 ? `${bedFolder} · ${bedList.length} brani`
-                : `Colonna · ${casaAutoBedLabel(beat)}`}
+                : `Colonna · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null)}`}
             </p>
             {bedList.length ? (
               <div className="casa-playlist">
@@ -2246,6 +2406,13 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         </div>
 
         <div className="casa-top-mod casa-top-layout">
+          <a
+            className="casa-layout-chip"
+            href={`/admin/${encodeURIComponent(eventCode)}/board`}
+            title="Plancia ufficiale unificata (/board)"
+          >
+            Board
+          </a>
           <CasaLayoutBar
             edit={layoutEdit}
             onEditChange={(edit) => {
@@ -2463,10 +2630,15 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                     type="button"
                     className="casa-hit"
                     onClick={() => siglaFile.current?.click()}
+                    title="Solo emergenza: in produzione usa web/public/grafiche/video/sigla.mp4"
                   >
-                    File sigla
+                    Override sigla (dev)
                   </button>
-                  <span>{siglaSrc.startsWith("blob:") ? "File locale" : siglaSrc}</span>
+                  <span>
+                    {siglaSrc.startsWith("blob:")
+                      ? "Override locale"
+                      : "Bundled · /grafiche/video/sigla.mp4"}
+                  </span>
                 </div>
               </>
             ) : null}
@@ -2718,7 +2890,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                   <span>
                     {bedFolder
                       ? `${bedFolder} · ${bedList.length} brani`
-                      : `Colonna · ${casaAutoBedLabel(beat)}`}
+                      : `Colonna · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null)}`}
                   </span>
                 </div>
                 {bedList.length ? (
@@ -2826,6 +2998,14 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                     onClick={() => patchGuest(picked.id, { gender: "F" })}
                   >
                     F
+                  </button>
+                  <button
+                    type="button"
+                    className="casa-mf"
+                    data-on={picked.gender === "N" ? "1" : undefined}
+                    onClick={() => patchGuest(picked.id, { gender: "N" })}
+                  >
+                    NB
                   </button>
                 </div>
               </div>

@@ -53,43 +53,48 @@ export interface PairForExtraction {
   participant_female_id: string;
 }
 
-export type ParticipantGender = "male" | "female";
+export type ParticipantGender = "male" | "female" | "nonbinary";
 
-/** Coppia valida solo se 1 uomo (U) + 1 donna (D), id distinti. */
-export function isValidMaleFemalePair(
-  maleId: string,
-  femaleId: string,
-  genderById: Map<string, ParticipantGender>,
+/**
+ * Coppia estraibile: due giocatori distinti presenti in sala.
+ * M-F, M-M, F-F e non binary sono tutti validi: il filtro è il «cerco» in matching.
+ */
+export function isValidExtractablePair(
+  aId: string,
+  bId: string,
+  knownIds: Map<string, ParticipantGender>,
 ): boolean {
-  if (!maleId || !femaleId || maleId === femaleId) return false;
-  return (
-    genderById.get(maleId) === "male" &&
-    genderById.get(femaleId) === "female"
-  );
+  if (!aId || !bId || aId === bId) return false;
+  return knownIds.has(aId) && knownIds.has(bId);
 }
 
-export function filterValidMaleFemalePairs<
+/** @deprecated Nome storico. Vale per qualsiasi coppia di giocatori distinti. */
+export const isValidMaleFemalePair = isValidExtractablePair;
+
+export function filterValidExtractablePairs<
   T extends Pick<
     PairForExtraction,
     "participant_male_id" | "participant_female_id"
   >,
->(pairs: T[], genderById: Map<string, ParticipantGender>): T[] {
+>(pairs: T[], knownIds: Map<string, ParticipantGender>): T[] {
   return pairs.filter((pair) =>
-    isValidMaleFemalePair(
+    isValidExtractablePair(
       pair.participant_male_id,
       pair.participant_female_id,
-      genderById,
+      knownIds,
     ),
   );
 }
 
-/** Massimo coppie estratte in esclusiva: min(U, D), opzionale cap da config. */
+/** @deprecated Nome storico. */
+export const filterValidMaleFemalePairs = filterValidExtractablePairs;
+
+/** Massimo coppie estratte in esclusiva: floor(giocatori / 2), opzionale cap da config. */
 export function maxAllowedExtractions(
-  maleCount: number,
-  femaleCount: number,
+  playerCount: number,
   extractionCountLimit: number | null | undefined,
 ): number {
-  const exclusiveCap = Math.min(maleCount, femaleCount);
+  const exclusiveCap = Math.floor(Math.max(0, playerCount) / 2);
   if (
     typeof extractionCountLimit === "number" &&
     extractionCountLimit > 0

@@ -59,6 +59,36 @@ export function animatorAuthHeaders(pin: string | null): HeadersInit {
   return headers;
 }
 
+export async function postSpecialTrialAction(
+  eventCode: string,
+  body: {
+    action:
+      | "book"
+      | "unbook"
+      | "setDuration"
+      | "pickChallenge"
+      | "pickMode"
+      | "setParticipants"
+      | "start"
+      | "close"
+      | "tick";
+    durationSec?: number;
+    challengeId?: "dance" | "declaration" | "approach" | "gaze";
+    mode?: "scegli" | "chiedi";
+    participants?: Array<{ id: string; nickname: string }>;
+  },
+  pin: string | null,
+): Promise<Response> {
+  return fetch(
+    `/api/events/${encodeURIComponent(eventCode)}/special-trial`,
+    {
+      method: "POST",
+      headers: animatorAuthHeaders(pin),
+      body: JSON.stringify(body),
+    },
+  );
+}
+
 export async function postQuizAction(
   eventCode: string,
   body: {
@@ -71,12 +101,20 @@ export async function postQuizAction(
       | "setAutoplayEnabled"
       | "tick"
       | "skipPhase"
-      | "setPhase";
+      | "setPhase"
+      | "replaceNextQuestion"
+      | "setSkipResults"
+      | "resumeAt";
     autoplaySeconds?: number;
     questionCount?: number;
     questionSeconds?: number;
     hideRankingLastN?: number;
+    rankingEveryN?: number;
     enabled?: boolean;
+    skipResults?: boolean;
+    skipStartCountdown?: boolean;
+    targetIndex?: number;
+    questionIds?: string[];
     displayPhase?:
       | "start_countdown"
       | "theme_intro"
@@ -92,6 +130,27 @@ export async function postQuizAction(
     headers: animatorAuthHeaders(pin),
     body: JSON.stringify(body),
   });
+}
+
+export async function postQuestionReport(
+  eventCode: string,
+  body: {
+    questionId?: string;
+    category: string;
+    body: string;
+    options: string[];
+    cueIndex?: number;
+  },
+  pin: string | null,
+): Promise<Response> {
+  return fetch(
+    `/api/events/${encodeURIComponent(eventCode)}/quiz/report`,
+    {
+      method: "POST",
+      headers: animatorAuthHeaders(pin),
+      body: JSON.stringify(body),
+    },
+  );
 }
 
 export async function postDisplayAudioStart(
@@ -220,7 +279,9 @@ export async function createParticipant(
   body: {
     nickname: string;
     realName?: string | null;
-    gender: "male" | "female";
+    gender: "male" | "female" | "nonbinary";
+    seeking?: "male" | "female" | "both" | null;
+    ageBand?: "18_29" | "30_39" | "40_49" | "50_plus" | null;
     badgeCode?: string | null;
   },
   pin: string | null,
@@ -238,7 +299,9 @@ export async function updateParticipant(
   body: {
     nickname?: string;
     realName?: string | null;
-    gender?: "male" | "female";
+    gender?: "male" | "female" | "nonbinary";
+    seeking?: "male" | "female" | "both" | null;
+    ageBand?: "18_29" | "30_39" | "40_49" | "50_plus" | null;
     badgeCode?: string | null;
     forceOffline?: boolean;
   },
@@ -289,7 +352,7 @@ export function playerTerminalTestUrl(
   player: {
     id: string;
     nickname: string;
-    gender: "male" | "female";
+    gender: "male" | "female" | "nonbinary";
     badge_code: string | null;
   },
 ): string {

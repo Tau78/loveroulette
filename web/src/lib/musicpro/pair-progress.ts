@@ -1,10 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   filterPairsAvailableForExtraction,
-  filterValidMaleFemalePairs,
+  filterValidExtractablePairs,
   maxAllowedExtractions,
   type ParticipantGender,
 } from "@/lib/matching/affinity";
+import { parseLoveRouletteGender } from "@/lib/player/identity";
 import { parseLoveRouletteConfig } from "./event-config";
 
 export interface PairProgress {
@@ -50,11 +51,10 @@ async function loadParticipantGenderContext(
 
   for (const row of data ?? []) {
     const id = String(row.id);
-    const gender: ParticipantGender =
-      row.gender === "female" ? "female" : "male";
+    const gender: ParticipantGender = parseLoveRouletteGender(row.gender);
     genderById.set(id, gender);
     if (gender === "male") maleCount++;
-    else femaleCount++;
+    else if (gender === "female") femaleCount++;
   }
 
   return { genderById, maleCount, femaleCount };
@@ -100,14 +100,14 @@ export async function getPairProgress(
 
   const shownCount = typedPairs.filter((pair) => pair.was_shown).length;
   const activePairCount = typedPairs.filter((pair) => !pair.is_eliminated).length;
+  const playerCount = genderById.size;
   const maxExtractions = maxAllowedExtractions(
-    maleCount,
-    femaleCount,
+    playerCount,
     config.extraction_count,
   );
 
   const eligibleForExtraction = filterPairsAvailableForExtraction(
-    filterValidMaleFemalePairs(
+    filterValidExtractablePairs(
       typedPairs.map((row) => ({
         id: row.id,
         rank: row.rank,
@@ -121,8 +121,7 @@ export async function getPairProgress(
   );
 
   const canExtractMore =
-    maleCount > 0 &&
-    femaleCount > 0 &&
+    playerCount >= 2 &&
     shownCount < maxExtractions &&
     eligibleForExtraction.length > 0;
 

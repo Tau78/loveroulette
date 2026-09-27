@@ -1135,7 +1135,8 @@ html.casa-native-chrome .casa {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
+  /* visible: il countdown nel bump del footer non deve essere clipato */
+  overflow: visible;
 }
 
 .casa-proj-quiz-shell > .casa-proj-center,

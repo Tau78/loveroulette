@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { playCountdownWhoosh } from "@/lib/audio/countdown-whoosh";
 import { cn } from "@/lib/utils";
 import {
   DISPLAY_COUNTDOWN_DIGIT_CLASS,
@@ -35,6 +36,12 @@ export function DisplayQuizLaunchSpectacle({
     remaining > 0 ? "countdown" : "reveal",
   );
   const displayValue = remaining > 0 ? remaining : null;
+
+  useEffect(() => {
+    if (displayValue != null && displayValue > 0) {
+      playCountdownWhoosh();
+    }
+  }, [displayValue]);
 
   useEffect(() => {
     if (remaining > 0) {

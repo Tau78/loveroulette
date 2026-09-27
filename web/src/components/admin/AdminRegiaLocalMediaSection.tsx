@@ -49,11 +49,12 @@ export function AdminRegiaLocalMediaSection({
 
   return (
     <section
-      className="space-y-2"
+      className="casa-regia-block space-y-1.5"
       title="Seleziona cartella sul PC e mandala in loop sul proiettore (stesso browser). Video muti per non coprire la colonna sonora."
     >
+      <p className="casa-board-prep-kicker">Media locale</p>
       {!supported ? (
-        <p className="text-xs text-destructive">
+        <p className="casa-board-prep-hint text-destructive">
           Browser non supportato per la sincronizzazione locale.
         </p>
       ) : null}
@@ -75,7 +76,7 @@ export function AdminRegiaLocalMediaSection({
       />
 
       <div
-        className="flex flex-wrap gap-1.5"
+        className="casa-board-prep-row"
         title={
           folderName
             ? `${folderName} · ${itemCount} file · ${playing ? "in riproduzione" : "in pausa"} · ${muted ? "muto" : "audio attivo"}`
@@ -86,6 +87,7 @@ export function AdminRegiaLocalMediaSection({
           type="button"
           size="sm"
           variant="outline"
+          className="h-8"
           disabled={disabled || !supported}
           onClick={() => void handleOpenFolder()}
         >
@@ -99,6 +101,7 @@ export function AdminRegiaLocalMediaSection({
               <AdminButton
                 type="button"
                 size="sm"
+                className="h-8"
                 disabled={disabled || itemCount === 0}
                 onClick={startPlayback}
               >
@@ -110,6 +113,7 @@ export function AdminRegiaLocalMediaSection({
                 type="button"
                 size="sm"
                 variant="outline"
+                className="h-8"
                 disabled={disabled}
                 onClick={stopPlayback}
               >
@@ -122,6 +126,7 @@ export function AdminRegiaLocalMediaSection({
               type="button"
               size="sm"
               variant={muted ? "secondary" : "outline"}
+              className="h-8"
               disabled={disabled || itemCount === 0}
               onClick={toggleMute}
               title={
@@ -142,12 +147,16 @@ export function AdminRegiaLocalMediaSection({
               type="button"
               size="sm"
               variant="ghost"
+              className="h-8"
               disabled={disabled}
               onClick={clearFolder}
             >
               <X className="size-3.5" />
               Chiudi
             </AdminButton>
+            <span className="casa-board-prep-hint truncate max-w-[12rem]">
+              {folderName} · {itemCount}
+            </span>
           </>
         ) : null}
       </div>

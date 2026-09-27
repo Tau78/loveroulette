@@ -23,14 +23,12 @@ import { AdminRegiaPanel } from "@/components/admin/AdminRegiaPanel";
 import { AdminSettingsPanel } from "@/components/admin/AdminSettingsPanel";
 import { AdminTransportBar } from "@/components/admin/AdminTransportBar";
 import { DisplayPreview } from "@/components/admin/DisplayPreview";
-import { AdminButton } from "@/components/admin/AdminButton";
 import { useAnimatorPin } from "@/hooks/useAnimatorPin";
 import { useLoveRouletteSession } from "@/hooks/useLoveRouletteSession";
 import type { EventStats } from "@/lib/musicpro/session";
 import type { LoveRouletteEvent } from "@/lib/musicpro/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import { normalizeEventSlug } from "@/lib/musicpro/slug";
-import { postQuizAction } from "@/lib/admin/animator-api";
 import type { ExtractionMode } from "@/lib/types";
 
 interface SessionPayload {
@@ -298,6 +296,19 @@ export default function AdminDashboardPage() {
         onRefreshProgress={refreshSessionStats}
         hideTransportActions
       />
+      <AdminNewGamePanel
+        variant="deck"
+        eventCode={eventCode}
+        animatorPin={pin}
+        disabled={controlsDisabled}
+        onInvalidPin={handleInvalidPin}
+        onReset={() => void handleResetComplete()}
+      />
+    </>
+  );
+
+  const regiaMancheSlot = (
+    <>
       {runtimeState === "lobby" ? (
         <AdminQuizPrepPanel
           variant="deck"
@@ -327,33 +338,9 @@ export default function AdminDashboardPage() {
       ) : null}
       {runtimeState === "quiz" && !quizState ? (
         <AdminDeckPanel title="Quiz vuoto" collapsible={false}>
-          <AdminButton
-            size="sm"
-            disabled={controlsDisabled}
-            onClick={() =>
-              void postQuizAction(eventCode, { action: "start" }, pin).then(
-                async (res) => {
-                  if (!res.ok) return;
-                  const data = (await res.json()) as {
-                    quiz: QuizSessionState | null;
-                  };
-                  handleQuizChange(data.quiz ?? null);
-                },
-              )
-            }
-          >
-            Carica
-          </AdminButton>
+          <p className="text-[10px] text-muted-foreground">Nessuna domanda in sessione.</p>
         </AdminDeckPanel>
       ) : null}
-      <AdminNewGamePanel
-        variant="deck"
-        eventCode={eventCode}
-        animatorPin={pin}
-        disabled={controlsDisabled}
-        onInvalidPin={handleInvalidPin}
-        onReset={() => void handleResetComplete()}
-      />
     </>
   );
 
@@ -376,6 +363,7 @@ export default function AdminDashboardPage() {
         animatorPin={pin}
         disabled={controlsDisabled}
         onInvalidPin={handleInvalidPin}
+        mancheSlot={regiaMancheSlot}
       />
     </>
   );
@@ -410,12 +398,19 @@ export default function AdminDashboardPage() {
     </>
   );
 
-  const deck =
-    activeTab === "controlli"
-      ? deckControlli
-      : activeTab === "regia"
-        ? deckRegia
-        : deckSetup;
+  const deck = (
+    <>
+      <div className={activeTab === "controlli" ? "contents" : "hidden"} aria-hidden={activeTab !== "controlli"}>
+        {deckControlli}
+      </div>
+      <div className={activeTab === "regia" ? "contents" : "hidden"} aria-hidden={activeTab !== "regia"}>
+        {deckRegia}
+      </div>
+      <div className={activeTab === "impostazioni" ? "contents" : "hidden"} aria-hidden={activeTab !== "impostazioni"}>
+        {deckSetup}
+      </div>
+    </>
+  );
 
   return (
     <>

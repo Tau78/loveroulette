@@ -17,9 +17,15 @@ describe("quiz-theme-tracks", () => {
     expect(trackIdForQuizPhase("question", "fun")).toBe("LR_02_Quiz_Tension");
   });
 
-  it("uses results reveal bed on results phase", () => {
+  it("switches to countdown bed when answers appear", () => {
+    expect(trackIdForQuizPhase("answers", "romantic")).toBe(
+      "LR_03_Quiz_Countdown",
+    );
+  });
+
+  it("uses long hold bed on results (reveal hit is one-shot elsewhere)", () => {
     expect(trackIdForQuizPhase("results", "romantic")).toBe(
-      "LR_25_Quiz_Results_Reveal",
+      "LR_02_Quiz_Tension",
     );
   });
 });

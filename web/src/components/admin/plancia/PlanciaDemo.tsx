@@ -27,7 +27,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-export function PlanciaDemo() {
+export function PlanciaDemo({ embedded = false }: { embedded?: boolean }) {
   const [state, dispatch] = useReducer(
     planciaReducer,
     undefined,
@@ -69,6 +69,7 @@ export function PlanciaDemo() {
   }, [state.phase]);
 
   useEffect(() => {
+    if (embedded) return;
     const html = document.documentElement;
     const body = document.body;
     html.classList.add("admin-console-root");
@@ -77,7 +78,7 @@ export function PlanciaDemo() {
       html.classList.remove("admin-console-root");
       body.classList.remove("overflow-hidden");
     };
-  }, []);
+  }, [embedded]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -111,7 +112,13 @@ export function PlanciaDemo() {
   }, []);
 
   return (
-    <div className="plancia-console theme-dark-fuchsia flex h-screen w-screen flex-col overflow-hidden">
+    <div
+      className={
+        embedded
+          ? "plancia-console theme-dark-fuchsia flex h-full min-h-0 w-full flex-col overflow-hidden"
+          : "plancia-console theme-dark-fuchsia flex h-screen w-screen flex-col overflow-hidden"
+      }
+    >
       <PlanciaHeader
         state={state}
         onBlackout={() => run({ type: "set_panic", key: "blackout" })}

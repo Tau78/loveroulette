@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getQuestionAnswerStats } from "@/lib/musicpro/quiz-results";
+import { getQuestionAnswerStats, orderQuestionResultsForDisplay } from "@/lib/musicpro/quiz-results";
 import { getLoveRouletteEvent } from "@/lib/musicpro/resolve-event";
 import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
@@ -36,7 +36,9 @@ export async function GET(
       questionId,
     );
 
-    return NextResponse.json(stats);
+    return NextResponse.json(
+      orderQuestionResultsForDisplay(stats, slug),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Stats unavailable";
     return NextResponse.json({ error: message }, { status: 503 });

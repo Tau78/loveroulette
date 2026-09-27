@@ -9,6 +9,7 @@ import {
 import type { AdminParticipantRow } from "@/lib/musicpro/participant-admin";
 import { participantAppearsOnline } from "@/lib/musicpro/presence";
 import type { VotingFinalist } from "@/lib/musicpro/voting";
+import { stageLetter } from "@/lib/player/identity";
 
 export type WidgetLeaderboardProps = {
   /** Max rows to show (default 12). */
@@ -120,7 +121,7 @@ export function WidgetLeaderboard({
         id: p.id,
         label: p.nickname,
         score: null,
-        meta: `${index + 1} · ${p.gender === "female" ? "F" : "M"}`,
+        meta: `${index + 1} · ${stageLetter(p.gender)}`,
         online: participantAppearsOnline(p),
       }));
   }, [finalsShow, limit, participants, voting.current]);

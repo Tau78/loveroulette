@@ -28,11 +28,12 @@ const baseQuiz = (): QuizSessionState => ({
   autoplayEnabled: true,
   autoplaySeconds: 15,
   hideRankingLastN: 5,
+  rankingEveryN: 5,
 });
 
 describe("session-sync", () => {
-  it("does not catch up an expired answers lock — AVANTI rivela le %", () => {
-    expect(quizNeedsServerCatchUp(baseQuiz())).toBe(false);
+  it("catches up expired answers so % reveal without AVANTI", () => {
+    expect(quizNeedsServerCatchUp(baseQuiz())).toBe(true);
   });
 
   it("catches up start_countdown when the launch clock is done", () => {

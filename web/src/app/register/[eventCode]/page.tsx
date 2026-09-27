@@ -3,7 +3,13 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import { PlayerIdentityFields } from "@/components/player/PlayerIdentityFields";
 import { DataVisibilitySelector } from "@/components/player/DataVisibilitySelector";
+import type {
+  LoveRouletteAgeBand,
+  LoveRouletteGender,
+  LoveRouletteSeeking,
+} from "@/lib/player/identity";
 import { DEFAULT_PARTICIPANT_DATA_VISIBILITY } from "@/lib/player/data-visibility";
 import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
 import {
@@ -18,7 +24,9 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [realName, setRealName] = useState("");
   const [nickname, setNickname] = useState("");
-  const [gender, setGender] = useState<"male" | "female">("male");
+  const [gender, setGender] = useState<LoveRouletteGender | null>(null);
+  const [seeking, setSeeking] = useState<LoveRouletteSeeking | null>(null);
+  const [ageBand, setAgeBand] = useState<LoveRouletteAgeBand | null>(null);
   const [dataVisibility, setDataVisibility] = useState<ParticipantDataVisibility>(
     DEFAULT_PARTICIPANT_DATA_VISIBILITY,
   );
@@ -34,6 +42,10 @@ export default function RegisterPage() {
     }
     if (!dataVisibility) {
       setFormError("Scegli chi può vedere i tuoi dati personali.");
+      return;
+    }
+    if (!gender || !seeking || !ageBand) {
+      setFormError("Scegli chi sei, chi cerchi e la fascia d’età.");
       return;
     }
     if (!consent) {
@@ -153,25 +165,24 @@ export default function RegisterPage() {
             </div>
           ) : null}
 
-          <div>
-            <label className="block text-sm text-muted mb-1">Genere</label>
-            <div className="grid grid-cols-2 gap-3">
-              {(["male", "female"] as const).map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setGender(g)}
-                  className={`rounded-lg py-3 font-medium border ${
-                    gender === g
-                      ? "border-accent bg-accent/20 text-accent"
-                      : "border-muted/30 bg-surface"
-                  }`}
-                >
-                  {g === "male" ? "Uomo" : "Donna"}
-                </button>
-              ))}
-            </div>
-          </div>
+          <PlayerIdentityFields
+            gender={gender}
+            seeking={seeking}
+            ageBand={ageBand}
+            invalid={Boolean(formError) && (!gender || !seeking || !ageBand)}
+            onGender={(value) => {
+              setGender(value);
+              if (formError) setFormError(null);
+            }}
+            onSeeking={(value) => {
+              setSeeking(value);
+              if (formError) setFormError(null);
+            }}
+            onAgeBand={(value) => {
+              setAgeBand(value);
+              if (formError) setFormError(null);
+            }}
+          />
 
           <DataVisibilitySelector
             value={dataVisibility}

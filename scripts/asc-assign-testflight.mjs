@@ -90,8 +90,10 @@ if (!build) {
 }
 
 const version = build.attributes?.version;
-await req("POST", `/v1/betaGroups/${GROUP_ID}/relationships/builds`, {
-  data: [{ type: "builds", id: build.id }],
-});
-console.log(`TestFlight gruppo Test → build ${version} (${build.id}).`);
+for (const groupId of GROUP_IDS) {
+  await req("POST", `/v1/betaGroups/${groupId}/relationships/builds`, {
+    data: [{ type: "builds", id: build.id }],
+  });
+  console.log(`TestFlight gruppo ${groupId} → build ${version} (${build.id}).`);
+}
 console.log("Tira giù per aggiornare in TestFlight.");

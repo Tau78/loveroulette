@@ -8,6 +8,11 @@ import type { FinalistCouple, LastElimination } from "@/lib/musicpro/elimination
 import type { LoveRouletteEvent } from "@/lib/musicpro/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import type { FinalsShowState } from "@/lib/musicpro/finals-show";
+import {
+  isSpecialTrialRunningExpired,
+  mergeSpecialTrialState,
+  type SpecialTrialState,
+} from "@/lib/musicpro/special-trial";
 import type { VotingMetadata, VotingSessionState } from "@/lib/musicpro/voting";
 import {
   deriveSyncStatus,
@@ -84,8 +89,13 @@ export interface UseLoveRouletteSessionResult {
   finalists: FinalistCouple[];
   voting: VotingMetadata;
   finalsShow: FinalsShowState | null;
+  specialTrial: SpecialTrialState | null;
   joinUrl: string | null;
   resyncNow: () => Promise<void>;
+  applySpecialTrialUpdate: (
+    trial: SpecialTrialState | null,
+    quiz?: QuizSessionState | null,
+  ) => void;
   applyQuizUpdate: (
     quiz: QuizSessionState | null,
     runtimeState?: EventState,
@@ -112,6 +122,7 @@ function applyEventPayload(
     setFinalists: (f: FinalistCouple[]) => void;
     setVoting: (v: VotingMetadata) => void;
     setFinalsShow: (s: FinalsShowState | null) => void;
+    setSpecialTrial: (s: SpecialTrialState | null) => void;
     setJoinUrl: (url: string) => void;
   },
 ) {
@@ -126,6 +137,7 @@ function applyEventPayload(
   setters.setFinalists(data.finalists ?? []);
   setters.setVoting(data.voting ?? { current: null, completed: {} });
   setters.setFinalsShow(data.finalsShow ?? null);
+  setters.setSpecialTrial(data.specialTrial ?? null);
   setters.setJoinUrl(data.joinUrl);
 }
 
@@ -202,6 +214,9 @@ export function useLoveRouletteSession(
   const [finalsShow, setFinalsShow] = useState<FinalsShowState | null>(
     initialEvent?.finalsShow ?? null,
   );
+  const [specialTrial, setSpecialTrial] = useState<SpecialTrialState | null>(
+    initialEvent?.specialTrial ?? null,
+  );
 
   const resyncInFlightRef = useRef(false);
   const seededEventKeyRef = useRef<string | null>(null);
@@ -218,6 +233,16 @@ export function useLoveRouletteSession(
       }
     },
     [],
+  );
+
+  const applySpecialTrialUpdate = useCallback(
+    (trial: SpecialTrialState | null, quiz?: QuizSessionState | null) => {
+      setSpecialTrial((prev) => mergeSpecialTrialState(prev, trial));
+      if (quiz !== undefined) {
+        applyQuizUpdate(quiz);
+      }
+    },
+    [applyQuizUpdate],
   );
 
   const applyFinalsUpdate = useCallback(
@@ -256,6 +281,9 @@ export function useLoveRouletteSession(
       mergeVotingMetadata(prev, data.voting ?? { current: null, completed: {} }),
     );
     setFinalsShow((prev) => mergeFinalsShow(prev, data.finalsShow ?? null));
+    setSpecialTrial((prev) =>
+      mergeSpecialTrialState(prev, data.specialTrial ?? null),
+    );
     setJoinUrl(data.joinUrl);
     setRuntimeState(data.runtimeState);
     setLastSyncedAt(Date.now());
@@ -287,6 +315,7 @@ export function useLoveRouletteSession(
           runtimeState: data.runtimeState,
           quiz: data.quizState ?? null,
           finalsShow: data.finalsShow ?? null,
+          specialTrial: data.specialTrial ?? null,
           handlers: {
             onQuiz: applyQuizUpdate,
             onFinals: applyFinalsUpdate,
@@ -327,6 +356,7 @@ export function useLoveRouletteSession(
       setFinalists,
       setVoting,
       setFinalsShow,
+      setSpecialTrial,
       setJoinUrl,
     });
     setLastSyncedAt(Date.now());
@@ -363,6 +393,7 @@ export function useLoveRouletteSession(
                 runtimeState: data.runtimeState,
                 quiz: data.quizState ?? null,
                 finalsShow: data.finalsShow ?? null,
+                specialTrial: data.specialTrial ?? null,
                 handlers: {
                   onQuiz: applyQuizUpdate,
                   onFinals: applyFinalsUpdate,
@@ -441,6 +472,46 @@ export function useLoveRouletteSession(
         applyPollPayload(data);
 
         if (
+          data.specialTrial &&
+          isSpecialTrialRunningExpired(data.specialTrial)
+        ) {
+          const tickRes = await fetch(
+            `/api/events/${encodeURIComponent(eventSlug)}/special-trial`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "tick" }),
+            },
+          );
+          if (tickRes.ok && !cancelled) {
+            const tickData = (await tickRes.json()) as LoveRouletteEvent & {
+              specialTrial?: SpecialTrialState | null;
+              quiz?: QuizSessionState | null;
+            };
+            applySpecialTrialUpdate(
+              tickData.specialTrial ?? null,
+              tickData.quiz,
+            );
+          }
+        }
+
+        if (
+          data.runtimeState === "quiz" &&
+          data.quizState &&
+          data.quizState.autoplayEnabled === true
+        ) {
+          await runSessionCatchUp({
+            eventSlug,
+            runtimeState: data.runtimeState,
+            quiz: data.quizState ?? null,
+            finalsShow: data.finalsShow ?? null,
+            specialTrial: data.specialTrial ?? null,
+            handlers: {
+              onQuiz: applyQuizUpdate,
+              onFinals: applyFinalsUpdate,
+            },
+          });
+        } else if (
           data.runtimeState === "finals" &&
           data.finalsShow &&
           finalsNeedsServerCatchUp(data.finalsShow)
@@ -450,6 +521,7 @@ export function useLoveRouletteSession(
             runtimeState: data.runtimeState,
             quiz: data.quizState ?? null,
             finalsShow: data.finalsShow,
+            specialTrial: data.specialTrial ?? null,
             handlers: {
               onQuiz: applyQuizUpdate,
               onFinals: applyFinalsUpdate,
@@ -473,6 +545,7 @@ export function useLoveRouletteSession(
     applyFinalsUpdate,
     applyPollPayload,
     applyQuizUpdate,
+    applySpecialTrialUpdate,
     enabled,
     eventSlug,
     runtimeState,
@@ -526,9 +599,11 @@ export function useLoveRouletteSession(
     finalists,
     voting,
     finalsShow,
+    specialTrial,
     joinUrl,
     resyncNow,
     applyQuizUpdate,
     applyFinalsUpdate,
+    applySpecialTrialUpdate,
   };
 }

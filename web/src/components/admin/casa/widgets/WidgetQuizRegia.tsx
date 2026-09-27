@@ -91,6 +91,7 @@ function WidgetQuizRegiaBody() {
               questionCount: event?.quizSetup.questionCount ?? undefined,
               questionSeconds: event?.quizSetup.questionSeconds ?? undefined,
               hideRankingLastN: event?.quizSetup.hideRankingLastN,
+              rankingEveryN: event?.quizSetup.rankingEveryN,
             }).then((result) => {
               if (result.ok) setQuestionsRefreshKey((k) => k + 1);
             });

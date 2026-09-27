@@ -7,6 +7,7 @@ import { DisplayFinalsStage } from "@/components/display/DisplayFinalsStage";
 import { DisplayOverlay } from "@/components/display/DisplayOverlay";
 import { DisplayMatchingStage } from "@/components/display/DisplayMatchingStage";
 import { DisplayQuizStage } from "@/components/display/DisplayQuizStage";
+import { DisplaySpecialTrialStage } from "@/components/display/DisplaySpecialTrialStage";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { DisplayEliminationStage } from "@/components/display/DisplayEliminationStage";
@@ -84,10 +85,18 @@ export default function DisplayPage() {
     displayAudioCue,
     applyQuizUpdate,
     applyFinalsUpdate,
+    applySpecialTrialUpdate,
+    specialTrial,
     syncStatus,
   } = useLoveRouletteSession({
     eventSlug,
   });
+
+  const showSpecialTrial =
+    specialTrial != null &&
+    (specialTrial.status === "setup" ||
+      specialTrial.status === "running" ||
+      specialTrial.status === "closing");
 
   const { remaining: finalsRemaining } = useFinalsShowSync({
     eventSlug,
@@ -250,6 +259,30 @@ export default function DisplayPage() {
           <DisplayEliminationStage
             lastElimination={lastElimination}
             finalists={finalists}
+          />
+        ) : runtimeState === "quiz" && showSpecialTrial && specialTrial ? (
+          <DisplaySpecialTrialStage
+            trial={specialTrial}
+            eventSlug={displayCode}
+            onTick={() => {
+              void fetch(
+                `/api/events/${encodeURIComponent(eventSlug)}/special-trial`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "tick" }),
+                },
+              )
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                  if (data) {
+                    applySpecialTrialUpdate(
+                      data.specialTrial ?? null,
+                      data.quiz,
+                    );
+                  }
+                });
+            }}
           />
         ) : runtimeState === "quiz" && quizState ? (
           <DisplayQuizStage

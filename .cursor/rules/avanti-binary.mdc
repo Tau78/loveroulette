@@ -30,15 +30,30 @@ Un tap AVANTI = **un** passo di stato condiviso. Display `/display`, anteprima i
 
 ## Skip non bloccante + log
 
-Se un passaggio previsto non avviene (slide saltata, ranking nascosto, client desync): **non bloccare** la serata. Scrivi un log leggibile (`[avanti-binary] skipped … from→to reason=…`) consultabile in console/regia. Skip intenzionali (premio/sponsor Salta, ultime N senza classifica) restano previsti dalla scaletta.
+Se un passaggio previsto non avviene (slide saltata, client desync): **non bloccare** la serata. Scrivi un log leggibile (`[avanti-binary] skipped … from→to reason=…`) consultabile in console/regia. Skip intenzionali (premio/sponsor Salta) restano previsti dalla scaletta.
 
 ## Scaletta canonica (non riordinare)
 
 1. **Lobby** (`casa`) — QR, nick, sala si siede.
 2. **Inizio → Sigla** — AVANTI «Sigla» → `sigla/warn`; AVANTI «Parte ora» → video+audio `on`; AVANTI → fuori sigla.
-3. **Apertura show** — `pres` → `regole` → `finale` → `premio`* → `sponsor`* → `stasera` → `presenti` (uno a uno) → `stacco` (5–4–3–2–1). \*saltabili.
-4. **Domande (quiz)** — countdown avvio (solo all’inizio) → per ogni domanda: tema → domanda → risposte+timer → lock auto → % risultati → classifica* → riparte dal tema. \*no classifica sulle ultime N.
+3. **Apertura show** — `pres` → `regole` → `finale` → `premio`* → `sponsor`* → `stasera` → `presenti` (uno a uno) → `stacco` (5–4–3–2–1, woosh). A fine stacco: quiz sull’argomento senza click. \*saltabili.
+4. **Domande (quiz) — BINARIO (Mauro 2026-09-27 + classifiche intermedie)**
+
+   Per ogni domanda:
+
+   1. **LEGGO ARGOMENTO** (`theme_intro`) → **CLICK** AVANTI
+   2. **LEGGO DOMANDA** (`question`) → **CLICK** AVANTI
+   3. **APPAIONO LE RISPOSTE + COUNTDOWN** (`answers`, cambia musica) — auto
+   4. Fine countdown → **PERCENTUALI** (`results`, cambia musica) — auto, niente click
+      · **Al Buio live** (plancia): salta le % da ora fino a fine manche (`skipResults`)
+   5. Se **classifica intermedia** (ogni N, non ultima, non in Al Buio setup) → hold `next_question` → **CLICK** AVANTI → prossimo tema
+   6. Altrimenti **CLICK** AVANTI dalle % → prossimo tema (`advance_index`)
+
+   Con 15 domande / ogni 5 / Al Buio 5: classifica a **5** e **10**; **mai a 15** (c’è la finale matching).
+   Pulsante plancia **Classifica** = forza hold `next_question` ora.
+
 5. **Prosecuzione** — fine quiz → matching → extraction → elimination.
 6. **Finale** — finals (prove) → winner → closed.
 
-Solo auto: countdown avvio sigla/stacco/quiz e timer risposte (lock tastiere). Reveal % e ogni hold = AVANTI (o Auto esplicito).
+**Solo auto:** countdown avvio/stacco; timer risposte → %.  
+**Sempre AVANTI:** tema, domanda, % (o classifica intermedia) → avanti.

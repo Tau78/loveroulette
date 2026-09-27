@@ -36,6 +36,17 @@ import { cn } from "@/lib/utils";
 import { useAnimatorPin } from "@/hooks/useAnimatorPin";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import {
+  ageBandLabel,
+  genderChoiceLabel,
+  seekingChoiceLabel,
+  LOVE_ROULETTE_AGE_BANDS,
+  LOVE_ROULETTE_GENDERS,
+  LOVE_ROULETTE_SEEKING,
+  type LoveRouletteAgeBand,
+  type LoveRouletteGender,
+  type LoveRouletteSeeking,
+} from "@/lib/player/identity";
+import {
   NICKNAME_FROM_REAL_NAME_PROMPT,
   nicknameSaveErrorMessage,
   resolveNicknameOnSave,
@@ -72,12 +83,18 @@ export function AdminPlayersManager({
   const [editNick, setEditNick] = useState("");
   const [editRealName, setEditRealName] = useState("");
   const [editBadge, setEditBadge] = useState("");
-  const [editGender, setEditGender] = useState<"male" | "female">("male");
+  const [editGender, setEditGender] = useState<LoveRouletteGender>("male");
+  const [editSeeking, setEditSeeking] = useState<LoveRouletteSeeking>("female");
+  const [editAgeBand, setEditAgeBand] = useState<LoveRouletteAgeBand | null>(
+    "18_29",
+  );
   const [showAdd, setShowAdd] = useState(false);
   const [newNick, setNewNick] = useState("");
   const [newRealName, setNewRealName] = useState("");
   const [newBadge, setNewBadge] = useState("");
-  const [newGender, setNewGender] = useState<"male" | "female">("male");
+  const [newGender, setNewGender] = useState<LoveRouletteGender>("male");
+  const [newSeeking, setNewSeeking] = useState<LoveRouletteSeeking>("female");
+  const [newAgeBand, setNewAgeBand] = useState<LoveRouletteAgeBand>("18_29");
   const [pendingNickConfirm, setPendingNickConfirm] = useState<
     null | "create" | { playerId: string }
   >(null);
@@ -173,6 +190,8 @@ export function AdminPlayersManager({
           nickname: resolved.nickname,
           realName: resolved.realName || null,
           gender: newGender,
+          seeking: newSeeking,
+          ageBand: newAgeBand,
           badgeCode: newBadge.trim() || null,
         },
         pin,
@@ -192,6 +211,8 @@ export function AdminPlayersManager({
       setNewRealName("");
       setNewBadge("");
       setNewGender("male");
+      setNewSeeking("female");
+      setNewAgeBand("18_29");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore di rete.");
@@ -206,6 +227,8 @@ export function AdminPlayersManager({
     setEditRealName(player.real_name ?? "");
     setEditBadge(player.badge_code ?? "");
     setEditGender(player.gender);
+    setEditSeeking(player.seeking);
+    setEditAgeBand(player.age_band);
     setPendingDeletePlayer(null);
     setPendingNickConfirm(null);
   }
@@ -242,6 +265,8 @@ export function AdminPlayersManager({
           nickname: resolved.nickname,
           realName: resolved.realName || null,
           gender: editGender,
+          seeking: editSeeking,
+          ageBand: editAgeBand,
           badgeCode: editBadge.trim() || null,
         },
         pin,
@@ -592,12 +617,53 @@ export function AdminPlayersManager({
                     id="new-gender"
                     value={newGender}
                     onChange={(e) =>
-                      setNewGender(e.target.value as "male" | "female")
+                      setNewGender(e.target.value as LoveRouletteGender)
                     }
                     className="h-8 w-full rounded-md border border-input bg-input/30 px-2 text-sm"
                   >
-                    <option value="male">Uomo</option>
-                    <option value="female">Donna</option>
+                    {LOVE_ROULETTE_GENDERS.map((value) => (
+                      <option key={value} value={value}>
+                        {genderChoiceLabel(value)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="new-seeking" className="text-xs">
+                    Cerco
+                  </Label>
+                  <select
+                    id="new-seeking"
+                    value={newSeeking}
+                    onChange={(e) =>
+                      setNewSeeking(e.target.value as LoveRouletteSeeking)
+                    }
+                    className="h-8 w-full rounded-md border border-input bg-input/30 px-2 text-sm"
+                  >
+                    {LOVE_ROULETTE_SEEKING.map((value) => (
+                      <option key={value} value={value}>
+                        {seekingChoiceLabel(value)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="new-age" className="text-xs">
+                    Età
+                  </Label>
+                  <select
+                    id="new-age"
+                    value={newAgeBand}
+                    onChange={(e) =>
+                      setNewAgeBand(e.target.value as LoveRouletteAgeBand)
+                    }
+                    className="h-8 w-full rounded-md border border-input bg-input/30 px-2 text-sm"
+                  >
+                    {LOVE_ROULETTE_AGE_BANDS.map((value) => (
+                      <option key={value} value={value}>
+                        {ageBandLabel(value)}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -719,22 +785,58 @@ export function AdminPlayersManager({
                           </td>
                           <td className="px-3 py-2 hidden lg:table-cell">
                             {isEditing ? (
-                              <select
-                                value={editGender}
-                                onChange={(e) =>
-                                  setEditGender(
-                                    e.target.value as "male" | "female",
-                                  )
-                                }
-                                className="h-7 rounded-md border border-input bg-input/30 px-2 text-xs"
-                              >
-                                <option value="male">Uomo</option>
-                                <option value="female">Donna</option>
-                              </select>
-                            ) : player.gender === "female" ? (
-                              "Donna"
+                              <div className="flex flex-wrap gap-1">
+                                <select
+                                  value={editGender}
+                                  onChange={(e) =>
+                                    setEditGender(
+                                      e.target.value as LoveRouletteGender,
+                                    )
+                                  }
+                                  className="h-7 rounded-md border border-input bg-input/30 px-2 text-xs"
+                                  aria-label="Sono"
+                                >
+                                  {LOVE_ROULETTE_GENDERS.map((value) => (
+                                    <option key={value} value={value}>
+                                      {genderChoiceLabel(value)}
+                                    </option>
+                                  ))}
+                                </select>
+                                <select
+                                  value={editSeeking}
+                                  onChange={(e) =>
+                                    setEditSeeking(
+                                      e.target.value as LoveRouletteSeeking,
+                                    )
+                                  }
+                                  className="h-7 rounded-md border border-input bg-input/30 px-2 text-xs"
+                                  aria-label="Cerco"
+                                >
+                                  {LOVE_ROULETTE_SEEKING.map((value) => (
+                                    <option key={value} value={value}>
+                                      {seekingChoiceLabel(value)}
+                                    </option>
+                                  ))}
+                                </select>
+                                <select
+                                  value={editAgeBand ?? ""}
+                                  onChange={(e) =>
+                                    setEditAgeBand(
+                                      e.target.value as LoveRouletteAgeBand,
+                                    )
+                                  }
+                                  className="h-7 rounded-md border border-input bg-input/30 px-2 text-xs"
+                                  aria-label="Età"
+                                >
+                                  {LOVE_ROULETTE_AGE_BANDS.map((value) => (
+                                    <option key={value} value={value}>
+                                      {ageBandLabel(value)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
                             ) : (
-                              "Uomo"
+                              `${genderChoiceLabel(player.gender)} · ${seekingChoiceLabel(player.seeking)}${player.age_band ? ` · ${ageBandLabel(player.age_band)}` : ""}`
                             )}
                           </td>
                           <td className="px-3 py-2 hidden lg:table-cell text-xs text-muted-foreground">

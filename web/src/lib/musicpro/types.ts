@@ -1,14 +1,24 @@
 import type { EventConfig, EventState } from "@/lib/types";
+import type {
+  LoveRouletteAgeBand,
+  LoveRouletteGender,
+  LoveRouletteSeeking,
+} from "@/lib/player/identity";
 import type { DisplayOverlay } from "./display-overlay";
 import type { LastReveal } from "./extraction";
 import type { FinalistCouple, LastElimination } from "./elimination";
 import type { QuizSessionState, QuizSetupPrefs } from "./quiz-state";
 import type { VotingMetadata } from "./voting";
 import type { FinalsShowState } from "./finals-show";
+import type { SpecialTrialState } from "./special-trial";
 
 export type EventGameFormat = "cervellone" | "love_roulette";
 
-export type LoveRouletteGender = "male" | "female";
+export type {
+  LoveRouletteAgeBand,
+  LoveRouletteGender,
+  LoveRouletteSeeking,
+} from "@/lib/player/identity";
 
 export type ParticipantDataVisibility = "everyone" | "matched" | "none";
 
@@ -66,6 +76,8 @@ export interface LoveRouletteEvent {
   voting: VotingMetadata;
   /** Spettacolo finali (slide prove, countdown, podio). */
   finalsShow: FinalsShowState | null;
+  /** Prova speciale mid-quiz (prenotazione / setup / timer). */
+  specialTrial: SpecialTrialState | null;
   joinUrl: string;
   /** True when `metadata.animator_pin` is set for this event. */
   animatorPinRequired: boolean;
@@ -78,6 +90,10 @@ export interface LoveRouletteParticipant {
   /** Nome vero (opzionale); a schermo resta sempre `nickname`. */
   real_name?: string | null;
   gender: LoveRouletteGender;
+  /** Chi cerca. Assente in DB = legacy uomo↔donna. */
+  seeking: LoveRouletteSeeking;
+  /** Raccolta in ingresso. Il matching non la filtra ancora. */
+  age_band: LoveRouletteAgeBand | null;
   badge_code: string | null;
   role: LoveRouletteParticipantRole;
   is_online: boolean;

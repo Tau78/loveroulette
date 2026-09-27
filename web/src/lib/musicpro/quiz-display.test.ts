@@ -4,6 +4,7 @@ import {
   nextQuizDisplayPhase,
   phaseAutoAdvancesOnTick,
   resolveSyncedQuizClock,
+  shouldShowIntermediateRanking,
   shouldShowPairingRanking,
 } from "./quiz-display";
 
@@ -28,35 +29,61 @@ function clockQuiz(
 }
 
 describe("shouldShowPairingRanking", () => {
-  it("hides ranking on the last N questions", () => {
+  it("still computes last-N (legacy helper)", () => {
     expect(shouldShowPairingRanking(0, 10, 5)).toBe(true);
-    expect(shouldShowPairingRanking(4, 10, 5)).toBe(true);
     expect(shouldShowPairingRanking(5, 10, 5)).toBe(false);
-    expect(shouldShowPairingRanking(9, 10, 5)).toBe(false);
-  });
-
-  it("hides ranking on every question when N covers the set", () => {
-    expect(shouldShowPairingRanking(0, 3, 5)).toBe(false);
-    expect(shouldShowPairingRanking(2, 3, 5)).toBe(false);
-  });
-
-  it("always shows ranking when N is 0", () => {
-    expect(shouldShowPairingRanking(9, 10, 0)).toBe(true);
   });
 });
 
-describe("nextQuizDisplayPhase", () => {
-  it("skips classifica on the last N questions", () => {
-    expect(nextQuizDisplayPhase("results", 4, 10, 5)).toBe("next_question");
-    expect(nextQuizDisplayPhase("results", 5, 10, 5)).toBe("advance_index");
-    expect(nextQuizDisplayPhase("results", 9, 10, 5)).toBe("finish");
+describe("shouldShowIntermediateRanking", () => {
+  it("with 15 / ogni 5 / al buio 5 → classifica a 5 e 10, non a 15", () => {
+    const base = {
+      total: 15,
+      rankingEveryN: 5,
+      hideRankingLastN: 5,
+    };
+    expect(shouldShowIntermediateRanking({ ...base, completedCount: 5 })).toBe(
+      true,
+    );
+    expect(shouldShowIntermediateRanking({ ...base, completedCount: 10 })).toBe(
+      true,
+    );
+    expect(shouldShowIntermediateRanking({ ...base, completedCount: 15 })).toBe(
+      false,
+    );
+    expect(shouldShowIntermediateRanking({ ...base, completedCount: 4 })).toBe(
+      false,
+    );
   });
+});
 
-  it("keeps the conductor sequence before results", () => {
-    expect(nextQuizDisplayPhase("start_countdown", 0, 10)).toBe("theme_intro");
+describe("nextQuizDisplayPhase — binario + classifiche intermedie", () => {
+  it("tema → domanda → risposte → %", () => {
     expect(nextQuizDisplayPhase("theme_intro", 0, 10)).toBe("question");
     expect(nextQuizDisplayPhase("question", 0, 10)).toBe("answers");
     expect(nextQuizDisplayPhase("answers", 0, 10)).toBe("results");
+  });
+
+  it("da % → hold classifica ogni N (non sull’ultima)", () => {
+    // 15 domande, ogni 5, al buio 5 → dopo Q5 (index 4) e Q10 (index 9)
+    expect(nextQuizDisplayPhase("results", 4, 15, 5, 5)).toBe("next_question");
+    expect(nextQuizDisplayPhase("results", 9, 15, 5, 5)).toBe("next_question");
+    expect(nextQuizDisplayPhase("results", 0, 15, 5, 5)).toBe("advance_index");
+    expect(nextQuizDisplayPhase("results", 14, 15, 5, 5)).toBe("finish");
+  });
+
+  it("start_countdown still leads to theme", () => {
+    expect(nextQuizDisplayPhase("start_countdown", 0, 10)).toBe("theme_intro");
+  });
+
+  it("Al Buio live (skipResults): answers salta le %", () => {
+    expect(nextQuizDisplayPhase("answers", 0, 15, 5, 5, true)).toBe(
+      "advance_index",
+    );
+    expect(nextQuizDisplayPhase("answers", 4, 15, 5, 5, true)).toBe(
+      "next_question",
+    );
+    expect(nextQuizDisplayPhase("answers", 14, 15, 5, 5, true)).toBe("finish");
   });
 });
 
@@ -72,11 +99,11 @@ describe("resolveSyncedQuizClock", () => {
     expect(question.remaining).toBe(0);
   });
 
-  it("locks answers at zero without walking to results", () => {
+  it("asks the server to close answers → results when the timer is done", () => {
     const clock = resolveSyncedQuizClock(clockQuiz("answers", 20));
     expect(clock.displayPhase).toBe("answers");
     expect(clock.remaining).toBe(0);
-    expect(clock.awaitingServerTick).toBe(false);
+    expect(clock.awaitingServerTick).toBe(true);
   });
 
   it("asks the server to close start_countdown", () => {
@@ -88,9 +115,9 @@ describe("resolveSyncedQuizClock", () => {
 });
 
 describe("phaseAutoAdvancesOnTick", () => {
-  it("never auto-advances answers", () => {
-    expect(phaseAutoAdvancesOnTick("answers", false)).toBe(false);
-    expect(phaseAutoAdvancesOnTick("answers", true)).toBe(false);
+  it("auto-advances answers (timer → %)", () => {
+    expect(phaseAutoAdvancesOnTick("answers", false)).toBe(true);
+    expect(phaseAutoAdvancesOnTick("answers", true)).toBe(true);
   });
 
   it("always auto-advances the launch countdown", () => {
@@ -100,5 +127,6 @@ describe("phaseAutoAdvancesOnTick", () => {
   it("auto-advances hold phases only when Auto is on", () => {
     expect(phaseAutoAdvancesOnTick("question", false)).toBe(false);
     expect(phaseAutoAdvancesOnTick("question", true)).toBe(true);
+    expect(phaseAutoAdvancesOnTick("results", false)).toBe(false);
   });
 });

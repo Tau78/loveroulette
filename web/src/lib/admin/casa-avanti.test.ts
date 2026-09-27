@@ -49,6 +49,15 @@ describe("AVANTI flow", () => {
     );
   });
 
+  it("labels Partenza then Sigla for opening", () => {
+    expect(avantiLabel({ beat: "casa", sigla: "idle", roll: 0, guestCount: 4 })).toBe(
+      "Partenza",
+    );
+    expect(avantiLabel({ beat: "sigla", sigla: "warn", roll: 0, guestCount: 4 })).toBe(
+      "Sigla",
+    );
+  });
+
   it("uses live GO only on quiz beat after leaving lobby", () => {
     expect(
       shouldUseLiveGo({ live: false, beat: "quiz", runtimeState: "lobby" }),

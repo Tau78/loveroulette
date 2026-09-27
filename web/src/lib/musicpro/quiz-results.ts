@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { orderOptionsForQuizDisplay } from "@/lib/musicpro/quiz-option-shuffle";
 
 export interface QuestionAnswerStat {
   optionId: string;
@@ -82,4 +83,24 @@ export async function getQuestionAnswerStats(
   });
 
   return { questionId, totalAnswers, options: stats };
+}
+
+/** Stesse lettere A–D dello schermo (shuffle serata), conteggi ancora per optionId. */
+export function orderQuestionResultsForDisplay(
+  results: QuestionResults,
+  eventSlug: string,
+): QuestionResults {
+  const keyed = results.options.map((stat) => ({
+    id: stat.optionId,
+    stat,
+  }));
+  const ordered = orderOptionsForQuizDisplay(
+    keyed,
+    eventSlug,
+    results.questionId,
+  );
+  return {
+    ...results,
+    options: ordered.map((row) => row.stat),
+  };
 }

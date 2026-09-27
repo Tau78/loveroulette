@@ -11,6 +11,8 @@ import {
   resolveFinalsShowClock,
 } from "./finals-show";
 import type { QuizSessionState } from "./quiz-state";
+import type { SpecialTrialState } from "./special-trial";
+import { isSpecialTrialBlockingQuiz } from "./special-trial";
 import type { VotingMetadata } from "./voting";
 
 export type SessionSyncStatus = "live" | "degraded" | "stale" | "resyncing";
@@ -83,7 +85,14 @@ export function mergeLastReveal(
   return incoming;
 }
 
-export function quizNeedsServerCatchUp(quiz: QuizSessionState): boolean {
+export function quizNeedsServerCatchUp(
+  quiz: QuizSessionState,
+  specialTrial: SpecialTrialState | null = null,
+): boolean {
+  if (isSpecialTrialBlockingQuiz(specialTrial)) {
+    return false;
+  }
+
   if (!phaseAutoAdvancesOnTick(quiz.displayPhase, quiz.autoplayEnabled)) {
     return false;
   }
@@ -123,6 +132,7 @@ export async function runSessionCatchUp(options: {
   runtimeState: EventState;
   quiz: QuizSessionState | null;
   finalsShow: FinalsShowState | null;
+  specialTrial?: SpecialTrialState | null;
   handlers: SessionCatchUpHandlers;
   maxSteps?: number;
 }): Promise<{ runtimeState: EventState; quiz: QuizSessionState | null; finalsShow: FinalsShowState | null }> {
@@ -136,7 +146,7 @@ export async function runSessionCatchUp(options: {
       runtimeState === "quiz" &&
       quiz &&
       quiz.autoplayEnabled === true &&
-      quizNeedsServerCatchUp(quiz)
+      quizNeedsServerCatchUp(quiz, options.specialTrial ?? null)
     ) {
       const res = await fetch(
         `/api/events/${encodeURIComponent(options.eventSlug)}/quiz`,

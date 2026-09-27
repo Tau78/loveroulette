@@ -100,10 +100,12 @@ export function AdminTransportBar({
     eventSlug: eventCode,
     quizState,
     enabled: runtimeState === "quiz" && Boolean(quizState) && !disabled,
-    // start_countdown avanza sempre; le hold restano su AVANTI salvo Auto.
+    // Binario: start_countdown + answers→% sempre; hold su AVANTI salvo Auto.
     driveTicks:
       !disabled &&
-      (autoplayEnabled || quizState?.displayPhase === "start_countdown"),
+      (autoplayEnabled ||
+        quizState?.displayPhase === "start_countdown" ||
+        quizState?.displayPhase === "answers"),
     onTick: (quiz) => onQuizChange?.(quiz),
   });
 
@@ -423,23 +425,30 @@ export function AdminTransportBar({
 
   if (variant === "go") {
     const goDisabled = primaryDisabled || !primaryAction;
+    const showWaitChip = goDisabled && Boolean(quizHint);
     return (
       <div className={cn("casa-conductor-local", className)}>
-        <button
-          type="button"
-          className="casa-go"
-          disabled={goDisabled}
-          aria-disabled={goDisabled}
-          title={quizHint ?? undefined}
-          onClick={() => primaryAction?.()}
-        >
-          {primaryAction ? primaryLabel : "Evento chiuso"}
-        </button>
-        {quizHint ? (
-          <p className="casa-sub casa-conductor-note" title={quizHint}>
-            {quizHint}
-          </p>
-        ) : null}
+        {showWaitChip ? (
+          <div
+            className="casa-go casa-go-wait"
+            role="status"
+            aria-live="polite"
+            title={quizHint ?? undefined}
+          >
+            <span className="casa-go-wait-chip">{quizHint}</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="casa-go"
+            disabled={goDisabled}
+            aria-disabled={goDisabled}
+            title={quizHint ?? undefined}
+            onClick={() => primaryAction?.()}
+          >
+            {primaryAction ? primaryLabel : "Evento chiuso"}
+          </button>
+        )}
         {error ? (
           <p className="casa-sub casa-conductor-note" title={error}>
             {error}

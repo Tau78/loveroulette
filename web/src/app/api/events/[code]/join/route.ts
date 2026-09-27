@@ -69,6 +69,8 @@ export async function POST(
       nickname: body.nickname,
       realName: body.realName,
       gender: body.gender,
+      seeking: body.seeking,
+      ageBand: body.ageBand,
       badgeCode: body.badgeCode,
       dataVisibility: body.dataVisibility,
       participantId: body.participantId,

@@ -1,5 +1,6 @@
 import type { QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
 import type { EventState } from "@/lib/types";
+import { playerWelcomeLabel } from "@/lib/player/identity";
 import {
   CLOSED_COPY,
   DEFAULT_PLAYER_SUBTITLE,
@@ -18,10 +19,7 @@ interface PlayerPresenceOptions {
   suppressForCard?: boolean;
 }
 
-/** Benvenuto/a sotto il saluto. */
-export function playerWelcomeLabel(gender: "male" | "female"): string {
-  return gender === "female" ? "BENVENUTA" : "BENVENUTO";
-}
+export { playerWelcomeLabel };
 
 /** Sottotitolo hero — una sola fonte per fase; la card quiz/voto fa il resto. */
 export function playerPresenceSubtitle(

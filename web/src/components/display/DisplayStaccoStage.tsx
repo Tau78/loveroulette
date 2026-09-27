@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { playCountdownWhoosh } from "@/lib/audio/countdown-whoosh";
 import { STACCO_CANVAS_SRC } from "@/lib/display/stacco";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,10 @@ type DisplayStaccoStageProps = {
 /** Stacco 5–4–3–2–1: canvas di scena + cifra che zoomma dal fondo ed esplode. */
 export function DisplayStaccoStage({ value, className }: DisplayStaccoStageProps) {
   const reduce = useReducedMotion();
+
+  useEffect(() => {
+    if (value > 0) playCountdownWhoosh();
+  }, [value]);
 
   return (
     <div

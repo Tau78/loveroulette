@@ -1,7 +1,8 @@
 # Love Roulette — SUNO Music Brief
 
 > Modulo 18 · Prompt produzione soundtrack live  
-> Versione: 1.0 · Giugno 2026
+> Versione: 1.1 · Settembre 2026  
+> Log sessioni: §8
 
 ## Introduzione
 
@@ -16,9 +17,11 @@ Questo documento definisce la **colonna sonora ufficiale** di Love Roulette per 
 | Track name | Phase | Duration target | Mood | BPM range | When played | Loop |
 |------------|-------|-----------------|------|-----------|-------------|------|
 | `LR_01_Lobby_Ambient` | LOBBY | 3:00–4:00 (loop) | Warm anticipation, social buzz | 90–105 | 20:30 briefing → `start_quiz`; sotto chat e QR badge | **Yes** |
+| `LR_22_PreSigla_Fanfare` | PRE-SIGLA (`sigla/warn`) | 1:30–2:30 (loop) | Fremito, fanfare, “prendi posto” | 118–128 | Slide *Stiamo per iniziare · prendi posto* → prima di «Parte ora» (video sigla) | **Yes** |
 | `LR_02_Quiz_Tension` | QUIZ | 2:30–3:30 (loop) | Focused curiosity, light suspense | 100–118 | Tema + lettura domanda (`theme_intro`, `question`) | **Yes** |
-| `LR_25_Quiz_Results_Reveal` | QUIZ | 0:45–1:00 (loop) | Satisfying stats reveal | 105–115 | Fase `results` — barre % in sala (dopo gong) | **Yes** |
-| `LR_03_Quiz_Anticipation` | QUIZ | 1:30–2:00 (loop) | Rising heartbeat, “almost match” | 112–128 | Ultime 5 domande; slide `cd_matching_soon`, `wf_love_roulette_wink` | **Yes** |
+| `LR_03_Quiz_Countdown` | QUIZ | 1:00–2:00 (loop) | Pulse da timer, urgenza game show | 112–128 | Fase `answers` — opzioni A–D + countdown | **Yes** |
+| `LR_25_Quiz_Results_Reveal` | QUIZ | ~0:10 (one-shot) | Satisfying stats reveal hit | 105–115 | Ingresso fase `results` — poi bed lungo (LR_02 hold), **non loopare** | **No** |
+| `LR_03_Quiz_Anticipation` | QUIZ | 1:30–2:00 (loop) | Rising heartbeat, “almost match” | 112–128 | *(legacy nome)* → sostituito da `LR_03_Quiz_Countdown` per il timer risposte; ultime 5 / matching = da rivalutare | **Yes** |
 | `LR_04_Matching_Transition` | MATCHING | 0:25–0:45 (one-shot) | Algorithmic mystery → reveal tease | 95–110 → 130 | Auto transizione `QUIZ → MATCHING`; backend calcolo affinità | **No** |
 | `LR_05_Extraction_Underscore` | EXTRACTION | 2:00–3:00 (loop) | Game-show glamour, controlled hype | 118–124 | Tra una coppia e l’altra; animatore parla sopra | **Yes** |
 | `LR_06_Extraction_Drumroll` | EXTRACTION | 0:12–0:20 (segment) | Roulette spin, nail-biting | 128–140 (accel) | Ogni tap **AVANTI** → sync spin 3–5 s (design system §5.1) | **Segment** |
@@ -38,7 +41,7 @@ Questo documento definisce la **colonna sonora ufficiale** di Love Roulette per 
 | `LR_20_Phase_Transition` | SLIDES / TRANSITIONS | 0:06–0:10 (whoosh) | Phase banner, ceremonial handoff | 90–105 | `ac_phase_announce`, cambio stato dashboard | **No** |
 | `LR_21_Closed_Outro` | CLOSED | 1:30–2:00 (fade) | Warm goodbye, afterglow | 80–95 | `close_event`, ringraziamenti animatore | **No** (fade out) |
 
-**Totale tracce: 22** (incl. `LR_25` sotto-fase quiz)
+**Totale tracce: 23** (incl. `LR_22` pre-sigla + `LR_25` sotto-fase quiz)
 
 ---
 
@@ -123,6 +126,88 @@ Minimal nu-disco instrumental, warm analog bass, soft claps every 2 bars, neon h
 
 ---
 
+### `LR_22_PreSigla_Fanfare`
+
+**When**: beat `sigla` / stato `warn` — proiettore *STIAMO PER INIZIARE · PRENDI POSTO*. Sala si accomoda; fremito prima del video sigla («Parte ora»). **Non** è la sigla video; è il bed tra lobby calma (`LR_01`) e video+audio sigla.
+
+**SUNO**: Custom → **Song** · **Instrumental = ON** · Styles + Lyrics.
+
+**Status (2026-09-27):** prompt archiviati · file audio **non ancora in repo**.
+
+**Prompt 1 (consigliato)** — fanfare periodiche + groove che fa alzare
+
+**Styles**
+```
+Instrumental only, no vocals. Pre-show seating bed for a glamorous Italian dating game show. Upbeat nu-disco / modern funky house, 122 BPM. Bright brass fanfare stabs every 8 bars, shimmering fuchsia synths, tight four-on-the-floor kick, warm sub, sparkling claps. Anticipation thrills — crowd finding seats before the theme song. Dark fuchsia club #0D0D12 with hot pink #E91E8C accents. Polished live PA mix, medium-high energy, headroom for MC voice. Seamless 2-minute loop feel, no big EDM drop, no cheesy circus brass, glamorous TV dating show fanfare
+```
+
+**Lyrics**
+```
+[Instrumental]
+
+[Intro — soft groove, filtered brass hint, seats filling energy]
+
+[Groove — full kick and bass, shimmering pads, playful anticipation]
+
+[Fanfare — bright brass stab motif, sparkle synth answer, thrilling lift]
+
+[Sustain — danceable bed under “take your seats” announcement]
+
+[Fanfare return — second brass hit, same energy, loop-friendly phrase]
+
+[End]
+```
+
+**Prompt 2** — più orchestrale / game-show classico
+
+**Styles**
+```
+Instrumental only, no vocals. Theatrical game-show pre-theme underscore, 120 BPM. Orchestral brass fanfares layered with electronic kick and disco strings. Romantic casino-meets-nightclub glamour, love roulette seating moment, magenta neon accents. Controlled hype — exciting but not a full theme song. Loopable 90–120 seconds, polished venue PA, space for host mic, no vocals, no comedy horns
+```
+
+**Lyrics**
+```
+[Instrumental]
+
+[Intro — timpani pulse soft, string pad, lights dimming feel]
+
+[Build — brass enter, electronic groove joins, crowd buzz low]
+
+[Fanfare — triumphant short brass phrase, confetti sparkle synth]
+
+[Bed — steady glamorous groove for seating]
+
+[Fanfare — brass return, held chord ready for theme song handoff]
+
+[End]
+```
+
+**Prompt 3** — più club / meno orchestrale
+
+**Styles**
+```
+Instrumental only, no vocals. High-energy pre-show club bed, 126 BPM French-house / nu-disco. Sidechain pump gentle, filtered disco samples synthetic, short synth-brass stabs as modern fanfare, hot pink filter sweeps. Dating show about to start, take your seats thrills, dark fuchsia nightclub. Seamless loop 2 minutes, no vocals, no drop, keeps dancing energy while people sit
+```
+
+**Lyrics**
+```
+[Instrumental]
+
+[Intro — filtered groove, rising excitement]
+
+[Drop-in — full beat, funky bass, neon stabs]
+
+[Fanfare stab — bright synth-brass hits every 8 bars]
+
+[Cruise — danceable seating bed]
+
+[Fanfare stab — repeat motif for loop cut]
+
+[End]
+```
+
+---
+
 ### `LR_02_Quiz_Tension`
 
 **When**: domande profilazione 24–27, feedback % opzionale.
@@ -181,9 +266,27 @@ Instrumental only, no vocals. Game show results reveal bed, satisfying resolutio
 
 ---
 
-### `LR_03_Quiz_Anticipation`
+### `LR_03_Quiz_Countdown`
 
-**When**: ultime 5 domande, slide “Quasi match!”.
+**When**: fase quiz `answers` — appaiono le risposte A–D + countdown (dopo lettura domanda). Cambia musica rispetto a LR_02.
+
+**In repo (placeholder 2026-09-27):** `_A` = copia energia `LR_05`, `_B` = copia `LR_02_B`. **Sostituire con SUNO dedicato** (prompt sotto).
+
+**Prompt 1 (Styles)**
+```
+Instrumental only, no vocals. Quiz answer countdown bed, ticking pulse under game show energy, rising urgency without panic, dark fuchsia club palette, tight kick and hi-hat clock feel, 120 BPM, seamless 90-second loop, leaves space for on-screen timer and MC voice, no vocals, no big EDM drop
+```
+
+**Prompt 2**
+```
+Building anticipation instrumental, tempo 118 BPM accelerating feel via rising white noise layer, heartbeat kick doubling, bright fuchsia lead synth, dating quiz countdown while players tap answers, instrumental only, designed to loop with clear 8-bar phrase
+```
+
+---
+
+### `LR_03_Quiz_Anticipation` (legacy)
+
+**When**: *(obsoleto come ID)* — il timer risposte usa `LR_03_Quiz_Countdown`. Eventuale bed “ultime 5 / quasi match” da ridisegnare.
 
 **Prompt 1**
 ```
@@ -767,19 +870,19 @@ Mix per **playback live** con microfono animatore sopra la musica:
 
 | Transizione | Durata crossfade | Cue |
 |-------------|------------------|-----|
-| Lobby → Quiz | 2.0 s | `start_quiz` state change |
-| Quiz → Anticipation | 1.5 s | domanda `total - 5` o slide `cd_matching_soon` |
+| Lobby ↔ Quiz ↔ Estrazione (bed/sigle) | **0.18 s** | cambio fase / auto bed |
+| Quiz → Anticipation | 0.18 s | domanda `total - 5` o slide `cd_matching_soon` |
 | Anticipation → Matching transition | 0 s (hard) | `end_quiz`; play LR_04 once |
-| Matching → Extraction underscore | 1.0 s | LR_04 tail → LR_05 |
+| Matching → Extraction underscore | 0.18 s | LR_04 tail → LR_05 |
 | AVANTI extraction | 0 s | Duck LR_05 −12 dB → LR_06 → LR_07 → restore LR_05 |
-| Extraction → Elimination | 2.0 s | `start_elimination` |
+| Extraction → Elimination | 0.18 s | `start_elimination` |
 | Elimination drop | 0 s overlay | LR_09 over LR_08, no stop bed |
-| Finals challenge switch | 1.5 s | `next_challenge` + challenge type map |
+| Finals challenge switch | 0.18 s | `next_challenge` + challenge type map |
 | Open voting | 0 s | LR_13 → LR_14; duck challenge bed |
-| Close voting | 1.0 s | fade LR_14 → restore challenge bed or silence |
-| Winner | 0 s hit + 2 s crossfade | LR_16 → LR_15 |
+| Close voting | 0.18 s | fade LR_14 → restore challenge bed or silence |
+| Winner | 0 s hit + 2 s crossfade | LR_16 → LR_15 (cerimoniale, resta lungo) |
 | Slide stinger | Duck bed −8 dB 0.3 s | Play LR_17/18/19; restore 0.5 s after `slide_dismiss` |
-| Closed | 3.0 s fade | LR_15 or LR_08 → LR_21 |
+| Closed | 3.0 s fade | LR_15 o LR_08 → LR_21 |
 
 **Ducking**: sidechain o automazione −8 a −14 dB su bed quando animatore parla (opzionale M3); minimo manuale volume tablet pre-serata.
 
@@ -850,7 +953,8 @@ Ordine di produzione SUNO se tempo limitato. **4 tracce obbligatorie** per prima
 
 | Fase dashboard | Musica default | Slide stinger (se attiva) |
 |----------------|----------------|---------------------------|
-| LOBBY | LR_01 | LR_17, LR_19 |
+| LOBBY (`casa`) | LR_01 | LR_17, LR_19 |
+| PRE-SIGLA (`sigla/warn`) | LR_22 | — (poi video sigla su «Parte ora») |
 | QUIZ | LR_02 → LR_03 (ultime 5) | LR_17, LR_18, LR_19 |
 | MATCHING | LR_04 (once) | LR_20 |
 | EXTRACTION | LR_05 + LR_06/07 per AVANTI | LR_20 |
@@ -868,3 +972,13 @@ Ordine di produzione SUNO se tempo limitato. **4 tracce obbligatorie** per prima
 - Temi e animazioni → [02-design-system.md](02-design-system.md) §2, §5
 - Timeline serata → [07-animator-runbook.md](07-animator-runbook.md) §1
 - Slide mood → [12-slides-library.md](12-slides-library.md) §6
+
+---
+
+## 8. Log sessioni SUNO
+
+Storico prompt creati in chat (copy-paste) + esito take quando arriva.
+
+| Data | Track | Prompt | Esito |
+|------|-------|--------|-------|
+| 2026-09-27 | `LR_22_PreSigla_Fanfare` | P1 (consigliato), P2, P3 archiviati in §2 | in attesa generazione Mauro |

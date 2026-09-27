@@ -19,12 +19,20 @@ export type CasaQuizActionBody = {
     | "setAutoplayEnabled"
     | "tick"
     | "skipPhase"
-    | "setPhase";
+    | "setPhase"
+    | "replaceNextQuestion"
+    | "setSkipResults"
+    | "resumeAt";
   autoplaySeconds?: number;
   questionCount?: number;
   questionSeconds?: number;
   hideRankingLastN?: number;
+  rankingEveryN?: number;
   enabled?: boolean;
+  skipResults?: boolean;
+  skipStartCountdown?: boolean;
+  targetIndex?: number;
+  questionIds?: string[];
   displayPhase?:
     | "start_countdown"
     | "theme_intro"
@@ -63,10 +71,12 @@ export type CasaLiveSessionValue = {
   quizState: UseLoveRouletteSessionResult["quizState"];
   voting: UseLoveRouletteSessionResult["voting"];
   finalsShow: UseLoveRouletteSessionResult["finalsShow"];
+  specialTrial: UseLoveRouletteSessionResult["specialTrial"];
   lastReveal: UseLoveRouletteSessionResult["lastReveal"];
   syncStatus: UseLoveRouletteSessionResult["syncStatus"];
   applyQuizUpdate: UseLoveRouletteSessionResult["applyQuizUpdate"];
   applyFinalsUpdate: UseLoveRouletteSessionResult["applyFinalsUpdate"];
+  applySpecialTrialUpdate: UseLoveRouletteSessionResult["applySpecialTrialUpdate"];
   stats: EventStats;
   setStats: Dispatch<SetStateAction<EventStats>>;
   refreshSessionStats: () => Promise<EventStats | null>;

@@ -42,7 +42,7 @@ const FLAGS: { key: PrepFlag; label: string }[] = [
   { key: "recap", label: "Recap" },
 ];
 
-function NumRow({
+function NumChip({
   label,
   value,
   min,
@@ -56,12 +56,11 @@ function NumRow({
   onStep: (n: number) => void;
 }) {
   return (
-    <div className="casa-setup-row">
+    <div className="casa-board-prep-num">
       <span>{label}</span>
-      <div className="casa-stepper">
+      <div className="casa-board-prep-stepper">
         <button
           type="button"
-          className="casa-stepper-btn"
           aria-label={`${label} meno`}
           onClick={() => onStep(Math.max(min, value - 1))}
         >
@@ -70,7 +69,6 @@ function NumRow({
         <strong>{value}</strong>
         <button
           type="button"
-          className="casa-stepper-btn"
           aria-label={`${label} più`}
           onClick={() => onStep(Math.min(max, value + 1))}
         >
@@ -114,43 +112,52 @@ export function CasaPrep({ prep, onChange }: Props) {
   }, [venues, query]);
 
   return (
-    <div className="casa-prep">
-      <p className="casa-sub">
-        Preparazione evento. Sparisce dopo la sigla. Locali da Supabase (APP Eventi).
-      </p>
-      <label className="casa-pop-field">
-        <span>Cerca locale</span>
-        <input
-          className="casa-field"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Nome o città"
-        />
-      </label>
-      <div className="casa-prep-venues">
-        {shown.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            className="casa-hit"
-            data-on={prep.venueId === v.id ? "1" : undefined}
-            onClick={() => onChange({ venueId: v.id, venueName: v.name })}
-          >
-            {venueLabel(v)}
-          </button>
-        ))}
-        {!shown.length ? (
-          <p className="casa-sub">{note ?? "Nessun locale. Prova un’altra ricerca."}</p>
+    <div className="casa-board-prep">
+      <section className="casa-regia-block space-y-1.5">
+        <p className="casa-board-prep-kicker">Locale</p>
+        <div className="casa-board-prep-row">
+          <input
+            className="casa-board-prep-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cerca locale o città"
+            aria-label="Cerca locale"
+          />
+        </div>
+        <div className="casa-board-prep-chips">
+          {shown.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              className="casa-board-prep-chip"
+              data-on={prep.venueId === v.id ? "1" : undefined}
+              onClick={() => onChange({ venueId: v.id, venueName: v.name })}
+            >
+              {venueLabel(v)}
+            </button>
+          ))}
+          {!shown.length ? (
+            <p className="casa-board-prep-hint">
+              {note ?? "Nessun locale. Prova un’altra ricerca."}
+            </p>
+          ) : null}
+        </div>
+        {prep.venueName ? (
+          <p className="casa-board-prep-hint">
+            Selezionato: <b>{prep.venueName}</b>
+          </p>
         ) : null}
-      </div>
-      <div className="casa-setup-row">
-        <span>Stile evento</span>
-        <div className="casa-secs">
+      </section>
+
+      <section className="casa-regia-block space-y-1.5">
+        <p className="casa-board-prep-kicker">Stile · ripescaggio</p>
+        <div className="casa-board-prep-row">
+          <span className="casa-board-prep-label">Stile</span>
           {STILE.map((s) => (
             <button
               key={s.id}
               type="button"
-              className="casa-sec"
+              className="casa-board-prep-chip"
               data-on={prep.stile === s.id ? "1" : undefined}
               onClick={() => onChange({ stile: s.id })}
             >
@@ -158,15 +165,13 @@ export function CasaPrep({ prep, onChange }: Props) {
             </button>
           ))}
         </div>
-      </div>
-      <div className="casa-setup-row">
-        <span>Ripescaggio</span>
-        <div className="casa-secs">
+        <div className="casa-board-prep-row">
+          <span className="casa-board-prep-label">Ripescaggio</span>
           {RIPESCA.map((s) => (
             <button
               key={s.id}
               type="button"
-              className="casa-sec"
+              className="casa-board-prep-chip"
               data-on={prep.ripescaggio === s.id ? "1" : undefined}
               onClick={() => onChange({ ripescaggio: s.id })}
             >
@@ -174,47 +179,53 @@ export function CasaPrep({ prep, onChange }: Props) {
             </button>
           ))}
         </div>
-      </div>
-      <div className="casa-prep-flags">
-        {FLAGS.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            className="casa-hit"
-            data-on={prep[f.key] ? "1" : undefined}
-            onClick={() => onChange({ [f.key]: !prep[f.key] })}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-      {prep.ship ? (
-        <NumRow
-          label="Top ship"
-          value={prep.shipTopN}
-          min={1}
-          max={20}
-          onStep={(n) => onChange({ shipTopN: n })}
-        />
-      ) : null}
-      {prep.luci ? (
-        <NumRow
-          label="Flash luci (s)"
-          value={prep.luciFlashSec}
-          min={1}
-          max={60}
-          onStep={(n) => onChange({ luciFlashSec: n })}
-        />
-      ) : null}
-      {prep.ripescaggio === "salva" ? (
-        <NumRow
-          label="Salva sala (s)"
-          value={prep.salvaSec}
-          min={5}
-          max={120}
-          onStep={(n) => onChange({ salvaSec: n })}
-        />
-      ) : null}
+      </section>
+
+      <section className="casa-regia-block space-y-1.5">
+        <p className="casa-board-prep-kicker">Moduli serata</p>
+        <div className="casa-board-prep-chips">
+          {FLAGS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              className="casa-board-prep-chip"
+              data-on={prep[f.key] ? "1" : undefined}
+              onClick={() => onChange({ [f.key]: !prep[f.key] })}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="casa-board-prep-row">
+          {prep.ship ? (
+            <NumChip
+              label="Top ship"
+              value={prep.shipTopN}
+              min={1}
+              max={20}
+              onStep={(n) => onChange({ shipTopN: n })}
+            />
+          ) : null}
+          {prep.luci ? (
+            <NumChip
+              label="Flash luci (s)"
+              value={prep.luciFlashSec}
+              min={1}
+              max={60}
+              onStep={(n) => onChange({ luciFlashSec: n })}
+            />
+          ) : null}
+          {prep.ripescaggio === "salva" ? (
+            <NumChip
+              label="Salva sala (s)"
+              value={prep.salvaSec}
+              min={5}
+              max={120}
+              onStep={(n) => onChange({ salvaSec: n })}
+            />
+          ) : null}
+        </div>
+      </section>
     </div>
   );
 }

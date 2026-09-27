@@ -98,7 +98,59 @@ export const QUIZ_PHASE_LABELS: Record<QuizDisplayPhase, string> = {
 /** Ultime N domande senza classifica di accoppiamento (default serata). */
 export const DEFAULT_HIDE_RANKING_LAST_N = 5;
 
-/** Fasi che restano in hold fino ad AVANTI (il timer risposte è l'unica chiusura automatica). */
+/** Classifiche intermedie ogni N domande (default). 0 = mai. */
+export const DEFAULT_RANKING_EVERY_N = 5;
+
+/** Default manche in setup (numero domande). */
+export const DEFAULT_QUIZ_QUESTION_COUNT = 15;
+
+export function normalizeHideRankingLastN(raw: unknown): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    return DEFAULT_HIDE_RANKING_LAST_N;
+  }
+  return Math.max(0, Math.min(30, Math.round(raw)));
+}
+
+export function normalizeRankingEveryN(raw: unknown): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    return DEFAULT_RANKING_EVERY_N;
+  }
+  return Math.max(0, Math.min(30, Math.round(raw)));
+}
+
+/**
+ * Dopo la domanda 1-based `completedCount`, serve hold classifica intermedia?
+ * Con 15 domande / ogni 5 / al buio 5 → sì a 5 e 10; mai all’ultima (classifica finale).
+ */
+export function shouldShowIntermediateRanking(input: {
+  completedCount: number;
+  total: number;
+  rankingEveryN: number;
+  hideRankingLastN: number;
+}): boolean {
+  const n = input.completedCount;
+  const total = input.total;
+  if (total <= 0 || n <= 0 || n >= total) return false;
+  const every = normalizeRankingEveryN(input.rankingEveryN);
+  if (every <= 0) return false;
+  if (n % every !== 0) return false;
+  const hide = normalizeHideRankingLastN(input.hideRankingLastN);
+  if (n > total - hide) return false;
+  return true;
+}
+
+/** True se la domanda corrente avrebbe la classifica pairing (legacy index-based). */
+export function shouldShowPairingRanking(
+  currentIndex: number,
+  total: number,
+  hideRankingLastN: number,
+): boolean {
+  if (total <= 0) return false;
+  const hide = normalizeHideRankingLastN(hideRankingLastN);
+  return currentIndex < total - hide;
+}
+
+/** Fasi in hold fino ad AVANTI. answers chiude da sola → %; start_countdown chiude da solo. */
 export const QUIZ_CONDUCTOR_HOLD_PHASES: readonly QuizDisplayPhase[] = [
   "theme_intro",
   "question",
@@ -110,30 +162,15 @@ export function isConductorHoldPhase(phase: QuizDisplayPhase): boolean {
   return QUIZ_CONDUCTOR_HOLD_PHASES.includes(phase);
 }
 
-export function normalizeHideRankingLastN(raw: unknown): number {
-  if (typeof raw !== "number" || !Number.isFinite(raw)) {
-    return DEFAULT_HIDE_RANKING_LAST_N;
-  }
-  return Math.max(0, Math.min(30, Math.round(raw)));
-}
-
-/** True se la domanda corrente deve mostrare la classifica temporanea (punto 5). */
-export function shouldShowPairingRanking(
-  currentIndex: number,
-  total: number,
-  hideRankingLastN: number,
-): boolean {
-  if (total <= 0) return false;
-  const hide = normalizeHideRankingLastN(hideRankingLastN);
-  return currentIndex < total - hide;
-}
-
-/** Il tick server può chiudere da solo solo countdown avvio (e, se Auto è on, le hold). Mai le risposte. */
+/**
+ * Solo auto senza AVANTI: countdown avvio + timer risposte → %.
+ * Hold (tema/domanda/%) avanzano solo con AVANTI (o Auto esplicito).
+ */
 export function phaseAutoAdvancesOnTick(
   phase: QuizDisplayPhase,
   autoplayEnabled: boolean,
 ): boolean {
-  if (phase === "answers") return false;
+  if (phase === "answers") return true;
   if (phase === "start_countdown") return true;
   return autoplayEnabled && isConductorHoldPhase(phase);
 }
@@ -165,15 +202,44 @@ export function isPhaseExpired(
 }
 
 /**
- * AVANTI-BINARY-LOCKED — prossima fase quiz (proiettore = anteprima = player).
- * Autorizzato Mauro 2026-08-31: ogni domanda riparte da SLIDE ARGOMENTO.
- * Vedi `.cursor/rules/avanti-binary.mdc`.
+ * Uscita dopo una domanda completata (% o Al Buio che salta le %).
+ */
+export function phaseAfterCompletedQuestion(
+  currentIndex: number,
+  total: number,
+  hideRankingLastN: number = DEFAULT_HIDE_RANKING_LAST_N,
+  rankingEveryN: number = DEFAULT_RANKING_EVERY_N,
+): "advance_index" | "finish" | "next_question" {
+  const completed = currentIndex + 1;
+  if (completed >= total) return "finish";
+  if (
+    shouldShowIntermediateRanking({
+      completedCount: completed,
+      total,
+      rankingEveryN,
+      hideRankingLastN,
+    })
+  ) {
+    return "next_question";
+  }
+  return "advance_index";
+}
+
+/**
+ * AVANTI-BINARY-LOCKED — binario domande (Mauro 2026-09-27 + classifiche + Al Buio live).
+ *
+ * tema → AVANTI → domanda → AVANTI →
+ * risposte+countdown (auto) →
+ * % (auto) OPPURE Al Buio salta le % →
+ * classifica intermedia (se dovuta) → AVANTI → prossimo tema
  */
 export function nextQuizDisplayPhase(
   phase: QuizDisplayPhase,
   currentIndex: number,
   total: number,
   hideRankingLastN: number = DEFAULT_HIDE_RANKING_LAST_N,
+  rankingEveryN: number = DEFAULT_RANKING_EVERY_N,
+  skipResults: boolean = false,
 ): QuizDisplayPhase | "advance_index" | "finish" {
   switch (phase) {
     case "start_countdown":
@@ -183,15 +249,22 @@ export function nextQuizDisplayPhase(
     case "question":
       return "answers";
     case "answers":
+      if (skipResults) {
+        return phaseAfterCompletedQuestion(
+          currentIndex,
+          total,
+          hideRankingLastN,
+          rankingEveryN,
+        );
+      }
       return "results";
     case "results":
-      if (currentIndex + 1 >= total) {
-        return "finish";
-      }
-      if (!shouldShowPairingRanking(currentIndex, total, hideRankingLastN)) {
-        return "advance_index";
-      }
-      return "next_question";
+      return phaseAfterCompletedQuestion(
+        currentIndex,
+        total,
+        hideRankingLastN,
+        rankingEveryN,
+      );
     case "next_question":
       return "advance_index";
   }
@@ -252,13 +325,13 @@ export function resolveSyncedQuizClock(
     };
   }
 
-  // Risposte: il timer chiude da solo (tastiere lock) ma AVANTI rivela le %.
+  // Risposte: fine timer → tick server rivela le % (niente AVANTI).
   if (phase === "answers") {
     return {
       displayPhase: phase,
       phaseStartedAt: new Date(startedMs).toISOString(),
       remaining: 0,
-      awaitingServerTick: false,
+      awaitingServerTick: true,
     };
   }
 
@@ -350,8 +423,7 @@ export function isMancheThemeIntroForIndex(
 
 /**
  * AVANTI-BINARY-LOCKED — fase dopo advance_index.
- * Autorizzato Mauro 2026-08-31: dopo le % si riparte sempre da SLIDE ARGOMENTO
- * (theme_intro). Il countdown 5-4-3 resta solo all'avvio quiz (start_countdown).
+ * Binario Mauro 2026-09-27: dopo le % → sempre SLIDE ARGOMENTO (theme_intro).
  */
 export function resolvePhaseAfterQuestionAdvance(
   _questionIds: string[],

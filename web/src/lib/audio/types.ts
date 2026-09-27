@@ -18,7 +18,8 @@ export interface SoundtrackManifest {
   tracks: Record<string, SoundtrackTrack>;
 }
 
-export const CROSSFADE_MS = 2000;
+/** Crossfade snappy tra bed/sigle/sottofondi (lobby↔quiz↔estrazione…). */
+export const CROSSFADE_MS = 180;
 export const DEFAULT_VOLUME = 0.72;
 export const STINGER_VOLUME = 0.88;
 export const BED_DUCK_VOLUME = 0.32;

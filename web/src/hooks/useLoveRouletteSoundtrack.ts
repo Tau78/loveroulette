@@ -9,7 +9,7 @@ import {
   formatMissingMp3Warning,
   probeMissingManifestFiles,
 } from "@/lib/audio/manifest-files";
-import { QUIZ_RESULTS_BED_ID } from "@/lib/audio/quiz-theme-tracks";
+import { QUIZ_RESULTS_REVEAL_ID } from "@/lib/audio/quiz-theme-tracks";
 import { trackIdForPhase, audioUrl } from "@/lib/audio/phase-tracks";
 import {
   EXTRACTION_BED_ID,
@@ -148,6 +148,7 @@ export function useLoveRouletteSoundtrack({
   const votingCueRef = useRef<string | null>(null);
   const votingSuspenseStartedRef = useRef(false);
   const challengeRegiaBedActiveRef = useRef(false);
+  const resultsRevealCueRef = useRef<string | null>(null);
   const [challengeRegiaBedEpoch, setChallengeRegiaBedEpoch] = useState(0);
 
   useEffect(() => {
@@ -264,7 +265,7 @@ export function useLoveRouletteSoundtrack({
       }
 
       const token = ++fadeTokenRef.current;
-      const instantIn = trackId === QUIZ_RESULTS_BED_ID;
+      const instantIn = trackId === QUIZ_RESULTS_REVEAL_ID;
       idle.src = url;
       idle.loop = track.loop;
       idle.volume = instantIn ? DEFAULT_VOLUME : 0;
@@ -634,6 +635,29 @@ export function useLoveRouletteSoundtrack({
       }
     });
   }, [eventCode, playTrack]);
+
+  useEffect(() => {
+    if (!manifest || !enabled || !unlocked || muted) return;
+
+    if (runtimeState !== "quiz" || quizDisplayPhase !== "results") {
+      resultsRevealCueRef.current = null;
+      return;
+    }
+
+    // Hit LR_25 una volta per ingresso %, poi resta il bed lungo (mystery hold).
+    const cue = `results:${quizDisplayPhase}`;
+    if (resultsRevealCueRef.current === cue) return;
+    resultsRevealCueRef.current = cue;
+    void playStinger(QUIZ_RESULTS_REVEAL_ID, cue);
+  }, [
+    enabled,
+    manifest,
+    muted,
+    playStinger,
+    quizDisplayPhase,
+    runtimeState,
+    unlocked,
+  ]);
 
   useEffect(() => {
     if (!manifest || !enabled || !unlocked) return;

@@ -17,6 +17,7 @@ import {
   getFinalsShowFromMetadata,
   initFinalsShow,
 } from "./finals-show";
+import { getSpecialTrialState } from "./special-trial";
 import {
   getLoveRouletteJoinCode,
   getLoveRouletteTitle,
@@ -109,6 +110,7 @@ export function toLoveRouletteEventView(
     finalists: getFinalistsFromMetadata(meta),
     voting: getVotingMetadata(meta),
     finalsShow: getFinalsShowFromMetadata(meta),
+    specialTrial: getSpecialTrialState(meta),
     joinUrl: buildJoinUrl(normalizeEventSlug(urlSlug)),
     animatorPinRequired:
       typeof meta.animator_pin === "string" && meta.animator_pin.trim().length > 0,

@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { playerPresentKey } from "@/lib/display/player-present";
 import { QUIZ_PRESENT_NAME_CLASS } from "@/lib/display/quiz-display-typography";
+import { stageSexLabel, type StageGender } from "@/lib/player/identity";
 
 const AVATAR_M = "/grafiche/avatar-m.png";
 const AVATAR_F = "/grafiche/avatar-f.png";
@@ -12,18 +13,14 @@ const EASE_BURST = [0.22, 0.9, 0.3, 1] as const;
 
 export type DisplayPlayerPresentProps = {
   nick: string;
-  gender: "M" | "F";
+  gender: StageGender;
   photo?: string | null;
   className?: string;
   /** Anteprima widget Casa più compatta. */
   compact?: boolean;
 };
 
-function sexLabel(gender: "M" | "F") {
-  return gender === "F" ? "Lei" : "Lui";
-}
-
-function faceSrc(gender: "M" | "F", photo?: string | null) {
+function faceSrc(gender: StageGender, photo?: string | null) {
   if (photo?.trim()) return photo.trim();
   return gender === "F" ? AVATAR_F : AVATAR_M;
 }
@@ -145,7 +142,7 @@ export function DisplayPlayerPresent({
             textShadow: "0 2px 12px rgba(0,0,0,0.95)",
           }}
         >
-          {sexLabel(gender)}
+          {stageSexLabel(gender)}
         </p>
       </motion.div>
     </motion.div>

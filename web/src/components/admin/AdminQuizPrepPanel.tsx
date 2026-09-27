@@ -5,7 +5,6 @@ import {
   isInvalidAnimatorPinError,
   postQuizAction,
 } from "@/lib/admin/animator-api";
-import { AdminPanelShell } from "@/components/admin/AdminDeckPanel";
 import {
   AdminQuizSetupFields,
   MAX_QUESTION_SECONDS,
@@ -13,8 +12,11 @@ import {
 } from "@/components/admin/AdminQuizSetupFields";
 import { useEventQuestionCount } from "@/hooks/useEventQuestionCount";
 import type { QuizSessionState, QuizSetupPrefs } from "@/lib/musicpro/quiz-state";
-import { DEFAULT_HIDE_RANKING_LAST_N } from "@/lib/musicpro/quiz-display";
-import { AdminButton } from "@/components/admin/AdminButton";
+import {
+  DEFAULT_HIDE_RANKING_LAST_N,
+  DEFAULT_QUIZ_QUESTION_COUNT,
+  DEFAULT_RANKING_EVERY_N,
+} from "@/lib/musicpro/quiz-display";
 
 interface AdminQuizPrepPanelProps {
   eventCode: string;
@@ -37,7 +39,6 @@ export function AdminQuizPrepPanel({
   onInvalidPin,
   onQuizChange,
   onTransportReady,
-  variant = "card",
 }: AdminQuizPrepPanelProps) {
   const { count: availableCount, loading: countLoading } = useEventQuestionCount(
     eventCode,
@@ -46,20 +47,27 @@ export function AdminQuizPrepPanel({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [questionCount, setQuestionCount] = useState(
-    quizSetup.questionCount ?? availableCount ?? 27,
-  );
+  const [questionCount, setQuestionCount] = useState(() => {
+    const preferred =
+      quizSetup.questionCount ?? DEFAULT_QUIZ_QUESTION_COUNT;
+    return preferred;
+  });
   const [questionSeconds, setQuestionSeconds] = useState(
     quizSetup.questionSeconds,
   );
   const [hideRankingLastN, setHideRankingLastN] = useState(
     quizSetup.hideRankingLastN ?? DEFAULT_HIDE_RANKING_LAST_N,
   );
+  const [rankingEveryN, setRankingEveryN] = useState(
+    quizSetup.rankingEveryN ?? DEFAULT_RANKING_EVERY_N,
+  );
 
   useEffect(() => {
     if (availableCount == null || availableCount <= 0) return;
     setQuestionCount((current) => {
-      const preferred = quizSetup.questionCount ?? availableCount;
+      const preferred =
+        quizSetup.questionCount ??
+        Math.min(DEFAULT_QUIZ_QUESTION_COUNT, availableCount);
       const next = Math.max(1, Math.min(availableCount, preferred));
       return Math.max(1, Math.min(availableCount, current || next));
     });
@@ -74,6 +82,10 @@ export function AdminQuizPrepPanel({
       quizSetup.hideRankingLastN ?? DEFAULT_HIDE_RANKING_LAST_N,
     );
   }, [quizSetup.hideRankingLastN]);
+
+  useEffect(() => {
+    setRankingEveryN(quizSetup.rankingEveryN ?? DEFAULT_RANKING_EVERY_N);
+  }, [quizSetup.rankingEveryN]);
 
   const startQuiz = useCallback(async () => {
     if (disabled || busy || availableCount == null || availableCount <= 0) return;
@@ -95,6 +107,7 @@ export function AdminQuizPrepPanel({
           questionCount: count,
           questionSeconds: seconds,
           hideRankingLastN,
+          rankingEveryN,
         },
         animatorPin,
       );
@@ -128,6 +141,7 @@ export function AdminQuizPrepPanel({
     questionCount,
     questionSeconds,
     hideRankingLastN,
+    rankingEveryN,
   ]);
 
   const canStart = availableCount != null && availableCount > 0;
@@ -147,14 +161,7 @@ export function AdminQuizPrepPanel({
   ]);
 
   return (
-    <AdminPanelShell
-      variant={variant}
-      title="Quiz setup"
-      cardTitle="Quiz — regia domande"
-      accent
-      collapsible={false}
-      className={variant === "card" ? "border-primary/20" : undefined}
-    >
+    <div className="space-y-1">
       <AdminQuizSetupFields
         availableQuestionCount={availableCount ?? 0}
         questionCount={questionCount}
@@ -166,14 +173,16 @@ export function AdminQuizPrepPanel({
         }}
         hideRankingLastN={hideRankingLastN}
         onHideRankingLastNChange={setHideRankingLastN}
+        rankingEveryN={rankingEveryN}
+        onRankingEveryNChange={setRankingEveryN}
         disabled={disabled || busy || countLoading || !canStart}
       />
 
       {!canStart && !countLoading ? (
-        <p className="text-[10px] text-destructive">0 domande</p>
+        <p className="text-[10px] text-destructive">0 domande caricate</p>
       ) : null}
 
       {error ? <p className="text-[10px] text-destructive">{error}</p> : null}
-    </AdminPanelShell>
+    </div>
   );
 }
