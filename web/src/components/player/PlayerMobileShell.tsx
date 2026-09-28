@@ -13,12 +13,15 @@ interface PlayerMobileShellProps {
   eventSlug: string;
   children: ReactNode;
   className?: string;
+  /** Prima del join il benvenuto deve restare libero. */
+  fullscreenPrompt?: boolean;
 }
 
 export function PlayerMobileShell({
   eventSlug,
   children,
   className,
+  fullscreenPrompt = true,
 }: PlayerMobileShellProps) {
   const { containerRef, isFullscreen, supported, enter } = useFullscreen({
     storageKey: `lr_player_fullscreen_${eventSlug}`,
@@ -28,7 +31,7 @@ export function PlayerMobileShell({
   const [promptVisible, setPromptVisible] = useState(false);
 
   useEffect(() => {
-    if (!supported || isFullscreen) {
+    if (!fullscreenPrompt || !supported || isFullscreen) {
       setPromptVisible(false);
       return;
     }
@@ -37,7 +40,7 @@ export function PlayerMobileShell({
     } catch {
       setPromptVisible(true);
     }
-  }, [isFullscreen, supported]);
+  }, [fullscreenPrompt, isFullscreen, supported]);
 
   const handleEnter = useCallback(async () => {
     await enter();

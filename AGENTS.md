@@ -1,6 +1,6 @@
 # Love Roulette
 
-Web Next.js in `web/`. Guscio iOS della plancia animatore in `mobile/` (WebView su `/admin/{codice}/serata`).
+Web Next.js in `web/`. Guscio iOS della plancia animatore in `mobile/` (WebView su `/admin/{codice}/board`).
 
 # Apple release
 

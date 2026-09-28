@@ -31,21 +31,41 @@ export function parseLoveRouletteGender(value: unknown): LoveRouletteGender {
   return "male";
 }
 
-/** Giocatori già in sala senza «cerco»: restano sul match uomo↔donna. */
-export function legacySeekingFor(
-  gender: LoveRouletteGender,
-): LoveRouletteSeeking {
-  if (gender === "male") return "female";
-  if (gender === "female") return "male";
-  return "both";
+export function explicitSeeking(value: unknown): LoveRouletteSeeking | null {
+  if (value === "male" || value === "female" || value === "both") return value;
+  return null;
 }
 
-export function parseLoveRouletteSeeking(
-  value: unknown,
-  gender: LoveRouletteGender,
-): LoveRouletteSeeking {
-  if (value === "male" || value === "female" || value === "both") return value;
-  return legacySeekingFor(gender);
+/** Come ti vedono in sala. `nick` usa il nick, oppure il nome se il nick manca. */
+export const PUBLIC_NAME_MODES = ["nick", "first", "full"] as const;
+export type PublicNameMode = (typeof PUBLIC_NAME_MODES)[number];
+
+export const publicNameModeSchema = z.enum(PUBLIC_NAME_MODES);
+
+export function parsePublicNameMode(value: unknown): PublicNameMode {
+  if (value === "first" || value === "full" || value === "nick") return value;
+  return "nick";
+}
+
+export function publicNameModeLabel(mode: PublicNameMode): string {
+  if (mode === "first") return "Nome";
+  if (mode === "full") return "Nome e cognome";
+  return "Nick";
+}
+
+/** Nome mostrato in sala. Senza nick si usa il nome. */
+export function publicDisplayName(input: {
+  firstName: string;
+  lastName: string;
+  nick: string;
+  mode: PublicNameMode;
+}): string {
+  const first = input.firstName.trim();
+  const last = input.lastName.trim();
+  const nick = input.nick.trim();
+  if (input.mode === "first") return first;
+  if (input.mode === "full") return [first, last].filter(Boolean).join(" ");
+  return nick || first;
 }
 
 export function parseLoveRouletteAgeBand(
@@ -106,7 +126,7 @@ export function genderChoiceLabel(gender: LoveRouletteGender): string {
 
 export function seekingChoiceLabel(seeking: LoveRouletteSeeking): string {
   if (seeking === "female") return "Donne";
-  if (seeking === "both") return "Entrambi";
+  if (seeking === "both") return "Tutti";
   return "Uomini";
 }
 

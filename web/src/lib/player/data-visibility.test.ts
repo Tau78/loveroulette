@@ -41,9 +41,21 @@ describe("DATA_VISIBILITY_OPTIONS", () => {
 });
 
 describe("joinParticipantBodySchema", () => {
+  const photoUrl = `data:image/jpeg;base64,${"a".repeat(32)}`;
+  const profile = {
+    firstName: "Alex",
+    lastName: "Riva",
+    phone: "3331234567",
+    email: "alex@example.com",
+    photoUrl,
+    publicNameMode: "nick" as const,
+    seeking: "female" as const,
+    ageBand: "18_29" as const,
+  };
+
   it("defaults dataVisibility to matched", () => {
     const parsed = joinParticipantBodySchema.parse({
-      nickname: "Alex",
+      ...profile,
       gender: "male",
     });
     expect(parsed.dataVisibility).toBe(DEFAULT_PARTICIPANT_DATA_VISIBILITY);
@@ -52,7 +64,7 @@ describe("joinParticipantBodySchema", () => {
   it("accepts explicit visibility choices", () => {
     for (const dataVisibility of participantDataVisibilitySchema.options) {
       const parsed = joinParticipantBodySchema.parse({
-        nickname: "Alex",
+        ...profile,
         gender: "female",
         dataVisibility,
       });
@@ -62,9 +74,18 @@ describe("joinParticipantBodySchema", () => {
 
   it("rejects invalid visibility values", () => {
     const parsed = joinParticipantBodySchema.safeParse({
-      nickname: "Alex",
+      ...profile,
       gender: "male",
       dataVisibility: "friends",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rifiuta l'ingresso senza cerco", () => {
+    const parsed = joinParticipantBodySchema.safeParse({
+      ...profile,
+      gender: "male",
+      seeking: undefined,
     });
     expect(parsed.success).toBe(false);
   });

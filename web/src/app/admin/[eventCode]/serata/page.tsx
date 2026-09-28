@@ -1,16 +1,26 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { CasaLiveSessionProvider } from "@/components/admin/casa/CasaLiveSessionProvider";
-import { CasaPlanciaGate } from "@/components/admin/casa/CasaPlanciaGate";
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { normalizeEventSlug } from "@/lib/musicpro/slug";
 
-export default function SerataPlanciaPage() {
+/**
+ * Legacy URL — la plancia ufficiale è solo `/admin/{code}/board`
+ * (TestFlight + desktop). Redirect permanente.
+ */
+export default function SerataPlanciaRedirectPage() {
   const params = useParams();
+  const router = useRouter();
   const eventCode = normalizeEventSlug(String(params.eventCode ?? ""));
+
+  useEffect(() => {
+    if (!eventCode) return;
+    router.replace(`/admin/${encodeURIComponent(eventCode)}/board`);
+  }, [eventCode, router]);
+
   return (
-    <CasaLiveSessionProvider eventCode={eventCode}>
-      <CasaPlanciaGate eventCode={eventCode} />
-    </CasaLiveSessionProvider>
+    <div className="flex min-h-dvh items-center justify-center bg-[#0d0d12] text-sm font-semibold uppercase tracking-widest text-white/50">
+      Apro la plancia…
+    </div>
   );
 }

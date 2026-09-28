@@ -15,9 +15,12 @@ import {
   missingOptionalParticipantColumn,
 } from "./participant-schema";
 import {
+  explicitSeeking,
   parseLoveRouletteAgeBand,
   parseLoveRouletteGender,
-  parseLoveRouletteSeeking,
+  parsePublicNameMode,
+  publicDisplayName,
+  type PublicNameMode,
 } from "@/lib/player/identity";
 
 export type JoinParticipantErrorCode =
@@ -36,11 +39,17 @@ export class JoinParticipantError extends Error {
 
 export interface JoinParticipantInput {
   eventId: string;
-  nickname: string;
   gender: LoveRouletteGender;
-  seeking?: LoveRouletteSeeking | null;
+  seeking: LoveRouletteSeeking;
   /** Fascia raccolta in ingresso. Non filtra il matching. */
   ageBand?: LoveRouletteAgeBand | null;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  photoUrl: string;
+  nick?: string | null;
+  publicNameMode: PublicNameMode;
   badgeCode?: string | null;
   dataVisibility?: ParticipantDataVisibility;
   /** Nome anagrafico opzionale (non mostrato a schermo). */
@@ -68,7 +77,20 @@ function participantSelectFor(payload: Record<string, unknown>): string {
   if ("real_name" in payload) columns.push("real_name");
   if ("seeking" in payload) columns.push("seeking");
   if ("age_band" in payload) columns.push("age_band");
+  if ("first_name" in payload) columns.push("first_name");
+  if ("last_name" in payload) columns.push("last_name");
+  if ("phone" in payload) columns.push("phone");
+  if ("email" in payload) columns.push("email");
+  if ("photo_url" in payload) columns.push("photo_url");
+  if ("nick" in payload) columns.push("nick");
+  if ("public_name_mode" in payload) columns.push("public_name_mode");
   return columns.join(", ");
+}
+
+function textOrNull(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
 }
 
 function mapParticipantRow(row: Record<string, unknown>): LoveRouletteParticipant {
@@ -77,12 +99,16 @@ function mapParticipantRow(row: Record<string, unknown>): LoveRouletteParticipan
     id: String(row.id),
     event_id: String(row.event_id),
     nickname: String(row.nickname),
-    real_name:
-      row.real_name === null || row.real_name === undefined
-        ? null
-        : String(row.real_name),
+    real_name: textOrNull(row.real_name),
+    first_name: textOrNull(row.first_name),
+    last_name: textOrNull(row.last_name),
+    phone: textOrNull(row.phone),
+    email: textOrNull(row.email),
+    photo_url: textOrNull(row.photo_url),
+    nick: textOrNull(row.nick),
+    public_name_mode: parsePublicNameMode(row.public_name_mode),
     gender,
-    seeking: parseLoveRouletteSeeking(row.seeking, gender),
+    seeking: explicitSeeking(row.seeking),
     age_band: parseLoveRouletteAgeBand(row.age_band),
     badge_code:
       row.badge_code === null || row.badge_code === undefined
@@ -92,10 +118,6 @@ function mapParticipantRow(row: Record<string, unknown>): LoveRouletteParticipan
     is_online: Boolean(row.is_online),
     data_visibility: normalizeParticipantDataVisibility(row.data_visibility),
   };
-}
-
-function normalizeNickname(value: string): string {
-  return value.trim();
 }
 
 function normalizeBadge(value: string | null | undefined): string | null {
@@ -262,9 +284,16 @@ async function markParticipantOnline(
   participantId: string,
   input: {
     gender: LoveRouletteGender;
-    seeking?: LoveRouletteSeeking | null;
+    seeking: LoveRouletteSeeking;
     ageBand?: LoveRouletteAgeBand | null;
-    nickname?: string;
+    nickname: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+    photoUrl: string;
+    nick: string | null;
+    publicNameMode: PublicNameMode;
     badgeCode?: string | null;
     dataVisibility?: ParticipantDataVisibility;
     realName?: string | null;
@@ -283,6 +312,14 @@ async function markParticipantOnline(
   if (input.ageBand !== undefined) {
     update.age_band = input.ageBand;
   }
+
+  update.first_name = input.firstName;
+  update.last_name = input.lastName;
+  update.phone = input.phone;
+  update.email = input.email;
+  update.photo_url = input.photoUrl;
+  update.nick = input.nick;
+  update.public_name_mode = input.publicNameMode;
 
   if (input.nickname !== undefined) {
     update.nickname = input.nickname;
@@ -342,10 +379,46 @@ export async function joinParticipant(
   supabase: SupabaseClient,
   input: JoinParticipantInput,
 ): Promise<LoveRouletteParticipant> {
-  const nickname = normalizeNickname(input.nickname);
+  const explicitNick = input.nick?.trim() ? input.nick.trim() : null;
+  const nickname = publicDisplayName({
+    firstName: input.firstName,
+    lastName: input.lastName,
+    nick: explicitNick ?? "",
+    mode: input.publicNameMode,
+  });
   const badge_code = normalizeBadge(input.badgeCode);
   const data_visibility = resolveDataVisibility(input);
-  const real_name = input.realName?.trim() ? input.realName.trim() : null;
+  const real_name = `${input.firstName.trim()} ${input.lastName.trim()}`.trim();
+  const profile = {
+    gender: input.gender,
+    seeking: input.seeking,
+    ageBand: input.ageBand,
+    nickname,
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    phone: input.phone.trim(),
+    email: input.email.trim(),
+    photoUrl: input.photoUrl.trim(),
+    nick: explicitNick,
+    publicNameMode: input.publicNameMode,
+    badgeCode: badge_code,
+    dataVisibility: data_visibility,
+    realName: real_name,
+  };
+
+  if (explicitNick) {
+    const taken = await findParticipantByNickname(
+      supabase,
+      input.eventId,
+      explicitNick,
+    );
+    if (taken && taken.id !== input.participantId) {
+      throw new JoinParticipantError(
+        "NICKNAME_TAKEN",
+        "Questo nick è già in sala — scegline un altro.",
+      );
+    }
+  }
 
   if (input.participantId) {
     const existingById = await findParticipantById(
@@ -369,62 +442,8 @@ export async function joinParticipant(
         }
       }
 
-      return markParticipantOnline(supabase, existingById.id, {
-        gender: input.gender,
-        seeking: input.seeking,
-        ageBand: input.ageBand,
-        nickname,
-        badgeCode: badge_code,
-        dataVisibility: data_visibility,
-        realName: real_name,
-      });
+      return markParticipantOnline(supabase, existingById.id, profile);
     }
-  }
-
-  const existingNick = await findParticipantByNickname(
-    supabase,
-    input.eventId,
-    nickname,
-  );
-
-  if (existingNick) {
-    const isReconnectById =
-      input.participantId && existingNick.id === input.participantId;
-    const isReconnectByBadge =
-      Boolean(badge_code) &&
-      Boolean(existingNick.badge_code) &&
-      existingNick.badge_code === badge_code;
-
-    if (!isReconnectById && !isReconnectByBadge) {
-      throw new JoinParticipantError(
-        "NICKNAME_TAKEN",
-        "Questo nickname è già in sala — scegline un altro.",
-      );
-    }
-
-    if (badge_code) {
-      const badgeOwner = await findParticipantByBadge(
-        supabase,
-        input.eventId,
-        badge_code,
-      );
-      if (badgeOwner && badgeOwner.id !== existingNick.id) {
-        throw new JoinParticipantError(
-          "BADGE_TAKEN",
-          "Questo badge è già usato da un altro giocatore. Lascia il campo vuoto se non hai una pettorina numerata.",
-        );
-      }
-    }
-
-    return markParticipantOnline(supabase, existingNick.id, {
-      gender: input.gender,
-      seeking: input.seeking,
-      ageBand: input.ageBand,
-      nickname,
-      badgeCode: badge_code,
-      dataVisibility: data_visibility,
-      realName: real_name,
-    });
   }
 
   if (badge_code) {
@@ -445,8 +464,15 @@ export async function joinParticipant(
     event_id: input.eventId,
     nickname,
     gender: input.gender,
-    seeking: input.seeking ?? null,
+    seeking: input.seeking,
     age_band: input.ageBand ?? null,
+    first_name: profile.firstName,
+    last_name: profile.lastName,
+    phone: profile.phone,
+    email: profile.email,
+    photo_url: profile.photoUrl,
+    nick: explicitNick,
+    public_name_mode: input.publicNameMode,
     badge_code,
     is_online: true,
     last_seen_at: new Date().toISOString(),
@@ -465,7 +491,9 @@ export async function joinParticipant(
       }
       throw new JoinParticipantError(
         "NICKNAME_TAKEN",
-        "Questo nickname è già in sala — scegline un altro.",
+        explicitNick
+          ? "Questo nick è già in sala — scegline un altro."
+          : "Questo nome è già in sala. Scegli un nick.",
       );
     }
     if (
@@ -474,6 +502,15 @@ export async function joinParticipant(
     ) {
       throw new Error(
         "Il database non accetta ancora «non binary». Applica la migration identity.",
+      );
+    }
+    if (
+      msg.includes("first_name") ||
+      msg.includes("photo_url") ||
+      msg.includes("public_name_mode")
+    ) {
+      throw new Error(
+        "Profilo non salvato. Applica la migration del profilo giocatore.",
       );
     }
     throw new Error(result.error.message);

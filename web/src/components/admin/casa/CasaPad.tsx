@@ -34,7 +34,14 @@ import { WidgetPreflight } from "@/components/admin/casa/widgets/WidgetPreflight
 import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
 import { useCasaLiveSession } from "@/components/admin/casa/casa-live-session-context";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
-import { stageLetter, stageSexLabel, type StageGender } from "@/lib/player/identity";
+import {
+  explicitSeeking,
+  seekingChoiceLabel,
+  stageLetter,
+  stageSexLabel,
+  type LoveRouletteSeeking,
+  type StageGender,
+} from "@/lib/player/identity";
 import {
   fetchParticipants,
   patchEventConfig,
@@ -182,6 +189,7 @@ type Guest = {
   realName?: string;
   gender: Gender;
   photo?: string;
+  seeking?: LoveRouletteSeeking | null;
   score: number;
   muted?: boolean;
 };
@@ -1039,6 +1047,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             nickname: string;
             real_name?: string | null;
             gender: "male" | "female" | "nonbinary";
+            photo_url?: string | null;
+            seeking?: string | null;
           }[];
         };
         const rows = data.participants ?? [];
@@ -1049,6 +1059,8 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             nick: p.nickname,
             realName: p.real_name?.trim() || undefined,
             gender: stageLetter(p.gender),
+            photo: p.photo_url?.trim() || undefined,
+            seeking: explicitSeeking(p.seeking),
             score: 0,
           })),
         );
@@ -1099,6 +1111,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           }
           if (beat === "presenti" && onStage) {
             const sex = stageSexLabel(onStage.gender);
+            const seek = onStage.seeking
+              ? `Cerco ${seekingChoiceLabel(onStage.seeking)}`
+              : "";
             const photo =
               onStage.photo &&
               !onStage.photo.startsWith("blob:") &&
@@ -1112,7 +1127,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
               {
                 type: "slide",
                 title: onStage.nick.toUpperCase(),
-                body: sex,
+                body: [sex, seek].filter(Boolean).join(" · "),
                 kicker: onStage.gender,
                 imageUrl: photo,
               },

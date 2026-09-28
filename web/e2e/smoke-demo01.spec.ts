@@ -34,9 +34,12 @@ test.describe("DEMO01 smoke", () => {
   test("play page loads join form or player shell", async ({ page }) => {
     await page.goto(`/s/${EVENT}/play`);
 
+    const welcome = page.getByRole("heading", { name: "Benvenuti" });
     const joinShell = page.getByRole("heading", { name: "Entra in sala" });
     const playerShell = page.getByText(/BENVENUT|Quiz in corso|Rispondi ora|manche/i);
 
-    await expect(joinShell.or(playerShell)).toBeVisible({ timeout: 30_000 });
+    await expect(welcome.or(joinShell).or(playerShell)).toBeVisible({
+      timeout: 30_000,
+    });
   });
 });

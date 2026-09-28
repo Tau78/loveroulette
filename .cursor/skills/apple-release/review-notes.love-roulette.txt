@@ -32,7 +32,7 @@ Then:
 4. Account deletion is not offered because accounts are created by the organizer in MusicPro Eventi (staff), not by end-user registration in this app.
 
 5) EXTERNAL SERVICES USED FOR CORE FEATURES
-- Own website / backend: https://loveroulette.vercel.app (Next.js + Supabase). The iOS app is a WebView of /admin/DEMO01/serata after login.
+- Own website / backend: https://loveroulette.vercel.app (Next.js + Supabase). The iOS app is a WebView of /admin/DEMO01/board after login.
 - None of: ads, analytics SDKs, payment processor, AI, Sign in with Apple, Google, iCloud Drive.
 Encryption: HTTPS/TLS only (ITSAppUsesNonExemptEncryption = false).
 

@@ -84,7 +84,9 @@ export function AdminPlayersManager({
   const [editRealName, setEditRealName] = useState("");
   const [editBadge, setEditBadge] = useState("");
   const [editGender, setEditGender] = useState<LoveRouletteGender>("male");
-  const [editSeeking, setEditSeeking] = useState<LoveRouletteSeeking>("female");
+  const [editSeeking, setEditSeeking] = useState<LoveRouletteSeeking | null>(
+    "female",
+  );
   const [editAgeBand, setEditAgeBand] = useState<LoveRouletteAgeBand | null>(
     "18_29",
   );
@@ -265,7 +267,7 @@ export function AdminPlayersManager({
           nickname: resolved.nickname,
           realName: resolved.realName || null,
           gender: editGender,
-          seeking: editSeeking,
+          seeking: editSeeking ?? undefined,
           ageBand: editAgeBand,
           badgeCode: editBadge.trim() || null,
         },
@@ -803,7 +805,7 @@ export function AdminPlayersManager({
                                   ))}
                                 </select>
                                 <select
-                                  value={editSeeking}
+                                  value={editSeeking ?? ""}
                                   onChange={(e) =>
                                     setEditSeeking(
                                       e.target.value as LoveRouletteSeeking,
@@ -812,6 +814,9 @@ export function AdminPlayersManager({
                                   className="h-7 rounded-md border border-input bg-input/30 px-2 text-xs"
                                   aria-label="Cerco"
                                 >
+                                  {editSeeking ? null : (
+                                    <option value="">Scegli</option>
+                                  )}
                                   {LOVE_ROULETTE_SEEKING.map((value) => (
                                     <option key={value} value={value}>
                                       {seekingChoiceLabel(value)}
@@ -836,7 +841,7 @@ export function AdminPlayersManager({
                                 </select>
                               </div>
                             ) : (
-                              `${genderChoiceLabel(player.gender)} · ${seekingChoiceLabel(player.seeking)}${player.age_band ? ` · ${ageBandLabel(player.age_band)}` : ""}`
+                              `${genderChoiceLabel(player.gender)} · ${player.seeking ? seekingChoiceLabel(player.seeking) : "Cerco —"}${player.age_band ? ` · ${ageBandLabel(player.age_band)}` : ""}`
                             )}
                           </td>
                           <td className="px-3 py-2 hidden lg:table-cell text-xs text-muted-foreground">

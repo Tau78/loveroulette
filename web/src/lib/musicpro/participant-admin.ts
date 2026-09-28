@@ -7,9 +7,10 @@ import type {
 } from "./types";
 import { missingOptionalParticipantColumn } from "./participant-schema";
 import {
+  explicitSeeking,
   parseLoveRouletteAgeBand,
   parseLoveRouletteGender,
-  parseLoveRouletteSeeking,
+  parsePublicNameMode,
 } from "@/lib/player/identity";
 import type { LoveRouletteAgeBand, LoveRouletteSeeking } from "@/lib/player/identity";
 import { JoinParticipantError } from "./participants";
@@ -20,8 +21,10 @@ const PARTICIPANT_ADMIN_SELECT_BASE =
 const PARTICIPANT_ADMIN_SELECT_VISIBILITY = `${PARTICIPANT_ADMIN_SELECT_BASE}, data_visibility`;
 const PARTICIPANT_ADMIN_SELECT = `${PARTICIPANT_ADMIN_SELECT_VISIBILITY}, real_name`;
 const PARTICIPANT_ADMIN_SELECT_IDENTITY = `${PARTICIPANT_ADMIN_SELECT}, seeking, age_band`;
+const PARTICIPANT_ADMIN_SELECT_PROFILE = `${PARTICIPANT_ADMIN_SELECT_IDENTITY}, first_name, last_name, phone, email, photo_url, nick, public_name_mode`;
 
 const ADMIN_SELECTS = [
+  PARTICIPANT_ADMIN_SELECT_PROFILE,
   PARTICIPANT_ADMIN_SELECT_IDENTITY,
   PARTICIPANT_ADMIN_SELECT,
   PARTICIPANT_ADMIN_SELECT_VISIBILITY,
@@ -44,7 +47,19 @@ async function withParticipantAdminSelectFallback<T>(
       return map(normalizeRows(result.data));
     }
     lastError = result.error;
-    const optional = ["age_band", "seeking", "real_name", "data_visibility"];
+    const optional = [
+      "public_name_mode",
+      "nick",
+      "photo_url",
+      "email",
+      "phone",
+      "last_name",
+      "first_name",
+      "age_band",
+      "seeking",
+      "real_name",
+      "data_visibility",
+    ];
     const missing = optional.some((column) =>
       missingOptionalParticipantColumn(result.error!, { [column]: true }),
     );
@@ -87,6 +102,12 @@ export interface UpdateParticipantAdminInput {
   realName?: string | null;
 }
 
+function textOrNull(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 function mapRow(row: Record<string, unknown>): AdminParticipantRow {
   return {
     id: String(row.id),
@@ -96,11 +117,15 @@ function mapRow(row: Record<string, unknown>): AdminParticipantRow {
       row.real_name === null || row.real_name === undefined
         ? null
         : String(row.real_name),
+    first_name: textOrNull(row.first_name),
+    last_name: textOrNull(row.last_name),
+    phone: textOrNull(row.phone),
+    email: textOrNull(row.email),
+    photo_url: textOrNull(row.photo_url),
+    nick: textOrNull(row.nick),
+    public_name_mode: parsePublicNameMode(row.public_name_mode),
     gender: parseLoveRouletteGender(row.gender),
-    seeking: parseLoveRouletteSeeking(
-      row.seeking,
-      parseLoveRouletteGender(row.gender),
-    ),
+    seeking: explicitSeeking(row.seeking),
     age_band: parseLoveRouletteAgeBand(row.age_band),
     badge_code: (row.badge_code as string | null) ?? null,
     role: (row.role as LoveRouletteParticipantRole) ?? "player",

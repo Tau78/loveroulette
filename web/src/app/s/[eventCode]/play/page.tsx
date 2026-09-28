@@ -15,15 +15,8 @@ import { SpecialTrialTeaser } from "@/components/player/SpecialTrialTeaser";
 import { VotingPlayer } from "@/components/player/VotingPlayer";
 import { FinalistCheerPlayer } from "@/components/player/FinalistCheerPlayer";
 import { PlayerIdentityFields } from "@/components/player/PlayerIdentityFields";
+import { PlayerJoinWelcome } from "@/components/player/PlayerJoinWelcome";
 import { FINALS_COPY } from "@/lib/game/late-game-copy";
-import {
-  parseLoveRouletteAgeBand,
-  parseLoveRouletteGender,
-  parseLoveRouletteSeeking,
-  type LoveRouletteAgeBand,
-  type LoveRouletteGender,
-  type LoveRouletteSeeking,
-} from "@/lib/player/identity";
 import { CoupleTakeover } from "@/components/player/CoupleTakeover";
 import type { WaveMode } from "@/components/player/ColorWave";
 import {
@@ -57,17 +50,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { playerPresenceSubtitle } from "@/lib/player/presence-copy";
-import { DataVisibilitySelector } from "@/components/player/DataVisibilitySelector";
 import { DEFAULT_PARTICIPANT_DATA_VISIBILITY } from "@/lib/player/data-visibility";
 import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
 import { isParticipantInFinalists } from "@/lib/player/finalist-cheer";
 import {
-  NICKNAME_FROM_REAL_NAME_PROMPT,
-  nicknameSaveErrorMessage,
-  resolveNicknameOnSave,
-} from "@/lib/player/nickname-save";
+  explicitSeeking,
+  parseLoveRouletteAgeBand,
+  parseLoveRouletteGender,
+  parsePublicNameMode,
+  PUBLIC_NAME_MODES,
+  publicDisplayName,
+  publicNameModeLabel,
+  type LoveRouletteAgeBand,
+  type LoveRouletteGender,
+  type LoveRouletteSeeking,
+  type PublicNameMode,
+} from "@/lib/player/identity";
+import { compressProfilePhoto } from "@/lib/player/profile-photo";
+import { storedProfileCanReconnect } from "@/lib/player/participant-storage";
 
-type JoinField = "realName" | "nickname" | "badge" | "dataVisibility" | "identity";
+type JoinField = "profile" | "photo" | "badge" | "identity";
 
 type RestoreState = "pending" | "ready";
 
@@ -91,11 +93,16 @@ const JOIN_CARD_CLASS =
 async function postJoin(
   eventSlug: string,
   payload: {
-    nickname: string;
-    realName?: string | null;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+    photoUrl: string;
+    nick: string | null;
+    publicNameMode: PublicNameMode;
     gender: LoveRouletteGender;
-    seeking?: LoveRouletteSeeking | null;
-    ageBand?: LoveRouletteAgeBand | null;
+    seeking: LoveRouletteSeeking;
+    ageBand: LoveRouletteAgeBand;
     badgeCode: string | null;
     dataVisibility: ParticipantDataVisibility;
     participantId?: string | null;
@@ -105,8 +112,13 @@ async function postJoin(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      nickname: payload.nickname,
-      realName: payload.realName,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      phone: payload.phone,
+      email: payload.email,
+      photoUrl: payload.photoUrl,
+      nick: payload.nick,
+      publicNameMode: payload.publicNameMode,
       gender: payload.gender,
       seeking: payload.seeking,
       ageBand: payload.ageBand,
@@ -137,8 +149,15 @@ function readAnimatorTestProfile(): StoredParticipantProfile | null {
   return {
     id,
     nickname: decodeURIComponent(nickname),
+    nick: decodeURIComponent(nickname),
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    photoUrl: "",
+    publicNameMode: parsePublicNameMode(params.get("nameMode")),
     gender,
-    seeking: parseLoveRouletteSeeking(params.get("seeking"), gender),
+    seeking: explicitSeeking(params.get("seeking")),
     ageBand: parseLoveRouletteAgeBand(params.get("age")),
     badgeCode: params.get("badge") ?? "",
     dataVisibility: DEFAULT_PARTICIPANT_DATA_VISIBILITY,
@@ -158,21 +177,32 @@ export default function PlayerPlayPage() {
   const badgeRequired = eventInfo?.badgeRequired === true;
 
   const [nickname, setNickname] = useState("");
-  const [realName, setRealName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [publicNameMode, setPublicNameMode] = useState<PublicNameMode>("nick");
   const [gender, setGender] = useState<LoveRouletteGender | null>(null);
   const [seeking, setSeeking] = useState<LoveRouletteSeeking | null>(null);
   const [ageBand, setAgeBand] = useState<LoveRouletteAgeBand | null>(null);
+  const shownName = publicDisplayName({
+    firstName,
+    lastName,
+    nick: nickname,
+    mode: publicNameMode,
+  });
   const [badgeCode, setBadgeCode] = useState("");
   const [dataVisibility, setDataVisibility] = useState<ParticipantDataVisibility>(
     DEFAULT_PARTICIPANT_DATA_VISIBILITY,
   );
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
+  const [entryStep, setEntryStep] = useState<"welcome" | "form">("welcome");
   const [restoreState, setRestoreState] = useState<RestoreState>("pending");
   const [joinError, setJoinError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<JoinField | null>(null);
   const [joining, setJoining] = useState(false);
-  const [nickConfirmOpen, setNickConfirmOpen] = useState(false);
   const [waveMode, setWaveMode] = useState<WaveMode>("idle");
   const [partnerNick, setPartnerNick] = useState<string | null>(null);
   const joinedRef = useRef(false);
@@ -212,8 +242,8 @@ export default function PlayerPlayPage() {
     const pool = finalsShow?.finalists?.length
       ? finalsShow.finalists
       : (voting.current?.finalists ?? []);
-    return isParticipantInFinalists(nickname, pool);
-  }, [finalsShow?.finalists, nickname, voting.current?.finalists]);
+    return isParticipantInFinalists(shownName, pool);
+  }, [finalsShow?.finalists, shownName, voting.current?.finalists]);
 
   const finalsVotingOpen =
     finalsShow?.phase === "voting" && voting.current?.status === "open";
@@ -262,29 +292,58 @@ export default function PlayerPlayPage() {
   const applyParticipant = useCallback(
     (
       participant: NonNullable<JoinResponse["participant"]>,
-      nick: string,
-      g: LoveRouletteGender,
-      seek: LoveRouletteSeeking,
-      age: LoveRouletteAgeBand | null,
-      badge: string,
-      visibility: ParticipantDataVisibility,
+      input: {
+        firstName: string;
+        lastName: string;
+        phone: string;
+        email: string;
+        photoUrl: string;
+        nick: string;
+        publicNameMode: PublicNameMode;
+        gender: LoveRouletteGender;
+        seeking: LoveRouletteSeeking;
+        ageBand: LoveRouletteAgeBand;
+        badge: string;
+        visibility: ParticipantDataVisibility;
+      },
     ) => {
+      const displayName =
+        participant.nickname?.trim() ||
+        publicDisplayName({
+          firstName: input.firstName,
+          lastName: input.lastName,
+          nick: input.nick,
+          mode: input.publicNameMode,
+        });
       persistParticipantProfile(eventSlug, {
         id: participant.id,
-        nickname: nick,
-        gender: g,
-        seeking: seek,
-        ageBand: age,
-        badgeCode: badge,
-        dataVisibility: visibility,
+        nickname: displayName,
+        nick: input.nick,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.phone,
+        email: input.email,
+        photoUrl: input.photoUrl,
+        publicNameMode: input.publicNameMode,
+        gender: input.gender,
+        seeking: input.seeking,
+        ageBand: input.ageBand,
+        badgeCode: input.badge,
+        dataVisibility: input.visibility,
       });
       setParticipantId(participant.id);
-      setNickname(nick);
-      setGender(g);
-      setSeeking(seek);
-      setAgeBand(age);
-      setBadgeCode(badge);
-      setDataVisibility(visibility);
+      setNickname(input.nick);
+      setFirstName(input.firstName);
+      setLastName(input.lastName);
+      setPhone(input.phone);
+      setEmail(input.email);
+      setPhotoUrl(input.photoUrl);
+      setPublicNameMode(input.publicNameMode);
+      setGender(input.gender);
+      setSeeking(input.seeking);
+      setAgeBand(input.ageBand);
+      setBadgeCode(input.badge);
+      setDataVisibility(input.visibility);
       setJoined(true);
       joinedRef.current = true;
     },
@@ -294,8 +353,8 @@ export default function PlayerPlayPage() {
   const handleJoinFailure = useCallback(
     (status: number, data: JoinResponse) => {
       if (data.code === "NICKNAME_TAKEN") {
-        setFieldError("nickname");
-        setJoinError(data.error ?? "Questo nickname è già in sala.");
+        setFieldError("profile");
+        setJoinError(data.error ?? "Questo nick è già in sala.");
       } else if (data.code === "BADGE_TAKEN") {
         setFieldError("badge");
         setJoinError(
@@ -306,8 +365,14 @@ export default function PlayerPlayPage() {
         setFieldError("badge");
         setJoinError(data.error ?? "Inserisci il codice badge.");
       } else if (status === 400) {
-        clearStoredParticipant(eventSlug);
-        setJoinError("Sessione scaduta — riprova a entrare.");
+        const payloadRejected =
+          data.error === "Invalid payload" || data.error === "Invalid JSON body";
+        if (readStoredParticipantId(eventSlug) && !payloadRejected) {
+          clearStoredParticipant(eventSlug);
+          setJoinError("Sessione scaduta — riprova a entrare.");
+        } else {
+          setJoinError(data.error ?? "Controlla i dati e riprova.");
+        }
       } else {
         setJoinError(data.error ?? "Impossibile entrare in sala");
       }
@@ -317,23 +382,32 @@ export default function PlayerPlayPage() {
 
   const performJoin = useCallback(
     async (input: {
-      nickname: string;
-      realName?: string | null;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      email: string;
+      photoUrl: string;
+      nick: string;
+      publicNameMode: PublicNameMode;
       gender: LoveRouletteGender;
-      seeking?: LoveRouletteSeeking | null;
-      ageBand?: LoveRouletteAgeBand | null;
+      seeking: LoveRouletteSeeking;
+      ageBand: LoveRouletteAgeBand;
       badgeCode: string;
       dataVisibility: ParticipantDataVisibility;
       participantId?: string | null;
     }) => {
-      const nick = input.nickname.trim();
       const badge = badgeRequired ? input.badgeCode.trim() : "";
       const storedId =
         input.participantId ?? readStoredParticipantId(eventSlug) ?? undefined;
 
       const result = await postJoin(eventSlug, {
-        nickname: nick,
-        realName: input.realName?.trim() || null,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        phone: input.phone.trim(),
+        email: input.email.trim(),
+        photoUrl: input.photoUrl,
+        nick: input.nick.trim() || null,
+        publicNameMode: input.publicNameMode,
         gender: input.gender,
         seeking: input.seeking,
         ageBand: input.ageBand,
@@ -346,15 +420,16 @@ export default function PlayerPlayPage() {
         return result;
       }
 
-      applyParticipant(
-        result.participant,
-        nick,
-        input.gender,
-        input.seeking ?? parseLoveRouletteSeeking(undefined, input.gender),
-        input.ageBand ?? null,
+      applyParticipant(result.participant, {
+        ...input,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        phone: input.phone.trim(),
+        email: input.email.trim(),
+        nick: input.nick.trim(),
         badge,
-        input.dataVisibility,
-      );
+        visibility: input.dataVisibility,
+      });
       return result;
     },
     [applyParticipant, badgeRequired, eventSlug],
@@ -375,16 +450,38 @@ export default function PlayerPlayPage() {
         return;
       }
 
-      setNickname(profile.nickname);
+      setNickname(profile.nick || profile.nickname);
+      setFirstName(profile.firstName);
+      setLastName(profile.lastName);
+      setPhone(profile.phone);
+      setEmail(profile.email);
+      setPhotoUrl(profile.photoUrl);
+      setPublicNameMode(profile.publicNameMode);
       setGender(profile.gender);
       setSeeking(profile.seeking);
       setAgeBand(profile.ageBand);
       setBadgeCode(profile.badgeCode);
       setDataVisibility(profile.dataVisibility);
+
+      if (
+        !storedProfileCanReconnect(profile) ||
+        !profile.seeking ||
+        !profile.ageBand
+      ) {
+        if (!cancelled) setRestoreState("ready");
+        return;
+      }
+
       setJoining(true);
 
       const result = await performJoin({
-        nickname: profile.nickname,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        email: profile.email,
+        photoUrl: profile.photoUrl,
+        nick: profile.nick,
+        publicNameMode: profile.publicNameMode,
         gender: profile.gender,
         seeking: profile.seeking,
         ageBand: profile.ageBand,
@@ -438,9 +535,9 @@ export default function PlayerPlayPage() {
     }
 
     if (partner) {
-      dispatchCoupleRevealed({ partnerNick: partner, yourNick: nickname });
+      dispatchCoupleRevealed({ partnerNick: partner, yourNick: shownName });
     }
-  }, [joined, participantId, lastReveal, nickname]);
+  }, [joined, participantId, lastReveal, shownName]);
 
   const handleCoupleRevealed = useCallback((detail: CoupleRevealedDetail) => {
     setWaveMode("celebration");
@@ -462,40 +559,27 @@ export default function PlayerPlayPage() {
     setWaveMode("idle");
   }, []);
 
-  const handleJoin = async (opts?: { confirmUseRealName?: boolean }) => {
-    const resolved = resolveNicknameOnSave({
-      realName,
-      nickname,
-      confirmUseRealName: opts?.confirmUseRealName,
-    });
+  const handleJoin = async () => {
+    const first = firstName.trim();
+    const last = lastName.trim();
+    const tel = phone.trim();
+    const mail = email.trim();
 
-    if (!resolved.ok) {
-      if (resolved.reason === "NEED_CONFIRM") {
-        setNickConfirmOpen(true);
-        setFieldError("nickname");
-        setJoinError(NICKNAME_FROM_REAL_NAME_PROMPT);
-        return;
-      }
-      setFieldError(resolved.reason === "NEED_REAL_NAME" ? "realName" : "nickname");
-      setJoinError(nicknameSaveErrorMessage(resolved.reason));
+    if (!first || !last || tel.length < 6 || !mail.includes("@")) {
+      setFieldError("profile");
+      setJoinError("Nome, cognome, telefono ed email sono obbligatori.");
       return;
     }
-
-    setNickConfirmOpen(false);
-    setNickname(resolved.nickname);
-
+    if (!photoUrl) {
+      setFieldError("photo");
+      setJoinError("Aggiungi una foto.");
+      return;
+    }
     if (!gender || !seeking || !ageBand) {
       setFieldError("identity");
       setJoinError("Scegli chi sei, chi cerchi e la fascia d’età.");
       return;
     }
-
-    if (!dataVisibility) {
-      setFieldError("dataVisibility");
-      setJoinError("Scegli chi può vedere i tuoi dati personali.");
-      return;
-    }
-
     if (badgeRequired && !badgeCode.trim()) {
       setFieldError("badge");
       setJoinError("Inserisci il codice badge sulla pettorina.");
@@ -508,8 +592,13 @@ export default function PlayerPlayPage() {
 
     try {
       const result = await performJoin({
-        nickname: resolved.nickname,
-        realName: resolved.realName || null,
+        firstName: first,
+        lastName: last,
+        phone: tel,
+        email: mail,
+        photoUrl,
+        nick: nickname,
+        publicNameMode,
         gender,
         seeking,
         ageBand,
@@ -528,7 +617,7 @@ export default function PlayerPlayPage() {
 
   if (restoreState === "pending" || (joining && !joined)) {
     return (
-      <PlayerMobileShell eventSlug={eventSlug}>
+      <PlayerMobileShell eventSlug={eventSlug} fullscreenPrompt={false}>
         <PlayerMobileHeader event={eventInfo} loading={eventInfoLoading} />
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
           <motion.div
@@ -548,7 +637,7 @@ export default function PlayerPlayPage() {
         <PlayerMobileHeader
           event={eventInfo}
           loading={eventInfoLoading}
-          nickname={runtimeState !== "lobby" ? nickname : null}
+          nickname={runtimeState !== "lobby" ? shownName : null}
         />
         <div className="flex justify-center px-4 -mt-2 mb-1">
           <SessionSyncIndicator status={syncStatus} />
@@ -558,8 +647,10 @@ export default function PlayerPlayPage() {
             <div className="w-full max-w-md space-y-6">
               <PlayerStageTransition stageKey={playerStageKey}>
                 <PlayerPresenceHero
-                  nickname={nickname}
+                  nickname={shownName || " "}
                   gender={gender ?? "male"}
+                  photoUrl={photoUrl}
+                  seeking={seeking}
                   runtimeState={runtimeState}
                   quizPhase={quizDisplayPhase ?? null}
                   votingOpen={finalsVotingOpen}
@@ -624,8 +715,19 @@ export default function PlayerPlayPage() {
     );
   }
 
+  if (entryStep === "welcome") {
+    return (
+      <PlayerMobileShell eventSlug={eventSlug} fullscreenPrompt={false}>
+        <PlayerMobileHeader event={eventInfo} loading={eventInfoLoading} />
+        <div className="flex flex-1 flex-col px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <PlayerJoinWelcome onContinue={() => setEntryStep("form")} />
+        </div>
+      </PlayerMobileShell>
+    );
+  }
+
   return (
-    <PlayerMobileShell eventSlug={eventSlug}>
+    <PlayerMobileShell eventSlug={eventSlug} fullscreenPrompt={false}>
       <PlayerMobileHeader event={eventInfo} loading={eventInfoLoading} />
       <div className="flex flex-1 flex-col px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <motion.div
@@ -639,8 +741,8 @@ export default function PlayerPlayPage() {
               Entra in sala
             </h1>
             <p className="text-sm text-muted-foreground">
-              Il nickname è obbligatorio e verrà mostrato a schermo. Può
-              coincidere col tuo nome.
+              Nome, cognome, telefono, email e foto sono obbligatori. Il nick
+              è facoltativo.
             </p>
           </div>
 
@@ -654,101 +756,168 @@ export default function PlayerPlayPage() {
                   void handleJoin();
                 }}
               >
-                <div className="space-y-2">
-                  <Label htmlFor="realName">Nome</Label>
-                  <Input
-                    id="realName"
-                    value={realName}
-                    onChange={(e) => {
-                      setRealName(e.target.value);
-                      if (fieldError === "realName") {
-                        setFieldError(null);
-                        setJoinError(null);
-                      }
-                      if (nickConfirmOpen) setNickConfirmOpen(false);
-                    }}
-                    placeholder="Il tuo nome"
-                    maxLength={40}
-                    autoComplete="given-name"
-                    enterKeyHint="next"
-                    aria-invalid={fieldError === "realName"}
-                    className={cn(
-                      "h-11 bg-background/50",
-                      fieldError === "realName" &&
-                        "border-destructive ring-destructive/30",
-                    )}
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">Nome</Label>
+                    <Input
+                      id="firstName"
+                      value={firstName}
+                      onChange={(e) => {
+                        setFirstName(e.target.value);
+                        if (fieldError === "profile") {
+                          setFieldError(null);
+                          setJoinError(null);
+                        }
+                      }}
+                      autoComplete="given-name"
+                      maxLength={40}
+                      className={cn(
+                        "h-11 bg-background/50",
+                        fieldError === "profile" &&
+                          "border-destructive ring-destructive/30",
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Cognome</Label>
+                    <Input
+                      id="lastName"
+                      value={lastName}
+                      onChange={(e) => {
+                        setLastName(e.target.value);
+                        if (fieldError === "profile") {
+                          setFieldError(null);
+                          setJoinError(null);
+                        }
+                      }}
+                      autoComplete="family-name"
+                      maxLength={40}
+                      className={cn(
+                        "h-11 bg-background/50",
+                        fieldError === "profile" &&
+                          "border-destructive ring-destructive/30",
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefono</Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      inputMode="tel"
+                      autoComplete="tel"
+                      maxLength={24}
+                      className="h-11 bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      inputMode="email"
+                      autoComplete="email"
+                      maxLength={80}
+                      className="h-11 bg-background/50"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {photoUrl ? (
+                    <img
+                      src={photoUrl}
+                      alt=""
+                      className="size-14 rounded-full object-cover border border-white/15"
+                    />
+                  ) : (
+                    <div className="size-14 rounded-full border border-dashed border-white/25 bg-black/30" />
+                  )}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <Label htmlFor="photo">Foto</Label>
+                    <Input
+                      id="photo"
+                      type="file"
+                      accept="image/*"
+                      disabled={joining}
+                      className={cn(
+                        "h-11 bg-background/50",
+                        fieldError === "photo" &&
+                          "border-destructive ring-destructive/30",
+                      )}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        void compressProfilePhoto(file)
+                          .then((url) => {
+                            setPhotoUrl(url);
+                            if (fieldError === "photo") {
+                              setFieldError(null);
+                              setJoinError(null);
+                            }
+                          })
+                          .catch(() => {
+                            setFieldError("photo");
+                            setJoinError("Foto non valida.");
+                          });
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nickname">Nickname (obbligatorio)</Label>
+                  <Label htmlFor="nickname">Nick</Label>
                   <Input
                     id="nickname"
                     value={nickname}
-                    onChange={(e) => {
-                      setNickname(e.target.value);
-                      if (fieldError === "nickname") {
-                        setFieldError(null);
-                        setJoinError(null);
-                      }
-                      if (nickConfirmOpen) setNickConfirmOpen(false);
-                    }}
-                    placeholder="Come appari a schermo — se vuoto userai il nome"
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="Facoltativo"
                     maxLength={24}
                     autoComplete="nickname"
-                    enterKeyHint="next"
-                    aria-invalid={fieldError === "nickname"}
-                    className={cn(
-                      "h-11 bg-background/50",
-                      fieldError === "nickname" &&
-                        "border-destructive ring-destructive/30",
-                    )}
+                    className="h-11 bg-background/50"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    È ciò che vedono tutti sul grande schermo.
-                  </p>
                 </div>
 
-                {nickConfirmOpen ? (
-                  <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="nickname-confirm-title"
-                    className="rounded-xl border border-amber-400/40 bg-amber-950/35 p-4 space-y-3"
-                  >
-                    <p
-                      id="nickname-confirm-title"
-                      className="text-sm font-medium text-amber-50"
-                    >
-                      {NICKNAME_FROM_REAL_NAME_PROMPT}
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <Label>Come ti vedono in sala</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Il nome sul proiettore e sui telefoni degli altri.
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={joining}
-                        onClick={() =>
-                          void handleJoin({ confirmUseRealName: true })
-                        }
-                      >
-                        Sì, usa il nome
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={joining}
-                        onClick={() => {
-                          setNickConfirmOpen(false);
-                          setJoinError(null);
-                          setFieldError("nickname");
-                        }}
-                      >
-                        No, inserisco un nickname
-                      </Button>
-                    </div>
                   </div>
-                ) : null}
+                  <div className="grid grid-cols-3 gap-2">
+                    {PUBLIC_NAME_MODES.map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        disabled={joining}
+                        onClick={() => setPublicNameMode(mode)}
+                        className={cn(
+                          "min-h-12 rounded-lg border px-2 py-2 text-sm font-medium",
+                          publicNameMode === mode
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-background/50",
+                        )}
+                      >
+                        {publicNameModeLabel(mode)}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {shownName
+                      ? `In sala ti vedono come ${shownName}.`
+                      : publicNameMode === "full"
+                        ? "Si vedono nome e cognome."
+                        : publicNameMode === "first"
+                          ? "Si vede solo il nome."
+                          : "Senza nick si vede il tuo nome."}
+                  </p>
+                </div>
 
                 <PlayerIdentityFields
                   gender={gender}
@@ -779,19 +948,6 @@ export default function PlayerPlayPage() {
                   }}
                 />
 
-                <DataVisibilitySelector
-                  value={dataVisibility}
-                  onChange={(value) => {
-                    setDataVisibility(value);
-                    if (fieldError === "dataVisibility") {
-                      setFieldError(null);
-                      setJoinError(null);
-                    }
-                  }}
-                  invalid={fieldError === "dataVisibility"}
-                  disabled={joining}
-                />
-
                 {badgeRequired ? (
                   <div className="space-y-2">
                     <Label htmlFor="badge">Codice badge</Label>
@@ -819,7 +975,7 @@ export default function PlayerPlayPage() {
                   </div>
                 ) : null}
 
-                {joinError && !nickConfirmOpen ? (
+                {joinError ? (
                   <p className="text-sm text-destructive" role="alert">
                     {joinError}
                   </p>
@@ -829,7 +985,7 @@ export default function PlayerPlayPage() {
                   type="submit"
                   size="lg"
                   className="h-12 w-full text-base font-semibold shadow-[0_0_24px_rgba(236,72,153,0.35)]"
-                  disabled={joining || nickConfirmOpen}
+                  disabled={joining}
                 >
                   {joining ? "Salvataggio…" : "Salva ed entra"}
                 </Button>

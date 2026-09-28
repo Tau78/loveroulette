@@ -3,6 +3,7 @@ import type {
   LoveRouletteAgeBand,
   LoveRouletteGender,
   LoveRouletteSeeking,
+  PublicNameMode,
 } from "@/lib/player/identity";
 import type { DisplayOverlay } from "./display-overlay";
 import type { LastReveal } from "./extraction";
@@ -18,6 +19,7 @@ export type {
   LoveRouletteAgeBand,
   LoveRouletteGender,
   LoveRouletteSeeking,
+  PublicNameMode,
 } from "@/lib/player/identity";
 
 export type ParticipantDataVisibility = "everyone" | "matched" | "none";
@@ -87,11 +89,19 @@ export interface LoveRouletteParticipant {
   id: string;
   event_id: string;
   nickname: string;
-  /** Nome vero (opzionale); a schermo resta sempre `nickname`. */
+  /** Nome anagrafico completo, non è il nome in sala. */
   real_name?: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  email: string | null;
+  photo_url: string | null;
+  /** Nick facoltativo. Il nome in sala è `nickname`. */
+  nick: string | null;
+  public_name_mode: PublicNameMode;
   gender: LoveRouletteGender;
-  /** Chi cerca. Assente in DB = legacy uomo↔donna. */
-  seeking: LoveRouletteSeeking;
+  /** Obbligatorio per entrare in coppia. Null = escluso dal matching. */
+  seeking: LoveRouletteSeeking | null;
   /** Raccolta in ingresso. Il matching non la filtra ancora. */
   age_band: LoveRouletteAgeBand | null;
   badge_code: string | null;

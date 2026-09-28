@@ -5,7 +5,7 @@ alwaysApply: true
 
 # CasaPad — prossimo giro domande
 
-Quando riparte AskQuestion sulla plancia (`/admin/{codice}/serata`), **il primo blocco è questo**.
+Quando riparte AskQuestion sulla plancia (`/admin/{codice}/board`), **il primo blocco è questo**.
 
 ## Chrome — DONE (ago 2026)
 

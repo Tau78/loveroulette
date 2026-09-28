@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  legacySeekingFor,
+  explicitSeeking,
   mutuallyCompatible,
-  parseLoveRouletteSeeking,
+  publicDisplayName,
   type PreferencePerson,
 } from "./identity";
 
@@ -38,7 +38,7 @@ describe("mutuallyCompatible", () => {
     ).toBe(false);
   });
 
-  it("tratta Entrambi come aperto anche al non binary", () => {
+  it("tratta Tutti come aperto anche al non binary", () => {
     expect(
       mutuallyCompatible(
         person("nonbinary", "both"),
@@ -66,11 +66,53 @@ describe("mutuallyCompatible", () => {
   });
 });
 
-describe("legacySeekingFor", () => {
-  it("tiene i giocatori già in sala sul match uomo↔donna", () => {
-    expect(legacySeekingFor("male")).toBe("female");
-    expect(legacySeekingFor("female")).toBe("male");
-    expect(legacySeekingFor("nonbinary")).toBe("both");
-    expect(parseLoveRouletteSeeking(null, "male")).toBe("female");
+describe("explicitSeeking", () => {
+  it("non inventa un cerco se manca", () => {
+    expect(explicitSeeking(null)).toBeNull();
+    expect(explicitSeeking(undefined)).toBeNull();
+    expect(explicitSeeking("female")).toBe("female");
+  });
+});
+
+describe("publicDisplayName", () => {
+  it("mostra il nick se scelto", () => {
+    expect(
+      publicDisplayName({
+        firstName: "Marta",
+        lastName: "Riva",
+        nick: "Marto",
+        mode: "nick",
+      }),
+    ).toBe("Marto");
+  });
+
+  it("senza nick mostra il nome", () => {
+    expect(
+      publicDisplayName({
+        firstName: "Marta",
+        lastName: "Riva",
+        nick: "  ",
+        mode: "nick",
+      }),
+    ).toBe("Marta");
+  });
+
+  it("può mostrare nome oppure nome e cognome", () => {
+    expect(
+      publicDisplayName({
+        firstName: "Marta",
+        lastName: "Riva",
+        nick: "Marto",
+        mode: "first",
+      }),
+    ).toBe("Marta");
+    expect(
+      publicDisplayName({
+        firstName: "Marta",
+        lastName: "Riva",
+        nick: "Marto",
+        mode: "full",
+      }),
+    ).toBe("Marta Riva");
   });
 });

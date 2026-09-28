@@ -66,11 +66,16 @@ export async function POST(
 
     const participant = await joinParticipant(supabase, {
       eventId: event.id,
-      nickname: body.nickname,
-      realName: body.realName,
       gender: body.gender,
       seeking: body.seeking,
       ageBand: body.ageBand,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      phone: body.phone,
+      email: body.email,
+      photoUrl: body.photoUrl,
+      nick: body.nick,
+      publicNameMode: body.publicNameMode,
       badgeCode: body.badgeCode,
       dataVisibility: body.dataVisibility,
       participantId: body.participantId,

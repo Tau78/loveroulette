@@ -5,9 +5,9 @@ import {
   type QuestionMeta,
 } from "@/lib/matching/affinity";
 import {
+  explicitSeeking,
   mutuallyCompatible,
   parseLoveRouletteGender,
-  parseLoveRouletteSeeking,
   type LoveRouletteGender,
   type LoveRouletteSeeking,
 } from "@/lib/player/identity";
@@ -53,13 +53,15 @@ interface MatchPerson {
   seeking: LoveRouletteSeeking;
 }
 
-function mapMatchPerson(row: Record<string, unknown>): MatchPerson {
+function mapMatchPerson(row: Record<string, unknown>): MatchPerson | null {
+  const seeking = explicitSeeking(row.seeking);
+  if (!seeking) return null;
   const gender = parseLoveRouletteGender(row.gender);
   return {
     id: String(row.id),
     nickname: typeof row.nickname === "string" ? row.nickname : "—",
     gender,
-    seeking: parseLoveRouletteSeeking(row.seeking, gender),
+    seeking,
   };
 }
 
@@ -77,9 +79,10 @@ async function loadMatchPeople(
     .eq("event_id", eventId);
 
   if (!withSeeking.error) {
-    return (withSeeking.data ?? []).map((row) =>
-      mapMatchPerson(row as Record<string, unknown>),
-    );
+    return (withSeeking.data ?? []).flatMap((row) => {
+      const person = mapMatchPerson(row as Record<string, unknown>);
+      return person ? [person] : [];
+    });
   }
 
   if (!isSeekingSchemaError(withSeeking.error)) {
@@ -92,9 +95,10 @@ async function loadMatchPeople(
     .eq("event_id", eventId);
 
   if (fallback.error) throw new Error(fallback.error.message);
-  return (fallback.data ?? []).map((row) =>
-    mapMatchPerson(row as Record<string, unknown>),
-  );
+  return (fallback.data ?? []).flatMap((row) => {
+    const person = mapMatchPerson(row as Record<string, unknown>);
+    return person ? [person] : [];
+  });
 }
 
 export interface PreviewPairRow {

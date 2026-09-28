@@ -41,7 +41,8 @@ export function PlayerIdentityFields({
   return (
     <div className="space-y-4">
       <ChoiceRow
-        label="Sono"
+        label="Chi sei"
+        hint="Come ti presenti in sala."
         invalid={invalid && !gender}
         disabled={disabled}
         columns={3}
@@ -53,7 +54,8 @@ export function PlayerIdentityFields({
         }))}
       />
       <ChoiceRow
-        label="Cerco"
+        label="Chi cerchi"
+        hint="Con chi vuoi essere abbinato."
         invalid={invalid && !seeking}
         disabled={disabled}
         columns={3}
@@ -65,7 +67,8 @@ export function PlayerIdentityFields({
         }))}
       />
       <ChoiceRow
-        label="Età"
+        label="Quanti anni hai"
+        hint="Una fascia, non la data di nascita."
         invalid={invalid && !ageBand}
         disabled={disabled}
         columns={4}
@@ -82,12 +85,14 @@ export function PlayerIdentityFields({
 
 function ChoiceRow({
   label,
+  hint,
   options,
   columns,
   disabled,
   invalid,
 }: {
   label: string;
+  hint: string;
   columns: 3 | 4;
   disabled?: boolean;
   invalid?: boolean;
@@ -100,7 +105,10 @@ function ChoiceRow({
 }) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <div className="space-y-1">
+        <Label>{label}</Label>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
       <div
         className={cn(
           "grid gap-2",

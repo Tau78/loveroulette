@@ -90,10 +90,26 @@ if (!build) {
 }
 
 const version = build.attributes?.version;
+let assigned = 0;
 for (const groupId of GROUP_IDS) {
-  await req("POST", `/v1/betaGroups/${groupId}/relationships/builds`, {
-    data: [{ type: "builds", id: build.id }],
-  });
-  console.log(`TestFlight gruppo ${groupId} → build ${version} (${build.id}).`);
+  try {
+    await req("POST", `/v1/betaGroups/${groupId}/relationships/builds`, {
+      data: [{ type: "builds", id: build.id }],
+    });
+    assigned += 1;
+    console.log(`TestFlight gruppo ${groupId} → build ${version} (${build.id}).`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // External/internal group IDs can go stale when ASC deletes/renames groups.
+    if (/\b404\b/.test(msg)) {
+      console.warn(`Avviso: gruppo ${groupId} assente (404), salto.`);
+      continue;
+    }
+    throw err;
+  }
+}
+if (assigned === 0) {
+  console.error(`Nessun gruppo TestFlight ha ricevuto la build ${version}.`);
+  process.exit(1);
 }
 console.log("Tira giù per aggiornare in TestFlight.");

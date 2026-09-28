@@ -1,7 +1,12 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import type { LoveRouletteGender } from "@/lib/player/identity";
+import {
+  genderChoiceLabel,
+  seekingChoiceLabel,
+  type LoveRouletteGender,
+  type LoveRouletteSeeking,
+} from "@/lib/player/identity";
 import type { EventState } from "@/lib/types";
 import type { QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
 import { playerWelcomeLabel } from "@/lib/player/presence-copy";
@@ -10,6 +15,8 @@ import { cn } from "@/lib/utils";
 interface PlayerPresenceHeroProps {
   nickname: string;
   gender: LoveRouletteGender;
+  photoUrl?: string | null;
+  seeking?: LoveRouletteSeeking | null;
   runtimeState: EventState;
   quizPhase?: QuizDisplayPhase | null;
   votingOpen?: boolean;
@@ -21,6 +28,8 @@ interface PlayerPresenceHeroProps {
 export function PlayerPresenceHero({
   nickname,
   gender,
+  photoUrl,
+  seeking,
   runtimeState,
   quizPhase,
   answersRemaining,
@@ -45,6 +54,13 @@ export function PlayerPresenceHero({
     >
       {showWelcome ? (
         <>
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt=""
+              className="mx-auto mb-3 size-20 rounded-full border border-white/15 object-cover"
+            />
+          ) : null}
           <motion.h1
             className="font-display text-[2rem] font-bold uppercase leading-tight tracking-tight text-foreground"
             initial={reduceMotion ? false : { opacity: 0, y: 8 }}
@@ -61,6 +77,10 @@ export function PlayerPresenceHero({
           >
             {playerWelcomeLabel(gender)}
           </motion.p>
+          <p className="pt-1 text-sm text-muted-foreground">
+            {genderChoiceLabel(gender)}
+            {seeking ? ` · Cerco ${seekingChoiceLabel(seeking)}` : ""}
+          </p>
         </>
       ) : null}
       {showSubtitle ? (

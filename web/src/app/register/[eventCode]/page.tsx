@@ -4,44 +4,38 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { PlayerIdentityFields } from "@/components/player/PlayerIdentityFields";
-import { DataVisibilitySelector } from "@/components/player/DataVisibilitySelector";
 import type {
   LoveRouletteAgeBand,
   LoveRouletteGender,
   LoveRouletteSeeking,
 } from "@/lib/player/identity";
-import { DEFAULT_PARTICIPANT_DATA_VISIBILITY } from "@/lib/player/data-visibility";
-import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
-import {
-  NICKNAME_FROM_REAL_NAME_PROMPT,
-  nicknameSaveErrorMessage,
-  resolveNicknameOnSave,
-} from "@/lib/player/nickname-save";
 
 export default function RegisterPage() {
   const params = useParams();
   const eventCode = String(params.eventCode ?? "").toUpperCase();
   const [email, setEmail] = useState("");
-  const [realName, setRealName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<LoveRouletteGender | null>(null);
   const [seeking, setSeeking] = useState<LoveRouletteSeeking | null>(null);
   const [ageBand, setAgeBand] = useState<LoveRouletteAgeBand | null>(null);
-  const [dataVisibility, setDataVisibility] = useState<ParticipantDataVisibility>(
-    DEFAULT_PARTICIPANT_DATA_VISIBILITY,
-  );
   const [consent, setConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [nickConfirmOpen, setNickConfirmOpen] = useState(false);
 
-  function submitRegistration(opts?: { confirmUseRealName?: boolean }) {
-    if (!email.trim()) {
-      setFormError("Inserisci la tua email.");
+  function submitRegistration() {
+    if (!firstName.trim() || !lastName.trim()) {
+      setFormError("Nome e cognome sono obbligatori.");
       return;
     }
-    if (!dataVisibility) {
-      setFormError("Scegli chi può vedere i tuoi dati personali.");
+    if (phone.trim().length < 6) {
+      setFormError("Inserisci un telefono.");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      setFormError("Inserisci la tua email.");
       return;
     }
     if (!gender || !seeking || !ageBand) {
@@ -53,25 +47,6 @@ export default function RegisterPage() {
       return;
     }
 
-    const resolved = resolveNicknameOnSave({
-      realName,
-      nickname,
-      confirmUseRealName: opts?.confirmUseRealName,
-    });
-
-    if (!resolved.ok) {
-      if (resolved.reason === "NEED_CONFIRM") {
-        setNickConfirmOpen(true);
-        setFormError(NICKNAME_FROM_REAL_NAME_PROMPT);
-        return;
-      }
-      setNickConfirmOpen(false);
-      setFormError(nicknameSaveErrorMessage(resolved.reason));
-      return;
-    }
-
-    setNickname(resolved.nickname);
-    setNickConfirmOpen(false);
     setFormError(null);
     setSubmitted(true);
   }
@@ -83,7 +58,7 @@ export default function RegisterPage() {
           <p className="text-4xl text-accent">♥</p>
           <h1 className="text-2xl font-bold">Pre-registrazione inviata!</h1>
           <p className="text-muted">
-            Controlla la tua email per confermare l&apos;account.
+            In sala completi la foto dal telefono. Senza nick si vede il nome.
           </p>
           <Link
             href={`/s/${eventCode}`}
@@ -104,8 +79,9 @@ export default function RegisterPage() {
         </Link>
         <h1 className="text-2xl font-bold">Pre-registrazione</h1>
         <p className="text-muted text-sm">
-          Registrati prima della serata per accedere alla chat e al gioco. Il
-          nickname è obbligatorio e verrà mostrato a schermo.
+          Nome, cognome, telefono ed email sono obbligatori. Il nick è
+          facoltativo: senza nick in sala si vede il nome. La foto si
+          aggiunge entrando dal telefono.
         </p>
 
         <form
@@ -115,55 +91,16 @@ export default function RegisterPage() {
             submitRegistration();
           }}
         >
+          <Field label="Nome" value={firstName} onChange={setFirstName} required />
+          <Field label="Cognome" value={lastName} onChange={setLastName} required />
+          <Field label="Telefono" type="tel" value={phone} onChange={setPhone} required />
           <Field label="Email" type="email" value={email} onChange={setEmail} required />
           <Field
-            label="Nome"
-            value={realName}
-            onChange={(v) => {
-              setRealName(v);
-              if (nickConfirmOpen) setNickConfirmOpen(false);
-            }}
-          />
-          <Field
-            label="Nickname (obbligatorio)"
+            label="Nick (facoltativo)"
             value={nickname}
-            onChange={(v) => {
-              setNickname(v);
-              if (nickConfirmOpen) setNickConfirmOpen(false);
-            }}
-            placeholder="Se vuoto userai il nome"
+            onChange={setNickname}
+            placeholder="Se vuoto si vede il nome"
           />
-
-          {nickConfirmOpen ? (
-            <div
-              role="dialog"
-              aria-modal="true"
-              className="rounded-xl border border-amber-400/40 bg-amber-950/35 p-4 space-y-3"
-            >
-              <p className="text-sm font-medium text-amber-50">
-                {NICKNAME_FROM_REAL_NAME_PROMPT}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => submitRegistration({ confirmUseRealName: true })}
-                  className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white"
-                >
-                  Sì, usa il nome
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNickConfirmOpen(false);
-                    setFormError(null);
-                  }}
-                  className="rounded-lg border border-muted/40 px-3 py-2 text-sm"
-                >
-                  No, inserisco un nickname
-                </button>
-              </div>
-            </div>
-          ) : null}
 
           <PlayerIdentityFields
             gender={gender}
@@ -184,15 +121,6 @@ export default function RegisterPage() {
             }}
           />
 
-          <DataVisibilitySelector
-            value={dataVisibility}
-            onChange={(value) => {
-              setDataVisibility(value);
-              if (formError) setFormError(null);
-            }}
-            invalid={Boolean(formError) && !nickConfirmOpen}
-          />
-
           <label className="flex items-start gap-3 text-sm text-muted">
             <input
               type="checkbox"
@@ -207,7 +135,7 @@ export default function RegisterPage() {
             </span>
           </label>
 
-          {formError && !nickConfirmOpen ? (
+          {formError ? (
             <p className="text-sm text-destructive" role="alert">
               {formError}
             </p>
@@ -215,7 +143,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={!consent || nickConfirmOpen}
+            disabled={!consent}
             className="w-full rounded-xl bg-accent py-4 text-lg font-bold text-white disabled:opacity-50"
           >
             Salva registrazione

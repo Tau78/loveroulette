@@ -281,6 +281,7 @@ async function ensureBotParticipant(
     eventId,
     nickname,
     gender,
+    seeking: gender === "male" ? "female" : "male",
     badgeCode,
   });
 

@@ -472,8 +472,8 @@ function TrashIco() {
 
 /**
  * Plancia unificata (scheletro /board): contenitore rigido + tab sinistre
- * (Regia, Video, Giocatori, Domande, Setup). /serata, /admin e /admin/plancia
- * restano attive per raffronto.
+ * (Regia, Video, Giocatori, Setup). Ufficiale su `/admin/{code}/board`.
+ * `/serata` redirect a board. /admin e /admin/plancia restano per raffronto.
  */
 export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const live = useCasaLiveSession();

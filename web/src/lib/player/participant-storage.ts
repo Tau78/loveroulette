@@ -1,22 +1,46 @@
 import type { ParticipantDataVisibility } from "@/lib/musicpro/types";
 import { normalizeParticipantDataVisibility } from "@/lib/player/data-visibility";
 import {
+  explicitSeeking,
   parseLoveRouletteAgeBand,
   parseLoveRouletteGender,
-  parseLoveRouletteSeeking,
+  parsePublicNameMode,
   type LoveRouletteAgeBand,
   type LoveRouletteGender,
   type LoveRouletteSeeking,
+  type PublicNameMode,
 } from "@/lib/player/identity";
 
 export interface StoredParticipantProfile {
   id: string;
+  /** Nome mostrato in sala. */
   nickname: string;
+  nick: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  photoUrl: string;
+  publicNameMode: PublicNameMode;
   gender: LoveRouletteGender;
-  seeking: LoveRouletteSeeking;
+  seeking: LoveRouletteSeeking | null;
   ageBand: LoveRouletteAgeBand | null;
   badgeCode: string;
   dataVisibility: ParticipantDataVisibility;
+}
+
+export function storedProfileCanReconnect(
+  profile: StoredParticipantProfile,
+): boolean {
+  return Boolean(
+    profile.firstName.trim() &&
+      profile.lastName.trim() &&
+      profile.phone.trim() &&
+      profile.email.trim() &&
+      profile.photoUrl.trim() &&
+      profile.seeking &&
+      profile.ageBand,
+  );
 }
 
 const UUID_RE =
@@ -46,13 +70,19 @@ function readFromStorage(
     }
 
     const gender = parseLoveRouletteGender(profile.gender);
-    const seeking = parseLoveRouletteSeeking(profile.seeking, gender);
 
     return {
       id: profile.id,
       nickname: profile.nickname,
+      nick: profile.nick ?? "",
+      firstName: profile.firstName ?? "",
+      lastName: profile.lastName ?? "",
+      phone: profile.phone ?? "",
+      email: profile.email ?? "",
+      photoUrl: profile.photoUrl ?? "",
+      publicNameMode: parsePublicNameMode(profile.publicNameMode),
       gender,
-      seeking,
+      seeking: explicitSeeking(profile.seeking),
       ageBand: parseLoveRouletteAgeBand(profile.ageBand),
       badgeCode: profile.badgeCode ?? "",
       dataVisibility: normalizeParticipantDataVisibility(profile.dataVisibility),
