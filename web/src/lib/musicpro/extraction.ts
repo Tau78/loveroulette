@@ -20,6 +20,24 @@ export interface LastReveal {
   pairId: string;
   affinityScore: number;
   updatedAt: string;
+  /** Foto proiettore (URL pubblico o avatar di fallback). */
+  malePhotoUrl?: string;
+  femalePhotoUrl?: string;
+}
+
+const AVATAR_M = "/grafiche/avatar-m.png";
+const AVATAR_F = "/grafiche/avatar-f.png";
+
+function resolveParticipantPhotoUrl(
+  photoUrl: string | null | undefined,
+  gender: string | null | undefined,
+): string {
+  const photo = photoUrl?.trim() ?? "";
+  if (photo && !photo.startsWith("blob:") && !photo.startsWith("file:")) {
+    return photo;
+  }
+  const g = (gender ?? "").trim().toUpperCase();
+  return g === "F" || g === "FEMALE" ? AVATAR_F : AVATAR_M;
 }
 
 export interface ExtractNextCoupleResult {
@@ -81,6 +99,15 @@ export function getLastReveal(
   const affinityScore =
     typeof record.affinityScore === "number" ? record.affinityScore : 0;
 
+  const malePhotoUrl =
+    typeof record.malePhotoUrl === "string" && record.malePhotoUrl.trim()
+      ? record.malePhotoUrl.trim()
+      : undefined;
+  const femalePhotoUrl =
+    typeof record.femalePhotoUrl === "string" && record.femalePhotoUrl.trim()
+      ? record.femalePhotoUrl.trim()
+      : undefined;
+
   return {
     maleNick: maleNick.trim(),
     femaleNick: femaleNick.trim(),
@@ -95,6 +122,8 @@ export function getLastReveal(
     pairId: pairId.trim(),
     affinityScore,
     updatedAt: updatedAt.trim(),
+    ...(malePhotoUrl ? { malePhotoUrl } : {}),
+    ...(femalePhotoUrl ? { femalePhotoUrl } : {}),
   };
 }
 
@@ -314,18 +343,27 @@ export async function extractNextCouple(
   const participantIds = [pair.participant_male_id, pair.participant_female_id];
   const { data: participants, error: participantsError } = await supabase
     .from("love_roulette_participants")
-    .select("id, nickname")
+    .select("id, nickname, photo_url, gender")
     .in("id", participantIds);
 
   if (participantsError) {
     throw new Error(participantsError.message);
   }
 
-  const nickById = new Map(
-    (participants ?? []).map((row) => [row.id as string, row.nickname as string]),
+  const byId = new Map(
+    (participants ?? []).map((row) => [
+      row.id as string,
+      {
+        nickname: row.nickname as string,
+        photo_url: (row.photo_url as string | null) ?? null,
+        gender: (row.gender as string | null) ?? null,
+      },
+    ]),
   );
-  const maleNick = nickById.get(pair.participant_male_id);
-  const femaleNick = nickById.get(pair.participant_female_id);
+  const male = byId.get(pair.participant_male_id);
+  const female = byId.get(pair.participant_female_id);
+  const maleNick = male?.nickname;
+  const femaleNick = female?.nickname;
 
   if (!maleNick?.trim() || !femaleNick?.trim()) {
     throw new ExtractionError("Partecipanti della coppia non trovati.", 404);
@@ -368,12 +406,16 @@ export async function extractNextCouple(
     pairId: pair.id,
     affinityScore: pair.affinity_score,
     updatedAt: now,
+    malePhotoUrl: resolveParticipantPhotoUrl(male?.photo_url, male?.gender),
+    femalePhotoUrl: resolveParticipantPhotoUrl(
+      female?.photo_url,
+      female?.gender,
+    ),
   };
 
+  // Niente overlay full-screen: la stage estrazione fa spin + reveal con foto.
   const displayOverlay: DisplayOverlay = {
-    type: "custom",
-    title: "Coppia rivelata!",
-    body: `${lastReveal.maleNick} & ${lastReveal.femaleNick}`,
+    type: "clear",
     updatedAt: now,
   };
 

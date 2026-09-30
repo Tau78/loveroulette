@@ -29,6 +29,7 @@ import {
 } from "@/lib/musicpro/realtime";
 
 const DISPLAY_POLL_MS = 3000;
+const EXTRACTION_POLL_MS = 800;
 const QUIZ_POLL_MS = 350;
 const FINALS_FAST_POLL_MS = 350;
 
@@ -100,6 +101,8 @@ export interface UseLoveRouletteSessionResult {
     quiz: QuizSessionState | null,
     runtimeState?: EventState,
   ) => void;
+  applyRuntimeState: (runtimeState: EventState) => void;
+  applyLastReveal: (reveal: LastReveal | null) => void;
   applyFinalsUpdate: (payload: {
     show?: FinalsShowState | null;
     session?: VotingSessionState | null;
@@ -147,6 +150,9 @@ function pollIntervalMs(
   finalsShow: FinalsShowState | null,
 ): number {
   if (runtimeState === "quiz") return QUIZ_POLL_MS;
+  if (runtimeState === "extraction" || runtimeState === "matching") {
+    return EXTRACTION_POLL_MS;
+  }
   if (
     runtimeState === "finals" &&
     (voting.current?.status === "open" ||
@@ -234,6 +240,17 @@ export function useLoveRouletteSession(
     },
     [],
   );
+
+  const applyRuntimeState = useCallback((next: EventState) => {
+    setRuntimeState(next);
+  }, []);
+
+  const applyLastReveal = useCallback((reveal: LastReveal | null) => {
+    setLastReveal((prev) => mergeLastReveal(prev, reveal));
+    if (reveal) {
+      setDisplayOverlay({ type: "clear", updatedAt: reveal.updatedAt });
+    }
+  }, []);
 
   const applySpecialTrialUpdate = useCallback(
     (trial: SpecialTrialState | null, quiz?: QuizSessionState | null) => {
@@ -607,6 +624,8 @@ export function useLoveRouletteSession(
     joinUrl,
     resyncNow,
     applyQuizUpdate,
+    applyRuntimeState,
+    applyLastReveal,
     applyFinalsUpdate,
     applySpecialTrialUpdate,
   };

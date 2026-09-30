@@ -11,6 +11,7 @@ import {
 } from "@/components/admin/casa/widgets/casa-widget-live";
 import { postSpecialTrialAction } from "@/lib/admin/animator-api";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
+import type { EventState } from "@/lib/types";
 
 /**
  * Transport live — AdminTransportBar (GO fase) + STOP (spegne Auto quiz).
@@ -42,6 +43,8 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
     extractionMode,
     setExtractionMode,
     applyQuizUpdate,
+    applyRuntimeState,
+    applyLastReveal,
     applyFinalsUpdate,
     applySpecialTrialUpdate,
     specialTrial,
@@ -55,8 +58,8 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
   const [trialBusy, setTrialBusy] = useState(false);
 
   const handleQuizChange = useCallback(
-    (quiz: QuizSessionState | null) => {
-      applyQuizUpdate(quiz);
+    (quiz: QuizSessionState | null, nextRuntimeState?: EventState) => {
+      applyQuizUpdate(quiz, nextRuntimeState);
     },
     [applyQuizUpdate],
   );
@@ -203,6 +206,8 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
         onExtractionModeChange={setExtractionMode}
         onInvalidPin={onInvalidPin}
         onQuizChange={handleQuizChange}
+        onRuntimeStateChange={applyRuntimeState}
+        onLastRevealChange={applyLastReveal}
         onFinalsChange={applyFinalsUpdate}
         onRefreshProgress={refreshSessionStats}
         onStartQuiz={

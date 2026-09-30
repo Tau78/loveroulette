@@ -2130,7 +2130,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         return;
       }
       setResumeOpen(false);
-      flashBoardToast("Manche chiusa → matching");
+      flashBoardToast("Manche chiusa → Stop alle domande");
     } catch (err) {
       setCmdError(
         err instanceof Error ? err.message : "Chiusura manche non riuscita.",
