@@ -3194,8 +3194,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   disabled={
                     live.controlsDisabled ||
                     !live.quizState ||
-                    live.runtimeState !== "quiz" ||
-                    cmdBusy
+                    live.runtimeState !== "quiz"
                   }
                   title={
                     live.quizState?.autoplayEnabled === true
@@ -3204,9 +3203,27 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   }
                   onClick={() => {
                     if (!live.quizState || live.controlsDisabled) return;
-                    void live.runQuizAction("setAutoplayEnabled", {
-                      enabled: live.quizState.autoplayEnabled !== true,
+                    const snapshot = live.quizState;
+                    const nextEnabled = snapshot.autoplayEnabled !== true;
+                    // Ottimistico: subito visibile anche se un tick è in volo.
+                    live.applyQuizUpdate({
+                      ...snapshot,
+                      autoplayEnabled: nextEnabled,
+                      updatedAt: new Date().toISOString(),
                     });
+                    void live
+                      .runQuizAction("setAutoplayEnabled", {
+                        enabled: nextEnabled,
+                      })
+                      .then((result) => {
+                        if (result.ok) return;
+                        setCmdError(result.error);
+                        live.applyQuizUpdate({
+                          ...snapshot,
+                          autoplayEnabled: snapshot.autoplayEnabled,
+                          updatedAt: new Date().toISOString(),
+                        });
+                      });
                   }}
                 >
                   Autoplay
