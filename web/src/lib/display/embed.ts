@@ -21,23 +21,31 @@ export function projectorPreviewScale(
 /** Anteprima dashboard: grafica sola, nessun audio dal proiettore embedded. */
 export function displayPath(
   eventCode: string,
-  options: { embed?: boolean; present?: boolean } = {},
+  options: { embed?: boolean; present?: boolean; fill?: boolean } = {},
 ): string {
   const base = `/s/${eventCode}/display`;
   const params = new URLSearchParams();
   if (options.embed) params.set("embed", "1");
   if (options.present) params.set("present", "1");
+  /** Secondo schermo nativo: riempie già la finestra, niente overlay «clicca». */
+  if (options.fill) params.set("fill", "1");
   const qs = params.toString();
   return qs ? `${base}?${qs}` : base;
 }
 
 export function displayUrl(
   eventCode: string,
-  options: { embed?: boolean; present?: boolean; origin?: string } = {},
+  options: {
+    embed?: boolean;
+    present?: boolean;
+    fill?: boolean;
+    origin?: string;
+  } = {},
 ): string {
   const path = displayPath(eventCode, {
     embed: options.embed,
     present: options.present,
+    fill: options.fill,
   });
   if (options.origin) return `${options.origin}${path}`;
   return path;
@@ -144,13 +152,16 @@ export type OpenProjectorResult = {
  */
 export async function openProjectorWindowAsync(
   eventCode: string,
-  options: { present?: boolean; origin?: string } = {},
+  options: { present?: boolean; fill?: boolean; origin?: string } = {},
 ): Promise<OpenProjectorResult> {
   if (typeof window === "undefined") {
     return { window: null, mode: "blocked", url: displayUrl(eventCode, options) };
   }
+  const onNative = isReactNativeWebView();
   const url = displayUrl(eventCode, {
     present: options.present ?? true,
+    // iPad/secondo schermo: già a tutta area — niente «Clicca per schermo intero».
+    fill: options.fill ?? onNative,
     origin: options.origin ?? window.location.origin,
   });
 

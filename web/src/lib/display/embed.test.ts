@@ -73,6 +73,15 @@ describe("pickSecondaryScreen", () => {
   });
 });
 
+describe("displayPath fill", () => {
+  it("adds fill=1 for native external screen", async () => {
+    const { displayPath } = await import("@/lib/display/embed");
+    expect(displayPath("DEMO01", { present: true, fill: true })).toBe(
+      "/s/DEMO01/display?present=1&fill=1",
+    );
+  });
+});
+
 describe("isOpenProjectorNativeMessage", () => {
   it("parses bridge payload", () => {
     expect(
