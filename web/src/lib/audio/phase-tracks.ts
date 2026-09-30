@@ -2,15 +2,27 @@ import { VOTING_SUSPENSE_ID } from "@/lib/audio/stingers";
 import { trackIdForQuizPhase } from "@/lib/audio/quiz-theme-tracks";
 import type { FinalsShowPhase } from "@/lib/musicpro/finals-show";
 import type { QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
+import type { SpecialTrialStatus } from "@/lib/musicpro/special-trial";
 import type { EventState } from "@/lib/types";
 
-/** Mappa fase runtime (+ sotto-fase quiz / finali) → track id nel manifest. */
+/** Bed prova speciale (timer + voti sala) — stesso pulse del countdown risposte. */
+export const SPECIAL_TRIAL_BED_ID = "LR_03_Quiz_Countdown";
+
+/** Mappa fase runtime (+ sotto-fase quiz / finali / prova) → track id nel manifest. */
 export function trackIdForPhase(
   state: EventState,
   quizPhase?: QuizDisplayPhase | null,
   finalsShowPhase?: FinalsShowPhase | null,
   quizThemeCategory?: string | null,
+  specialTrialStatus?: SpecialTrialStatus | null,
 ): string | null {
+  if (
+    state === "quiz" &&
+    (specialTrialStatus === "running" || specialTrialStatus === "closing")
+  ) {
+    return SPECIAL_TRIAL_BED_ID;
+  }
+
   if (state === "quiz") {
     return trackIdForQuizPhase(quizPhase, quizThemeCategory);
   }

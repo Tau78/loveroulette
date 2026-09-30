@@ -19,6 +19,7 @@ import { BoardVideoRegiaPanel } from "@/components/admin/casa/BoardVideoRegiaPan
 import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
 import { useCasaLiveSession } from "@/components/admin/casa/casa-live-session-context";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
+import { isSpecialTrialBlockingQuiz } from "@/lib/musicpro/special-trial";
 import {
   fetchParticipants,
   isInvalidAnimatorPinError,
@@ -861,15 +862,22 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     () => ({
       sigla,
       displayCue: activeDisplayCue,
+      specialTrial: live.specialTrial?.status ?? null,
     }),
-    [sigla, activeDisplayCue],
+    [sigla, activeDisplayCue, live.specialTrial?.status],
   );
+
+  const specialTrialActive = isSpecialTrialBlockingQuiz(live.specialTrial);
 
   const activeBed = useMemo(
     () =>
       resolveCasaBed(
         beat,
-        gameOwnsAv || beat === "sigla" ? null : bedFolder ? bedList : null,
+        gameOwnsAv || beat === "sigla" || specialTrialActive
+          ? null
+          : bedFolder
+            ? bedList
+            : null,
         bedIndex,
         liveQuizActive ? liveQuizPhase : null,
         liveQuizActive ? liveQuestion?.category ?? null : null,
@@ -881,6 +889,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       bedList,
       bedIndex,
       gameOwnsAv,
+      specialTrialActive,
       liveQuizActive,
       liveQuizPhase,
       liveQuestion?.category,
@@ -2576,6 +2585,24 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 mediaOnScreen={mediaOnScreen}
                 onSiglaAvailability={onSiglaAvailability}
                 onSiglaEnded={holdSiglaFrame}
+                specialTrial={live.specialTrial}
+                onSpecialTrialTick={() => {
+                  void postSpecialTrialAction(
+                    eventCode,
+                    { action: "tick" },
+                    live.pin,
+                  ).then(async (res) => {
+                    if (!res.ok) return;
+                    const data = (await res.json().catch(() => null)) as {
+                      specialTrial?: typeof live.specialTrial;
+                      quiz?: typeof live.quizState;
+                    } | null;
+                    live.applySpecialTrialUpdate(
+                      data?.specialTrial ?? null,
+                      data?.quiz ?? undefined,
+                    );
+                  });
+                }}
               />
               {help ? (
                 <div className="casa-board-qr">
@@ -3553,6 +3580,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     mediaOnScreen={mediaOnScreen}
                     enlarge
                     onSiglaEnded={holdSiglaFrame}
+                    specialTrial={live.specialTrial}
                   />
                 </div>
               ) : null}

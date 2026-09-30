@@ -83,6 +83,8 @@ export interface UseLoveRouletteSoundtrackOptions {
   finalsShowPhase?: FinalsShowPhase | null;
   /** Categoria domanda corrente (manche/tema slide) → mood sottofondo quiz. */
   quizThemeCategory?: string | null;
+  /** Prova speciale attiva → bed countdown dedicato. */
+  specialTrialStatus?: import("@/lib/musicpro/special-trial").SpecialTrialStatus | null;
   /** Codice evento — per duck del bed quando parte la regia prova. */
   eventCode?: string | null;
 }
@@ -119,6 +121,7 @@ export function useLoveRouletteSoundtrack({
   stingerDedupKey = null,
   finalsShowPhase = null,
   quizThemeCategory = null,
+  specialTrialStatus = null,
   eventCode = null,
 }: UseLoveRouletteSoundtrackOptions): UseLoveRouletteSoundtrackResult {
   const [manifest, setManifest] = useState<SoundtrackManifest | null>(null);
@@ -679,6 +682,7 @@ export function useLoveRouletteSoundtrack({
       quizDisplayPhase,
       finalsShowPhase,
       quizThemeCategory,
+      specialTrialStatus,
     );
 
     if (
@@ -716,6 +720,7 @@ export function useLoveRouletteSoundtrack({
     quizDisplayPhase,
     finalsShowPhase,
     quizThemeCategory,
+    specialTrialStatus,
     enabled,
     unlocked,
     playTrack,
