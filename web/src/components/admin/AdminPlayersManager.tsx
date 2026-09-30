@@ -55,12 +55,15 @@ import {
   buildSimDemoChatMessages,
   dispatchSimDemoChat,
   isDemoChatSimBadge,
+  type CasaDemoChatMessage,
 } from "@/lib/admin/casa-demo-chat";
 
 interface AdminPlayersManagerProps {
   eventCode: string;
   eventTitle: string;
   pinRequired: boolean;
+  /** Plancia /board: riempie il riquadro Messaggi senza dipendere solo dal CustomEvent. */
+  onDemoChat?: (messages: CasaDemoChatMessage[]) => void;
 }
 
 function formatLastSeen(iso: string | null): string {
@@ -79,6 +82,7 @@ export function AdminPlayersManager({
   eventCode,
   eventTitle,
   pinRequired,
+  onDemoChat,
 }: AdminPlayersManagerProps) {
   const [participants, setParticipants] = useState<AdminParticipantRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -356,12 +360,12 @@ export function AdminPlayersManager({
       const nicks = rows
         .filter((p) => isDemoChatSimBadge(p.badge_code))
         .map((p) => p.nickname);
-      dispatchSimDemoChat(
-        buildSimDemoChatMessages(
-          nicks.length > 0 ? nicks : rows.map((p) => p.nickname),
-          8,
-        ),
+      const demoMsgs = buildSimDemoChatMessages(
+        nicks.length > 0 ? nicks : rows.map((p) => p.nickname),
+        8,
       );
+      dispatchSimDemoChat(demoMsgs);
+      onDemoChat?.(demoMsgs);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore di rete.");
     } finally {

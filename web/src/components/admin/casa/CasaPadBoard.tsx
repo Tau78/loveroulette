@@ -92,6 +92,8 @@ import {
   stepAvanti,
   type CasaBeat,
 } from "@/lib/admin/casa-avanti";
+import { casaQrDisplayCommand } from "@/lib/admin/casa-qr-display";
+import { openingAutoplayHoldSeconds } from "@/lib/admin/casa-opening-autoplay";
 import { boardCueQuestionIndex } from "@/lib/admin/board-cue-question";
 import { casaAutoBedLabel, resolveCasaBed, resolveCasaBedOrLobby } from "@/lib/admin/casa-beds";
 import {
@@ -539,6 +541,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     null,
   );
   const [help, setHelp] = useState(false);
+  /** Autoplay plancia: vale già in apertura (prima del quiz live). */
+  const [boardAutoplay, setBoardAutoplay] = useState(false);
+  const goRef = useRef<() => void | Promise<void>>(() => {});
   const [externalScreenOn, setExternalScreenOn] = useState(false);
   const projectorWinRef = useRef<Window | null>(null);
   /** WebView iPad: niente Window da chiudere — toggle via bridge. */
@@ -679,19 +684,27 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     };
   }, []);
 
-  // Chat demo da «10 coppie test» → riquadro Messaggi.
+  const applyDemoChatMessages = useCallback(
+    (messages: { id: string; who: string; text: string }[]) => {
+      if (!messages.length) return;
+      setMsgs(messages.map((m) => ({ id: m.id, who: m.who, text: m.text })));
+    },
+    [],
+  );
+
+  // Chat demo da «10 coppie test» → riquadro Messaggi (evento + callback diretto).
   useEffect(() => {
     function onDemoChat(ev: Event) {
       const detail = (ev as CustomEvent<CasaSimDemoChatDetail>).detail;
       const messages = detail?.messages;
       if (!messages?.length) return;
-      setMsgs(messages.map((m) => ({ id: m.id, who: m.who, text: m.text })));
+      applyDemoChatMessages(messages);
     }
     window.addEventListener(CASA_SIM_DEMO_CHAT_EVENT, onDemoChat);
     return () => {
       window.removeEventListener(CASA_SIM_DEMO_CHAT_EVENT, onDemoChat);
     };
-  }, []);
+  }, [applyDemoChatMessages]);
 
   // Roster live → riquadro Giocatori (stesso fetch di CasaPad / tab Lista).
   useEffect(() => {
@@ -1011,6 +1024,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
               rankingEveryN: live.event?.quizSetup.rankingEveryN,
           skipStartCountdown: true,
+          autoplayEnabled: boardAutoplay,
           questionIds: lineupIds ?? undefined,
         });
         if (!result.ok) {
@@ -1029,6 +1043,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     })();
   }, [
     beat,
+    boardAutoplay,
     count,
     eventCode,
     live.event?.quizSetup.hideRankingLastN,
@@ -1055,9 +1070,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       void (async () => {
         if (cancelled) return;
         try {
-          if (beat === "casa" || help) {
-            await postDisplayCommand(eventCode, { type: "show_qr" }, live.pin);
-            return;
+          {
+            const qrCmd = casaQrDisplayCommand(help, beat);
+            if (qrCmd) {
+              await postDisplayCommand(eventCode, qrCmd, live.pin);
+              return;
+            }
           }
           if (beat === "sigla" && sigla === "warn") {
             await postDisplayCommand(eventCode, SIGLA_WARN_SLIDE, live.pin);
@@ -1336,6 +1354,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             questionSeconds: live.event?.quizSetup.questionSeconds ?? undefined,
             hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
               rankingEveryN: live.event?.quizSetup.rankingEveryN,
+            autoplayEnabled: boardAutoplay,
             questionIds: lineupIds ?? undefined,
           });
           if (!result.ok) {
@@ -1358,6 +1377,35 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
 
     setQuizGate("tema");
   }
+
+  goRef.current = () => {
+    void go();
+  };
+
+  // Allinea flag plancia ↔ quiz quando siamo in manche live.
+  useEffect(() => {
+    if (live.runtimeState !== "quiz" || !live.quizState) return;
+    setBoardAutoplay(live.quizState.autoplayEnabled === true);
+  }, [live.runtimeState, live.quizState?.autoplayEnabled]);
+
+  // Autoplay apertura: ogni slide/passo senza timer dedicato → 5s poi AVANTI locale.
+  useEffect(() => {
+    if (!boardAutoplay || live.controlsDisabled || goBusy) return;
+    const hold = openingAutoplayHoldSeconds({ beat, sigla });
+    if (hold == null) return;
+    const timer = window.setTimeout(() => {
+      void goRef.current();
+    }, hold * 1000);
+    return () => window.clearTimeout(timer);
+  }, [
+    boardAutoplay,
+    beat,
+    sigla,
+    roll,
+    guests.length,
+    goBusy,
+    live.controlsDisabled,
+  ]);
 
   function firePad(id: CasaPadHitId, src?: string) {
     if (remoteAudio) return;
@@ -1601,9 +1649,16 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     }
   }
 
-  function pickPlayer(player: BoardPlayer) {
+  /** Card Giocatori: tap faccia → solo a schermo (non apre il riquadro). */
+  function sendPlayerFromCard(player: BoardPlayer) {
     setPickedId(player.id);
-    openExpand("players");
+    void sendPlayerToScreen(player, "card");
+  }
+
+  /** Riquadro espanso: seleziona, mostra dettagli e manda card a schermo. */
+  function pickPlayerInExpand(player: BoardPlayer) {
+    setPickedId(player.id);
+    setScreenField("card");
     void sendPlayerToScreen(player, "card");
   }
 
@@ -2012,14 +2067,28 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       nativeProjectorOpenRef.current = true;
       setExternalScreenOn(true);
       flashBoardToast("Proiettore sul secondo schermo (HDMI / AirPlay)");
+      // Allinea overlay QR al toggle plancia (niente QR sticky se QR è off).
+      void syncQrOverlayAfterSchermo();
       return;
     }
     setExternalScreenOn(true);
+    void syncQrOverlayAfterSchermo();
     const tip =
       result.mode === "secondary"
         ? "Proiettore sullo schermo collegato (HDMI)"
         : "Proiettore aperto — in Stage Manager trascinalo sulla HDMI";
     flashBoardToast(tip);
+  }
+
+  async function syncQrOverlayAfterSchermo() {
+    if (!live.pinReady) return;
+    const qrCmd = casaQrDisplayCommand(help, beat);
+    if (!qrCmd) return;
+    try {
+      await postDisplayCommand(eventCode, qrCmd, live.pin);
+    } catch {
+      /* display non bloccante */
+    }
   }
 
   async function toggleSpecialTrialBook() {
@@ -2542,7 +2611,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     data-g={g.gender}
                     data-on={pickedId === g.id ? "1" : undefined}
                     title={`${g.nick} a schermo`}
-                    onClick={() => pickPlayer(g)}
+                    onClick={() => sendPlayerFromCard(g)}
                   >
                     <span
                       style={
@@ -2574,7 +2643,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 className="casa-board-empty casa-board-empty-tight casa-board-empty-btn"
                 onClick={() => openExpand("players")}
               >
-                +{guests.length - PLAYER_SLOTS} · tap per tutti ({guests.length})
+                +{guests.length - PLAYER_SLOTS} · tap titolo per tutti (
+                {guests.length})
               </button>
             ) : null}
           </article>
@@ -2592,7 +2662,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             <BoardCardHead title="Messaggi" onExpand={() => openExpand("msg")} />
             <div className="casa-board-msgs">
               {msgs.length === 0 ? (
-                <p className="casa-board-empty">Nessun messaggio · tap titolo per aprire</p>
+                <p className="casa-board-empty">
+                  Nessun messaggio · «10 coppie test» in Lista li riempie
+                </p>
               ) : (
                 msgs.slice(0, 4).map((m) => (
                   <div key={m.id} className="casa-board-msg">
@@ -3188,24 +3260,24 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 <button
                   type="button"
                   className="casa-board-mini"
-                  data-on={
-                    live.quizState?.autoplayEnabled === true ? "1" : undefined
-                  }
-                  disabled={
-                    live.controlsDisabled ||
-                    !live.quizState ||
-                    live.runtimeState !== "quiz"
-                  }
+                  data-on={boardAutoplay ? "1" : undefined}
+                  disabled={live.controlsDisabled}
                   title={
-                    live.quizState?.autoplayEnabled === true
-                      ? "Autoplay acceso — le fasi in hold avanzano da sole"
-                      : "Autoplay spento — serve AVANTI sulle fasi in hold"
+                    boardAutoplay
+                      ? "Autoplay acceso — apertura e hold avanzano da sole (5s se manca un tempo)"
+                      : "Autoplay spento — serve AVANTI / Partenza"
                   }
                   onClick={() => {
-                    if (!live.quizState || live.controlsDisabled) return;
+                    if (live.controlsDisabled) return;
+                    const nextEnabled = !boardAutoplay;
+                    setBoardAutoplay(nextEnabled);
+                    if (
+                      live.runtimeState !== "quiz" ||
+                      !live.quizState
+                    ) {
+                      return;
+                    }
                     const snapshot = live.quizState;
-                    const nextEnabled = snapshot.autoplayEnabled !== true;
-                    // Ottimistico: subito visibile anche se un tick è in volo.
                     live.applyQuizUpdate({
                       ...snapshot,
                       autoplayEnabled: nextEnabled,
@@ -3218,6 +3290,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                       .then((result) => {
                         if (result.ok) return;
                         setCmdError(result.error);
+                        setBoardAutoplay(snapshot.autoplayEnabled === true);
                         live.applyQuizUpdate({
                           ...snapshot,
                           autoplayEnabled: snapshot.autoplayEnabled,
@@ -3300,13 +3373,19 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 onTrackToScreen={sendVideoToScreen}
               />
             ) : null}
-            {rail === "giocatori" ? (
+            {/* Sempre montato: altrimenti «10 coppie test» non raggiunge Messaggi. */}
+            <div
+              className="casa-board-rail-panel"
+              hidden={rail !== "giocatori"}
+              aria-hidden={rail !== "giocatori"}
+            >
               <AdminPlayersManager
                 eventCode={eventCode}
                 eventTitle={eventTitle}
                 pinRequired={pinRequired}
+                onDemoChat={applyDemoChatMessages}
               />
-            ) : null}
+            </div>
             {rail === "setup" ? (
               <CasaPrep
                 prep={prep}
@@ -3355,7 +3434,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             </header>
             <div className="casa-board-expand-body">
               {expand === "players" ? (
-                <div className="casa-board-expand-players">
+                <div className="casa-board-expand-players" data-scroll="y">
                   {guests.length === 0 ? (
                     <p className="casa-board-empty">
                       I nick arrivano dal QR sul telefono. Usa <b>Lista</b> sulla
@@ -3363,8 +3442,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     </p>
                   ) : (
                     <p className="casa-board-empty">
-                      Tap un giocatore: nome e foto a schermo. Poi scegli un
-                      dato da mandare.
+                      Tap un giocatore: dettagli + nome/foto a schermo. Poi
+                      scegli un altro dato. Scorri con due dita.
                     </p>
                   )}
                   <div className="casa-board-players casa-board-players-expand">
@@ -3385,8 +3464,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                             className="casa-board-avatar"
                             data-g={g.gender}
                             data-on={pickedId === g.id ? "1" : undefined}
-                            title={`${g.nick} a schermo`}
-                            onClick={() => pickPlayer(g)}
+                            title={`${g.nick} · dettagli e schermo`}
+                            onClick={() => pickPlayerInExpand(g)}
                           >
                             <span
                               style={
@@ -3457,7 +3536,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               {expand === "msg" ? (
                 <div className="casa-board-msgs">
                   {msgs.length === 0 ? (
-                    <p className="casa-board-empty">Nessun messaggio in coda.</p>
+                    <p className="casa-board-empty">
+                      Nessun messaggio. Apri Lista → «10 coppie test» per la
+                      demo. La chat live dai telefoni non è ancora attiva.
+                    </p>
                   ) : (
                     msgs.map((m) => (
                       <div key={m.id} className="casa-board-msg">

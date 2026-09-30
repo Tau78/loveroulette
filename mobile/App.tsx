@@ -535,8 +535,11 @@ function WebPlancia({
         <ExternalDisplay
           screen={externalScreenId}
           fallbackInMainScreen={false}
+          // La view nativa usa absoluteFill anche sull’albero main: senza
+          // pointerEvents=none mangia tutti i tocchi della plancia.
+          pointerEvents="none"
         >
-          <View style={styles.projectorRoot} pointerEvents="box-none">
+          <View style={styles.projectorRoot} pointerEvents="none">
             {projectorWebView}
           </View>
         </ExternalDisplay>

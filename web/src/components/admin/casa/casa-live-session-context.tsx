@@ -31,6 +31,7 @@ export type CasaQuizActionBody = {
   enabled?: boolean;
   skipResults?: boolean;
   skipStartCountdown?: boolean;
+  autoplayEnabled?: boolean;
   targetIndex?: number;
   questionIds?: string[];
   displayPhase?:

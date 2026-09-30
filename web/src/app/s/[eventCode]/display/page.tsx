@@ -9,7 +9,6 @@ import { DisplayMatchingStage } from "@/components/display/DisplayMatchingStage"
 import { DisplayQuizStage } from "@/components/display/DisplayQuizStage";
 import { DisplaySpecialTrialStage } from "@/components/display/DisplaySpecialTrialStage";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
-import { JoinQrCode } from "@/components/display/JoinQrCode";
 import { DisplayEliminationStage } from "@/components/display/DisplayEliminationStage";
 import { DisplayExtractionStage } from "@/components/display/DisplayExtractionStage";
 import { DisplayQuizLaunchInterstitial } from "@/components/display/DisplayQuizLaunchSpectacle";
@@ -327,9 +326,9 @@ export default function DisplayPage() {
           <div className="relative z-10 flex flex-1 w-full items-end pb-14 px-16 animate-fade-in">
             <div className="flex flex-col items-start gap-4 max-w-[320px]">
               <p className="text-left text-lg text-white/90 tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
-                Scansiona il QR e preparati al gioco
+                Benvenuti in sala
               </p>
-              <JoinQrCode url={effectiveJoinUrl} showUrl={false} size={240} />
+              {/* QR solo via overlay show_qr (toggle QR sulla plancia). */}
             </div>
           </div>
         ) : (

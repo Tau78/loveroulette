@@ -42,6 +42,7 @@ const bodySchema = z.object({
   enabled: z.boolean().optional(),
   skipResults: z.boolean().optional(),
   skipStartCountdown: z.boolean().optional(),
+  autoplayEnabled: z.boolean().optional(),
   targetIndex: z.number().int().min(0).max(199).optional(),
   questionIds: z.array(z.string().min(1)).min(1).max(200).optional(),
   displayPhase: z
@@ -113,6 +114,7 @@ export async function POST(
           hideRankingLastN: body.hideRankingLastN,
           rankingEveryN: body.rankingEveryN,
           skipStartCountdown: body.skipStartCountdown,
+          autoplayEnabled: body.autoplayEnabled,
           questionIds: body.questionIds,
         });
         return NextResponse.json({
