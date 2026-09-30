@@ -57,3 +57,13 @@ export function resetCasaResultsRevealHit(): void {
     active = null;
   }
 }
+
+/**
+ * Segna la cue come già consumata senza suonare — join in ritardo su %
+ * (Play dopo che la fase results è già attiva).
+ */
+export function consumeCasaResultsRevealCue(cueKey: string): void {
+  lastCue = cueKey;
+  cancelWait?.();
+  cancelWait = null;
+}

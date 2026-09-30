@@ -153,6 +153,10 @@ export function useLoveRouletteSoundtrack({
   const votingSuspenseStartedRef = useRef(false);
   const challengeRegiaBedActiveRef = useRef(false);
   const resultsRevealCueRef = useRef<string | null>(null);
+  /** `undefined` = primo sync; evita LR_25 su unlock/mount già in results. */
+  const prevQuizPhaseForRevealRef = useRef<
+    QuizDisplayPhase | null | undefined
+  >(undefined);
   const [challengeRegiaBedEpoch, setChallengeRegiaBedEpoch] = useState(0);
 
   useEffect(() => {
@@ -641,12 +645,19 @@ export function useLoveRouletteSoundtrack({
   }, [eventCode, playTrack]);
 
   useEffect(() => {
+    const prevPhase = prevQuizPhaseForRevealRef.current;
+    prevQuizPhaseForRevealRef.current = quizDisplayPhase;
+
     if (!manifest || !enabled || !unlocked || muted) return;
 
     if (runtimeState !== "quiz" || quizDisplayPhase !== "results") {
       resultsRevealCueRef.current = null;
       return;
     }
+
+    // Solo ingresso vivo in % (answers→results). Niente hit su mount/unlock
+    // con results già attiva (Play in apertura non deve sparare gong+reveal).
+    if (prevPhase === undefined || prevPhase === "results") return;
 
     // Hit LR_25 dopo gong sul bianco + gap (non sopra al gong).
     const cue = `results:${quizDisplayPhase}`;

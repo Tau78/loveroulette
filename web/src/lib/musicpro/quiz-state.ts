@@ -422,19 +422,35 @@ export async function startQuizSession(
     throw new Error("Nessuna domanda disponibile per questo evento.");
   }
 
+  const poolSnapshot = questions;
   const quizQuestions =
     source === "pool"
       ? await materializePoolQuestionsForEvent(supabase, eventId, questions)
       : questions;
 
   const bankById = new Map(quizQuestions.map((q) => [q.id, q]));
+  /** Plancia pre-quiz manda id pool; dopo materialize servono id evento. */
+  const aliasToEventId = new Map<string, string>();
+  if (source === "pool") {
+    for (let i = 0; i < poolSnapshot.length; i++) {
+      const poolQ = poolSnapshot[i];
+      if (!poolQ) continue;
+      const eventQ =
+        quizQuestions.find((q) => q.body === poolQ.body) ?? quizQuestions[i];
+      if (eventQ) aliasToEventId.set(poolQ.id, eventQ.id);
+    }
+  }
+
   let questionIds: string[];
 
   if (options.questionIds?.length) {
     const unique: string[] = [];
     for (const id of options.questionIds) {
-      if (!bankById.has(id) || unique.includes(id)) continue;
-      unique.push(id);
+      const resolved = bankById.has(id) ? id : aliasToEventId.get(id);
+      if (!resolved || !bankById.has(resolved) || unique.includes(resolved)) {
+        continue;
+      }
+      unique.push(resolved);
     }
     if (unique.length === 0) {
       throw new Error("Scaletta domande non valida.");
@@ -760,6 +776,82 @@ export function pickSameCategoryReplacementId(
   return candidates[Math.min(pick, candidates.length - 1)]?.id ?? null;
 }
 
+export type LineupReplacement =
+  | { kind: "replace"; questionId: string }
+  | { kind: "swap"; withIndex: number };
+
+function pickRandomIndex(length: number, random: () => number): number {
+  if (length <= 0) return 0;
+  return Math.min(length - 1, Math.floor(random() * length));
+}
+
+/**
+ * Trova un ricambio per la scaletta plancia:
+ * 1) stessa categoria fuori scaletta
+ * 2) qualsiasi fuori scaletta
+ * 3) swap con un altro slot (stessa categoria se possibile)
+ */
+export function pickLineupReplacement(
+  bank: { id: string; category: string }[],
+  questionIds: string[],
+  targetIndex: number,
+  random: () => number = Math.random,
+): LineupReplacement | null {
+  const sameCat = pickSameCategoryReplacementId(
+    bank,
+    questionIds,
+    targetIndex,
+    random,
+  );
+  if (sameCat) return { kind: "replace", questionId: sameCat };
+
+  const targetId = questionIds[targetIndex];
+  if (!targetId) return null;
+
+  const target = bank.find((q) => q.id === targetId);
+  const used = new Set(questionIds);
+  const unusedAny = bank.filter((q) => !used.has(q.id));
+  if (unusedAny.length > 0) {
+    const pick = unusedAny[pickRandomIndex(unusedAny.length, random)];
+    return pick ? { kind: "replace", questionId: pick.id } : null;
+  }
+
+  // Banca = scaletta: scambia con un altro posto (preferisci stessa categoria).
+  if (!target || questionIds.length < 2) return null;
+  const cat = target.category.trim().toLowerCase();
+  const otherIndices = questionIds
+    .map((_, i) => i)
+    .filter((i) => i !== targetIndex);
+  const sameCatIndices = otherIndices.filter((i) => {
+    const id = questionIds[i];
+    const q = id ? bank.find((b) => b.id === id) : undefined;
+    return q?.category.trim().toLowerCase() === cat;
+  });
+  const pool = sameCatIndices.length > 0 ? sameCatIndices : otherIndices;
+  if (pool.length === 0) return null;
+  const withIndex = pool[pickRandomIndex(pool.length, random)];
+  if (withIndex == null) return null;
+  return { kind: "swap", withIndex };
+}
+
+export function applyLineupReplacement(
+  questionIds: string[],
+  targetIndex: number,
+  replacement: LineupReplacement,
+): string[] {
+  const next = [...questionIds];
+  if (replacement.kind === "replace") {
+    next[targetIndex] = replacement.questionId;
+    return next;
+  }
+  const a = next[targetIndex];
+  const b = next[replacement.withIndex];
+  if (a == null || b == null) return questionIds;
+  next[targetIndex] = b;
+  next[replacement.withIndex] = a;
+  return next;
+}
+
 export async function replaceNextQuizQuestion(
   supabase: SupabaseClient,
   eventId: string,
@@ -781,18 +873,17 @@ export async function replaceNextQuizQuestion(
       ? await materializePoolQuestionsForEvent(supabase, eventId, questions)
       : questions;
 
-  const replacementId = pickSameCategoryReplacementId(
-    bank,
-    current.questionIds,
-    index,
-  );
+  const replacement = pickLineupReplacement(bank, current.questionIds, index);
 
-  if (!replacementId) {
-    throw new Error("Nessuna altra domanda disponibile in questa categoria.");
+  if (!replacement) {
+    throw new Error("Nessuna altra domanda disponibile da mettere al posto.");
   }
 
-  const questionIds = [...current.questionIds];
-  questionIds[index] = replacementId;
+  const questionIds = applyLineupReplacement(
+    current.questionIds,
+    index,
+    replacement,
+  );
 
   const quiz: QuizSessionState = {
     ...current,

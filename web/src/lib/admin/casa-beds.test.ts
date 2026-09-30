@@ -2,11 +2,23 @@ import { describe, expect, it } from "vitest";
 import {
   casaAutoBedLabel,
   casaAutoBedSrc,
+  casaEffectiveBedBeat,
   resolveCasaBed,
   resolveCasaBedOrLobby,
 } from "./casa-beds";
 
 describe("casa auto beds", () => {
+  it("follows quiz beds when runtime quiz is live even if local beat is casa", () => {
+    expect(casaEffectiveBedBeat("casa", true)).toBe("quiz");
+    expect(casaEffectiveBedBeat("casa", false)).toBe("casa");
+    expect(
+      casaAutoBedSrc(casaEffectiveBedBeat("casa", true), "results", "fun"),
+    ).toContain("LR_02_Quiz_Fun");
+    expect(
+      casaAutoBedSrc(casaEffectiveBedBeat("casa", false), "results", "fun"),
+    ).toContain("LR_01_Lobby_Ambient");
+  });
+
   it("maps beats to the SUNO loops", () => {
     expect(casaAutoBedSrc("casa")).toContain("LR_01_Lobby_Ambient");
     expect(casaAutoBedSrc("pres")).toContain("LR_01_Lobby_Ambient");

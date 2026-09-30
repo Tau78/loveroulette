@@ -52,6 +52,17 @@ function wantsSpecialTrialBed(opts?: CasaBedOpts | null): boolean {
   return opts?.specialTrial === "running" || opts?.specialTrial === "closing";
 }
 
+/**
+ * Beat usato per la colonna auto: se il runtime è in quiz live, la bed
+ * segue le fasi quiz anche se la plancia locale è ancora su «casa».
+ */
+export function casaEffectiveBedBeat(
+  beat: CasaBeat,
+  liveQuizActive: boolean,
+): CasaBeat {
+  return liveQuizActive ? "quiz" : beat;
+}
+
 export function casaAutoBedSrc(
   beat: CasaBeat,
   quizPhase?: QuizDisplayPhase | null,
