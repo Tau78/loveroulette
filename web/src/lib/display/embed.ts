@@ -45,6 +45,130 @@ export function displayUrl(
 
 const PROJECTOR_WINDOW_NAME = "love-roulette-display";
 
+/** Forma minima di Screen / ScreenDetailed (Window Management API). */
+export type ProjectorScreenLike = {
+  isPrimary?: boolean;
+  availLeft: number;
+  availTop: number;
+  availWidth: number;
+  availHeight: number;
+};
+
+/**
+ * Sceglie lo schermo non-primario (HDMI / monitor esteso).
+ * Se `isPrimary` manca, preferisce uno schermo spostato (availLeft/Top ≠ 0).
+ */
+export function pickSecondaryScreen(
+  screens: readonly ProjectorScreenLike[],
+): ProjectorScreenLike | null {
+  if (screens.length === 0) return null;
+  const marked = screens.find((s) => s.isPrimary === false);
+  if (marked) return marked;
+  const offset = screens.find(
+    (s) =>
+      (Number.isFinite(s.availLeft) && s.availLeft !== 0) ||
+      (Number.isFinite(s.availTop) && s.availTop !== 0),
+  );
+  if (offset) return offset;
+  return screens.length > 1 ? screens[1]! : null;
+}
+
+function popupFeatures(screen?: ProjectorScreenLike | null): string {
+  const base = [
+    "menubar=no",
+    "toolbar=no",
+    "location=no",
+    "status=no",
+    "resizable=yes",
+  ];
+  if (screen) {
+    return [
+      ...base,
+      `left=${Math.round(screen.availLeft)}`,
+      `top=${Math.round(screen.availTop)}`,
+      `width=${Math.round(screen.availWidth || PROJECTOR_REFERENCE.width)}`,
+      `height=${Math.round(screen.availHeight || PROJECTOR_REFERENCE.height)}`,
+    ].join(",");
+  }
+  return [
+    ...base,
+    `width=${PROJECTOR_REFERENCE.width}`,
+    `height=${PROJECTOR_REFERENCE.height}`,
+  ].join(",");
+}
+
+function notifyNativeOpenProjector(url: string): boolean {
+  if (typeof window === "undefined") return false;
+  const rn = (
+    window as unknown as {
+      ReactNativeWebView?: { postMessage?: (msg: string) => void };
+    }
+  ).ReactNativeWebView;
+  if (!rn?.postMessage) return false;
+  rn.postMessage(JSON.stringify({ type: "lr-open-projector", url }));
+  return true;
+}
+
+export type OpenProjectorMode =
+  | "secondary"
+  | "popup"
+  | "native-bridge"
+  | "blocked";
+
+export type OpenProjectorResult = {
+  window: Window | null;
+  mode: OpenProjectorMode;
+  url: string;
+};
+
+/**
+ * Apre `/display` preferendo uno schermo secondario (Window Management API,
+ * Chrome/Edge desktop). Fallback: popup. In WebView iPad: bridge nativo.
+ */
+export async function openProjectorWindowAsync(
+  eventCode: string,
+  options: { present?: boolean; origin?: string } = {},
+): Promise<OpenProjectorResult> {
+  if (typeof window === "undefined") {
+    return { window: null, mode: "blocked", url: displayUrl(eventCode, options) };
+  }
+  const url = displayUrl(eventCode, {
+    present: options.present ?? true,
+    origin: options.origin ?? window.location.origin,
+  });
+
+  try {
+    const getScreenDetails = (
+      window as unknown as {
+        getScreenDetails?: () => Promise<{ screens?: ProjectorScreenLike[] }>;
+      }
+    ).getScreenDetails;
+    if (typeof getScreenDetails === "function") {
+      const details = await getScreenDetails.call(window);
+      const secondary = pickSecondaryScreen(details.screens ?? []);
+      if (secondary) {
+        const win = window.open(
+          url,
+          PROJECTOR_WINDOW_NAME,
+          popupFeatures(secondary),
+        );
+        if (win) return { window: win, mode: "secondary", url };
+      }
+    }
+  } catch {
+    /* permesso negato o API assente */
+  }
+
+  const win = window.open(url, PROJECTOR_WINDOW_NAME, popupFeatures());
+  if (win) return { window: win, mode: "popup", url };
+
+  if (notifyNativeOpenProjector(url)) {
+    return { window: null, mode: "native-bridge", url };
+  }
+  return { window: null, mode: "blocked", url };
+}
+
+/** Sync legacy — popup locale. Preferire `openProjectorWindowAsync` sulla board. */
 export function openProjectorWindow(
   eventCode: string,
   options: { present?: boolean; origin?: string } = {},
@@ -54,22 +178,27 @@ export function openProjectorWindow(
     present: options.present,
     origin: options.origin ?? window.location.origin,
   });
-  const { width, height } = PROJECTOR_REFERENCE;
-  const features = [
-    "noopener",
-    "noreferrer",
-    `width=${width}`,
-    `height=${height}`,
-    "menubar=no",
-    "toolbar=no",
-    "location=no",
-    "status=no",
-  ].join(",");
-  return window.open(url, PROJECTOR_WINDOW_NAME, features);
+  const win = window.open(url, PROJECTOR_WINDOW_NAME, popupFeatures());
+  if (win) return win;
+  notifyNativeOpenProjector(url);
+  return null;
 }
 
 export function isDisplayEmbedMode(
   params: Pick<URLSearchParams, "get"> | null | undefined,
 ): boolean {
   return params?.get("embed") === "1";
+}
+
+export function isOpenProjectorNativeMessage(
+  raw: string,
+): { url: string } | null {
+  try {
+    const data = JSON.parse(raw) as { type?: string; url?: string };
+    if (data?.type !== "lr-open-projector") return null;
+    if (typeof data.url !== "string" || !data.url) return null;
+    return { url: data.url };
+  } catch {
+    return null;
+  }
 }

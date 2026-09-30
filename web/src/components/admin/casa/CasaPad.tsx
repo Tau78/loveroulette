@@ -98,6 +98,7 @@ import {
   playCasaResultsRevealHit,
   resetCasaResultsRevealHit,
 } from "@/lib/admin/casa-results-reveal";
+import { getMediaVolume, setMediaVolume } from "@/lib/audio/media-element-gain";
 import { CROSSFADE_MS } from "@/lib/audio/types";
 import {
   CANVAS_HEIGHT,
@@ -1307,13 +1308,13 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     const el = bedAudio.current;
     if (!el) return;
     if (bedFadeRaf.current != null) return;
-    el.volume = effVol("bed");
+    setMediaVolume(el, effVol("bed"));
   }, [mute.bed, vols.bed, masterVol]);
 
   useEffect(() => {
     const el = gongAudioRef.current;
     if (!el) return;
-    el.volume = effVol("bed");
+    setMediaVolume(el, effVol("bed"));
   }, [mute.bed, vols.bed, masterVol]);
 
   useEffect(() => {
@@ -1330,6 +1331,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     el.loop = !bedFolder || bedRepeat === "one";
 
     if (el.src === abs) {
+      setMediaVolume(el, targetVol);
       if (shouldPlay) {
         void el.play().catch(() => {});
       } else {
@@ -1346,10 +1348,10 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     const swapIn = () => {
       el.src = activeBed.url;
       el.loop = !bedFolder || bedRepeat === "one";
-      el.volume = 0;
+      setMediaVolume(el, 0);
       if (!shouldPlay) {
         el.pause();
-        el.volume = targetVol;
+        setMediaVolume(el, targetVol);
         return;
       }
       void el
@@ -1358,13 +1360,13 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
           const t0 = performance.now();
           const tick = (now: number) => {
             const t = Math.min(1, (now - t0) / CROSSFADE_MS);
-            el.volume = targetVol * t;
+            setMediaVolume(el, targetVol * t);
             if (t < 1) {
               bedFadeRaf.current = requestAnimationFrame(tick);
               return;
             }
             bedFadeRaf.current = null;
-            el.volume = targetVol;
+            setMediaVolume(el, targetVol);
           };
           bedFadeRaf.current = requestAnimationFrame(tick);
         })
@@ -1372,11 +1374,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     };
 
     if (!el.paused && el.currentSrc) {
-      const startVol = el.volume;
+      const startVol = getMediaVolume(el);
       const t0 = performance.now();
       const tickOut = (now: number) => {
         const t = Math.min(1, (now - t0) / CROSSFADE_MS);
-        el.volume = startVol * (1 - t);
+        setMediaVolume(el, startVol * (1 - t));
         if (t < 1) {
           bedFadeRaf.current = requestAnimationFrame(tickOut);
           return;
@@ -1404,7 +1406,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     bedAudio.current?.pause();
     el.src = gongAtmo.track.url;
     el.loop = true;
-    el.volume = effVol("bed");
+    setMediaVolume(el, effVol("bed"));
     if (remoteAudio) {
       el.pause();
       return;

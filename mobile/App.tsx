@@ -58,6 +58,28 @@ function isOfficialBoardUrl(url: string, adminUrl: string | null): boolean {
   }
 }
 
+function isDisplayProjectorUrl(url: string): boolean {
+  try {
+    const target = new URL(url);
+    const host = new URL(DEFAULT_HOST);
+    if (target.origin !== host.origin) return false;
+    return /\/s\/[^/]+\/display\/?$/.test(target.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function parseOpenProjectorMessage(raw: string): string | null {
+  try {
+    const data = JSON.parse(raw) as { type?: string; url?: string };
+    if (data?.type !== "lr-open-projector") return null;
+    if (typeof data.url !== "string" || !data.url) return null;
+    return isDisplayProjectorUrl(data.url) ? data.url : null;
+  } catch {
+    return null;
+  }
+}
+
 function shouldAllowWebViewNav(url: string, adminUrl: string): boolean {
   if (
     url.startsWith("about:") ||
@@ -249,6 +271,16 @@ function WebPlancia({
   const insetJs = useMemo(() => safeAreaScript(insets), [insets]);
   const allowed = canRunPlancia(status);
   const crashReloadsRef = useRef(0);
+  const [projectorUrl, setProjectorUrl] = useState<string | null>(null);
+
+  const openProjector = useCallback((url: string) => {
+    if (!isDisplayProjectorUrl(url)) return;
+    setProjectorUrl(url);
+  }, []);
+
+  const closeProjector = useCallback(() => {
+    setProjectorUrl(null);
+  }, []);
 
   // Re-inject quando notch/home indicator cambiano (rotate / primo layout).
   useEffect(() => {
@@ -314,7 +346,7 @@ function WebPlancia({
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
           allowsBackForwardNavigationGestures
-          setSupportMultipleWindows={false}
+          setSupportMultipleWindows
           javaScriptEnabled
           domStorageEnabled
           allowsFullscreenVideo
@@ -332,6 +364,18 @@ function WebPlancia({
               <Text style={styles.webCoverText}>Apro la plancia…</Text>
             </View>
           )}
+          onOpenWindow={(event) => {
+            const targetUrl = event.nativeEvent.targetUrl || "";
+            if (isDisplayProjectorUrl(targetUrl)) {
+              openProjector(targetUrl);
+              return;
+            }
+            // Altre finestre: ignora (resta sulla plancia).
+          }}
+          onMessage={(event) => {
+            const url = parseOpenProjectorMessage(event.nativeEvent.data || "");
+            if (url) openProjector(url);
+          }}
           onShouldStartLoadWithRequest={(request) => {
             const next = request.url || "";
             if (!next || shouldAllowWebViewNav(next, adminUrl)) return true;
@@ -403,6 +447,66 @@ function WebPlancia({
           <Text style={styles.webCoverText}>Apro la plancia…</Text>
         </View>
       ) : null}
+
+      <Modal
+        visible={Boolean(projectorUrl)}
+        animationType="fade"
+        presentationStyle="fullScreen"
+        onRequestClose={closeProjector}
+      >
+        <View style={styles.projectorRoot}>
+          <View
+            style={[
+              styles.projectorChrome,
+              {
+                paddingTop: Math.max(insets.top, 8),
+                paddingRight: insets.right + 8,
+                paddingLeft: insets.left + 8,
+              },
+            ]}
+          >
+            <Pressable
+              onPress={closeProjector}
+              style={styles.back}
+              accessibilityRole="button"
+              accessibilityLabel="Chiudi schermo"
+            >
+              <Text style={styles.backText}>Chiudi schermo</Text>
+            </Pressable>
+            <Text style={styles.chromeCredit}>Proiettore</Text>
+          </View>
+          {projectorUrl ? (
+            <WebView
+              source={{ uri: projectorUrl }}
+              style={styles.web}
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              javaScriptEnabled
+              domStorageEnabled
+              allowsFullscreenVideo
+              setSupportMultipleWindows={false}
+              onShouldStartLoadWithRequest={(request) => {
+                const next = request.url || "";
+                if (!next) return true;
+                if (isDisplayProjectorUrl(next)) return true;
+                try {
+                  const target = new URL(next);
+                  const host = new URL(DEFAULT_HOST);
+                  if (target.origin !== host.origin) return false;
+                  return (
+                    target.pathname.startsWith("/_next/") ||
+                    target.pathname.startsWith("/grafiche/") ||
+                    target.pathname.startsWith("/audio/") ||
+                    target.pathname.startsWith("/api/")
+                  );
+                } catch {
+                  return false;
+                }
+              }}
+            />
+          ) : null}
+        </View>
+      </Modal>
 
       <EventoSheet
         visible={eventoOpen}
@@ -690,6 +794,20 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     backgroundColor: CASA_BG,
+  },
+  projectorRoot: {
+    flex: 1,
+    flexDirection: "column",
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#000000",
+  },
+  projectorChrome: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#000000",
+    paddingBottom: 6,
   },
   webCover: {
     ...StyleSheet.absoluteFillObject,

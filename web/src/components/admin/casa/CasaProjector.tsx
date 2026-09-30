@@ -22,6 +22,7 @@ import {
   quizAnswerEnterX,
   quizAnswersRevealMs,
 } from "@/lib/display/quiz-reveal-motion";
+import { setMediaVolume } from "@/lib/audio/media-element-gain";
 import { projectorPreviewScale } from "@/lib/display/embed";
 import {
   DEFAULT_SLIDES,
@@ -173,7 +174,7 @@ export function CasaProjector({
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !mountSigla) return;
-    video.volume = Math.min(1, Math.max(0, siglaVolume));
+    setMediaVolume(video, Math.min(1, Math.max(0, siglaVolume)));
   }, [siglaVolume, mountSigla, siglaSrc]);
 
   useEffect(() => {

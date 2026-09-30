@@ -31,7 +31,7 @@ import {
   BOARD_DISPLAY_CUES,
   type BoardDisplayCueId,
 } from "@/lib/admin/board-display-cues";
-import { displayUrl } from "@/lib/display/embed";
+import { displayUrl, openProjectorWindowAsync } from "@/lib/display/embed";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
   DEFAULT_CASA_CLOCK,
@@ -58,6 +58,7 @@ import {
   playCasaResultsRevealHit,
   resetCasaResultsRevealHit,
 } from "@/lib/admin/casa-results-reveal";
+import { getMediaVolume, setMediaVolume } from "@/lib/audio/media-element-gain";
 import { CROSSFADE_MS } from "@/lib/audio/types";
 import { pickSameCategoryReplacementId } from "@/lib/musicpro/quiz-state";
 import { WidgetConductor } from "@/components/admin/casa/widgets/WidgetConductor";
@@ -492,6 +493,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   /** Roster locale in plancia; la lista API è nella tab Giocatori. */
   const [guests] = useState<Guest[]>([]);
   const [help, setHelp] = useState(false);
+  const [externalScreenOn, setExternalScreenOn] = useState(false);
+  const projectorWinRef = useRef<Window | null>(null);
   const [rail, setRail] = useState<RailTab>("plancia");
   const [expand, setExpand] = useState<ExpandPanel>(null);
   const [layout, setLayout] = useState<BoardLayout>(DEFAULT_BOARD_LAYOUT);
@@ -872,7 +875,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     const el = bedAudio.current;
     if (!el) return;
     if (bedFadeRaf.current != null) return;
-    el.volume = effVol("bed");
+    setMediaVolume(el, effVol("bed"));
   }, [vols.bed, mute.bed, masterVol]);
 
   useEffect(() => {
@@ -891,6 +894,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
 
     if (el.src === abs) {
+      setMediaVolume(el, targetVol);
       if (shouldPlay) {
         void el.play().catch(() => setBedPlaying(false));
       } else {
@@ -909,34 +913,34 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       el.src = activeBed.url;
       setBedSeek({ current: 0, duration: 0 });
       el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
-      el.volume = 0;
+      setMediaVolume(el, 0);
       if (!shouldPlay) {
         el.pause();
-        el.volume = targetVol;
+        setMediaVolume(el, targetVol);
         return;
       }
       void el.play().then(() => {
         const t0 = performance.now();
         const tick = (now: number) => {
           const t = Math.min(1, (now - t0) / CROSSFADE_MS);
-          el.volume = targetVol * t;
+          setMediaVolume(el, targetVol * t);
           if (t < 1) {
             bedFadeRaf.current = requestAnimationFrame(tick);
             return;
           }
           bedFadeRaf.current = null;
-          el.volume = targetVol;
+          setMediaVolume(el, targetVol);
         };
         bedFadeRaf.current = requestAnimationFrame(tick);
       }).catch(() => setBedPlaying(false));
     };
 
     if (!el.paused && el.currentSrc) {
-      const startVol = el.volume;
+      const startVol = getMediaVolume(el);
       const t0 = performance.now();
       const tickOut = (now: number) => {
         const t = Math.min(1, (now - t0) / CROSSFADE_MS);
-        el.volume = startVol * (1 - t);
+        setMediaVolume(el, startVol * (1 - t));
         if (t < 1) {
           bedFadeRaf.current = requestAnimationFrame(tickOut);
           return;
@@ -1282,19 +1286,19 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       done();
       return;
     }
-    const startVol = el.volume;
+    const startVol = getMediaVolume(el);
     const t0 = performance.now();
     const dur = CROSSFADE_MS;
     const tick = (now: number) => {
       const t = Math.min(1, (now - t0) / dur);
-      el.volume = startVol * (1 - t);
+      setMediaVolume(el, startVol * (1 - t));
       if (t < 1) {
         bedFadeRaf.current = requestAnimationFrame(tick);
         return;
       }
       bedFadeRaf.current = null;
       el.pause();
-      el.volume = Math.min(1, Math.max(0, effVol("bed")));
+      setMediaVolume(el, Math.min(1, Math.max(0, effVol("bed"))));
       done();
     };
     bedFadeRaf.current = requestAnimationFrame(tick);
@@ -1530,6 +1534,43 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     } catch {
       setCmdError("Non riesco a copiare il link proiettore.");
     }
+  }
+
+  async function activateExternalScreen() {
+    setCmdError(null);
+    // Se già aperta, chiudi (toggle).
+    const existing = projectorWinRef.current;
+    if (existing && !existing.closed) {
+      try {
+        existing.close();
+      } catch {
+        /* ignore */
+      }
+      projectorWinRef.current = null;
+      setExternalScreenOn(false);
+      flashBoardToast("Schermo proiettore chiuso");
+      return;
+    }
+
+    const result = await openProjectorWindowAsync(eventCode, {
+      present: true,
+    });
+    projectorWinRef.current = result.window;
+    if (result.mode === "blocked") {
+      setExternalScreenOn(false);
+      setCmdError(
+        "Popup bloccato. Consenti le finestre o usa «Copia link» su un altro device.",
+      );
+      return;
+    }
+    setExternalScreenOn(true);
+    const tip =
+      result.mode === "secondary"
+        ? "Proiettore sullo schermo collegato (HDMI)"
+        : result.mode === "native-bridge"
+          ? "Proiettore a tutto schermo — con HDMI in mirror lo vedi sul TV"
+          : "Proiettore aperto — in Stage Manager trascinalo sulla HDMI";
+    flashBoardToast(tip);
   }
 
   async function toggleSpecialTrialBook() {
@@ -2128,6 +2169,17 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   onClick={() => setHelp((v) => !v)}
                 >
                   {help ? "QR on" : "QR"}
+                </button>
+                <button
+                  type="button"
+                  className="casa-board-mini"
+                  data-on={externalScreenOn ? "1" : undefined}
+                  title="Apri /display sullo schermo HDMI o monitor collegato"
+                  onClick={() => {
+                    void activateExternalScreen();
+                  }}
+                >
+                  {externalScreenOn ? "Schermo on" : "Schermo"}
                 </button>
                 <button
                   type="button"
