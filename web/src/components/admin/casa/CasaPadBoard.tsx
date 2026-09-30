@@ -2832,13 +2832,13 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             style={{ flex: `${layout.left[2]} 1 0` }}
           >
             <BoardCardHead title="Messaggi" onExpand={() => openExpand("msg")} />
-            <div className="casa-board-msgs">
+            <div className="casa-board-msgs" data-scroll="y">
               {msgs.length === 0 ? (
                 <p className="casa-board-empty">
                   Nessun messaggio · «10 coppie test» in Lista ne aggiunge
                 </p>
               ) : (
-                msgs.slice(0, 6).map((m) => (
+                msgs.map((m) => (
                   <div key={m.id} className="casa-board-msg">
                     <div>
                       <strong>{m.who}</strong>
@@ -3720,7 +3720,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               ) : null}
 
               {expand === "msg" ? (
-                <div className="casa-board-msgs">
+                <div className="casa-board-msgs" data-scroll="y">
                   {msgs.length === 0 ? (
                     <p className="casa-board-empty">
                       Nessun messaggio. Apri Lista → «10 coppie test» per la
