@@ -93,6 +93,7 @@ import {
   type CasaBeat,
 } from "@/lib/admin/casa-avanti";
 import { casaQrDisplayCommand } from "@/lib/admin/casa-qr-display";
+import { openingAutoplayHoldSeconds } from "@/lib/admin/casa-opening-autoplay";
 import { boardCueQuestionIndex } from "@/lib/admin/board-cue-question";
 import { casaAutoBedLabel, resolveCasaBed, resolveCasaBedOrLobby } from "@/lib/admin/casa-beds";
 import {
@@ -540,6 +541,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     null,
   );
   const [help, setHelp] = useState(false);
+  /** Autoplay plancia: vale già in apertura (prima del quiz live). */
+  const [boardAutoplay, setBoardAutoplay] = useState(false);
+  const goRef = useRef<() => void | Promise<void>>(() => {});
   const [externalScreenOn, setExternalScreenOn] = useState(false);
   const projectorWinRef = useRef<Window | null>(null);
   /** WebView iPad: niente Window da chiudere — toggle via bridge. */
@@ -1020,6 +1024,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
               rankingEveryN: live.event?.quizSetup.rankingEveryN,
           skipStartCountdown: true,
+          autoplayEnabled: boardAutoplay,
           questionIds: lineupIds ?? undefined,
         });
         if (!result.ok) {
@@ -1038,6 +1043,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     })();
   }, [
     beat,
+    boardAutoplay,
     count,
     eventCode,
     live.event?.quizSetup.hideRankingLastN,
@@ -1348,6 +1354,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             questionSeconds: live.event?.quizSetup.questionSeconds ?? undefined,
             hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
               rankingEveryN: live.event?.quizSetup.rankingEveryN,
+            autoplayEnabled: boardAutoplay,
             questionIds: lineupIds ?? undefined,
           });
           if (!result.ok) {
@@ -1370,6 +1377,35 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
 
     setQuizGate("tema");
   }
+
+  goRef.current = () => {
+    void go();
+  };
+
+  // Allinea flag plancia ↔ quiz quando siamo in manche live.
+  useEffect(() => {
+    if (live.runtimeState !== "quiz" || !live.quizState) return;
+    setBoardAutoplay(live.quizState.autoplayEnabled === true);
+  }, [live.runtimeState, live.quizState?.autoplayEnabled]);
+
+  // Autoplay apertura: ogni slide/passo senza timer dedicato → 5s poi AVANTI locale.
+  useEffect(() => {
+    if (!boardAutoplay || live.controlsDisabled || goBusy) return;
+    const hold = openingAutoplayHoldSeconds({ beat, sigla });
+    if (hold == null) return;
+    const timer = window.setTimeout(() => {
+      void goRef.current();
+    }, hold * 1000);
+    return () => window.clearTimeout(timer);
+  }, [
+    boardAutoplay,
+    beat,
+    sigla,
+    roll,
+    guests.length,
+    goBusy,
+    live.controlsDisabled,
+  ]);
 
   function firePad(id: CasaPadHitId, src?: string) {
     if (remoteAudio) return;
@@ -3224,24 +3260,24 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 <button
                   type="button"
                   className="casa-board-mini"
-                  data-on={
-                    live.quizState?.autoplayEnabled === true ? "1" : undefined
-                  }
-                  disabled={
-                    live.controlsDisabled ||
-                    !live.quizState ||
-                    live.runtimeState !== "quiz"
-                  }
+                  data-on={boardAutoplay ? "1" : undefined}
+                  disabled={live.controlsDisabled}
                   title={
-                    live.quizState?.autoplayEnabled === true
-                      ? "Autoplay acceso — le fasi in hold avanzano da sole"
-                      : "Autoplay spento — serve AVANTI sulle fasi in hold"
+                    boardAutoplay
+                      ? "Autoplay acceso — apertura e hold avanzano da sole (5s se manca un tempo)"
+                      : "Autoplay spento — serve AVANTI / Partenza"
                   }
                   onClick={() => {
-                    if (!live.quizState || live.controlsDisabled) return;
+                    if (live.controlsDisabled) return;
+                    const nextEnabled = !boardAutoplay;
+                    setBoardAutoplay(nextEnabled);
+                    if (
+                      live.runtimeState !== "quiz" ||
+                      !live.quizState
+                    ) {
+                      return;
+                    }
                     const snapshot = live.quizState;
-                    const nextEnabled = snapshot.autoplayEnabled !== true;
-                    // Ottimistico: subito visibile anche se un tick è in volo.
                     live.applyQuizUpdate({
                       ...snapshot,
                       autoplayEnabled: nextEnabled,
@@ -3254,6 +3290,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                       .then((result) => {
                         if (result.ok) return;
                         setCmdError(result.error);
+                        setBoardAutoplay(snapshot.autoplayEnabled === true);
                         live.applyQuizUpdate({
                           ...snapshot,
                           autoplayEnabled: snapshot.autoplayEnabled,

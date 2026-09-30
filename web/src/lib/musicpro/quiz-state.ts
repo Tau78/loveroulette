@@ -70,19 +70,25 @@ function normalizeTiming(raw: unknown): QuizTimingConfig {
     return { ...DEFAULT_QUIZ_TIMING };
   }
   const record = raw as Record<string, unknown>;
-  const num = (key: keyof QuizTimingConfig, fallback: number) => {
+  /** Hold / slide: minimo 5s così Autoplay non resta bloccato senza tempo. */
+  const num = (
+    key: keyof QuizTimingConfig,
+    fallback: number,
+    minSec = 5,
+  ) => {
     const value = record[key];
-    return typeof value === "number" && value >= 1 && value <= 120
-      ? value
-      : fallback;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return Math.max(minSec, Math.min(120, Math.round(value)));
+    }
+    return fallback;
   };
   return {
     startCountdownSeconds: num("startCountdownSeconds", 5),
-    themeIntroSeconds: num("themeIntroSeconds", 4),
-    questionStemSeconds: num("questionStemSeconds", 4),
-    questionSeconds: num("questionSeconds", 15),
+    themeIntroSeconds: num("themeIntroSeconds", 5),
+    questionStemSeconds: num("questionStemSeconds", 5),
+    questionSeconds: num("questionSeconds", 15, 3),
     resultsSeconds: num("resultsSeconds", 6),
-    nextQuestionSeconds: num("nextQuestionSeconds", 3),
+    nextQuestionSeconds: num("nextQuestionSeconds", 5),
   };
 }
 
@@ -167,6 +173,11 @@ export interface StartQuizSessionOptions {
    * Autorizzato Mauro: fine countdown → argomento senza click.
    */
   skipStartCountdown?: boolean;
+  /**
+   * Se true, tiene Autoplay acceso anche dopo stacco (skipLaunch).
+   * Default storico: skipLaunch → autoplay off (hold AVANTI sul tema).
+   */
+  autoplayEnabled?: boolean;
   /** Scaletta già preparata in plancia (es. dopo Cambia domanda in partenza/sigla). */
   questionIds?: string[];
 }
@@ -453,8 +464,13 @@ export async function startQuizSession(
     total: questionIds.length,
     source: source === "pool" ? "event" : source,
     autoplaySeconds: timing.questionSeconds,
-    // Dopo stacco: hold sull’argomento (AVANTI). Altrimenti legacy Auto on.
-    autoplayEnabled: skipLaunch ? false : true,
+    // Dopo stacco: di default hold AVANTI; plancia può chiedere Autoplay già on.
+    autoplayEnabled:
+      options.autoplayEnabled !== undefined
+        ? options.autoplayEnabled === true
+        : skipLaunch
+          ? false
+          : true,
     updatedAt: at,
     displayPhase: skipLaunch ? "theme_intro" : "start_countdown",
     phaseStartedAt: at,

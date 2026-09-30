@@ -117,6 +117,7 @@ export async function postQuizAction(
     enabled?: boolean;
     skipResults?: boolean;
     skipStartCountdown?: boolean;
+    autoplayEnabled?: boolean;
     targetIndex?: number;
     questionIds?: string[];
     displayPhase?:

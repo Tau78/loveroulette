@@ -18,13 +18,14 @@ export interface QuizTimingConfig {
   nextQuestionSeconds: number;
 }
 
+/** Hold Autoplay: nessuna fase sotto i 5s (Mauro 2026-09-30). */
 export const DEFAULT_QUIZ_TIMING: QuizTimingConfig = {
   startCountdownSeconds: 5,
-  themeIntroSeconds: 4,
-  questionStemSeconds: 4,
+  themeIntroSeconds: 5,
+  questionStemSeconds: 5,
   questionSeconds: 15,
   resultsSeconds: 6,
-  nextQuestionSeconds: 3,
+  nextQuestionSeconds: 5,
 };
 
 export interface QuizMancheTheme {
