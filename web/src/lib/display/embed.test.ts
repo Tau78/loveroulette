@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PROJECTOR_REFERENCE,
+  isCloseProjectorNativeMessage,
   isOpenProjectorNativeMessage,
   pickSecondaryScreen,
   projectorPreviewScale,
@@ -91,5 +92,24 @@ describe("isOpenProjectorNativeMessage", () => {
     expect(
       isOpenProjectorNativeMessage(JSON.stringify({ type: "other" })),
     ).toBeNull();
+  });
+});
+
+describe("isCloseProjectorNativeMessage", () => {
+  it("accepts close payload", () => {
+    expect(
+      isCloseProjectorNativeMessage(
+        JSON.stringify({ type: "lr-close-projector" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects open and junk", () => {
+    expect(
+      isCloseProjectorNativeMessage(
+        JSON.stringify({ type: "lr-open-projector", url: "x" }),
+      ),
+    ).toBe(false);
+    expect(isCloseProjectorNativeMessage("nope")).toBe(false);
   });
 });

@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -26,6 +27,9 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
+import ExternalDisplay, {
+  useExternalDisplay,
+} from "react-native-external-display";
 import {
   STORAGE_CREDIT_ACTIVATED_AT,
   STORAGE_SESSION,
@@ -41,6 +45,10 @@ import {
   formatRemaining,
   type CreditStatus,
 } from "./src/credits";
+import {
+  parseProjectorBridgeMessage,
+  pickExternalScreenId,
+} from "./src/projector-screen";
 import { shouldAutoReloadAfterCrash } from "./src/webview-crash";
 
 const DEFAULT_HOST = "https://loveroulette.vercel.app";
@@ -70,14 +78,13 @@ function isDisplayProjectorUrl(url: string): boolean {
 }
 
 function parseOpenProjectorMessage(raw: string): string | null {
-  try {
-    const data = JSON.parse(raw) as { type?: string; url?: string };
-    if (data?.type !== "lr-open-projector") return null;
-    if (typeof data.url !== "string" || !data.url) return null;
-    return isDisplayProjectorUrl(data.url) ? data.url : null;
-  } catch {
-    return null;
-  }
+  const msg = parseProjectorBridgeMessage(raw);
+  if (!msg || msg.type !== "open") return null;
+  return isDisplayProjectorUrl(msg.url) ? msg.url : null;
+}
+
+function isCloseProjectorMessage(raw: string): boolean {
+  return parseProjectorBridgeMessage(raw)?.type === "close";
 }
 
 function shouldAllowWebViewNav(url: string, adminUrl: string): boolean {
@@ -272,15 +279,46 @@ function WebPlancia({
   const allowed = canRunPlancia(status);
   const crashReloadsRef = useRef(0);
   const [projectorUrl, setProjectorUrl] = useState<string | null>(null);
+  const externalScreens = useExternalDisplay();
+  const externalScreenId = useMemo(
+    () => pickExternalScreenId(externalScreens),
+    [externalScreens],
+  );
 
-  const openProjector = useCallback((url: string) => {
-    if (!isDisplayProjectorUrl(url)) return;
-    setProjectorUrl(url);
-  }, []);
+  const openProjector = useCallback(
+    (url: string) => {
+      if (!isDisplayProjectorUrl(url)) return;
+      if (!externalScreenId) {
+        Alert.alert(
+          "Secondo schermo",
+          "Collega HDMI o AirPlay. Se è in «Duplica», passa a Schermo esteso / Separate Mode dal Centro di Controllo, poi ritocca Schermo.",
+        );
+        webRef.current?.injectJavaScript(
+          `(function(){try{window.dispatchEvent(new CustomEvent('lr-native-projector',{detail:{open:false}}));}catch(e){}})();true;`,
+        );
+        return;
+      }
+      setProjectorUrl(url);
+      webRef.current?.injectJavaScript(
+        `(function(){try{window.dispatchEvent(new CustomEvent('lr-native-projector',{detail:{open:true}}));}catch(e){}})();true;`,
+      );
+    },
+    [externalScreenId, webRef],
+  );
 
   const closeProjector = useCallback(() => {
     setProjectorUrl(null);
-  }, []);
+    webRef.current?.injectJavaScript(
+      `(function(){try{window.dispatchEvent(new CustomEvent('lr-native-projector',{detail:{open:false}}));}catch(e){}})();true;`,
+    );
+  }, [webRef]);
+
+  // Se stacca HDMI mentre il proiettore è aperto, chiudi senza crash.
+  useEffect(() => {
+    if (projectorUrl && !externalScreenId) {
+      closeProjector();
+    }
+  }, [projectorUrl, externalScreenId, closeProjector]);
 
   // Re-inject quando notch/home indicator cambiano (rotate / primo layout).
   useEffect(() => {
@@ -307,6 +345,37 @@ function WebPlancia({
     crashReloadsRef.current = 0;
     retryLoad();
   };
+
+  const projectorWebView = projectorUrl ? (
+    <WebView
+      source={{ uri: projectorUrl }}
+      style={styles.web}
+      allowsInlineMediaPlayback
+      mediaPlaybackRequiresUserAction={false}
+      javaScriptEnabled
+      domStorageEnabled
+      allowsFullscreenVideo
+      setSupportMultipleWindows={false}
+      onShouldStartLoadWithRequest={(request) => {
+        const next = request.url || "";
+        if (!next) return true;
+        if (isDisplayProjectorUrl(next)) return true;
+        try {
+          const target = new URL(next);
+          const host = new URL(DEFAULT_HOST);
+          if (target.origin !== host.origin) return false;
+          return (
+            target.pathname.startsWith("/_next/") ||
+            target.pathname.startsWith("/grafiche/") ||
+            target.pathname.startsWith("/audio/") ||
+            target.pathname.startsWith("/api/")
+          );
+        } catch {
+          return false;
+        }
+      }}
+    />
+  ) : null;
 
   return (
     <View style={styles.webRoot}>
@@ -346,7 +415,7 @@ function WebPlancia({
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
           allowsBackForwardNavigationGestures
-          setSupportMultipleWindows
+          setSupportMultipleWindows={false}
           javaScriptEnabled
           domStorageEnabled
           allowsFullscreenVideo
@@ -364,16 +433,13 @@ function WebPlancia({
               <Text style={styles.webCoverText}>Apro la plancia…</Text>
             </View>
           )}
-          onOpenWindow={(event) => {
-            const targetUrl = event.nativeEvent.targetUrl || "";
-            if (isDisplayProjectorUrl(targetUrl)) {
-              openProjector(targetUrl);
+          onMessage={(event) => {
+            const raw = event.nativeEvent.data || "";
+            if (isCloseProjectorMessage(raw)) {
+              closeProjector();
               return;
             }
-            // Altre finestre: ignora (resta sulla plancia).
-          }}
-          onMessage={(event) => {
-            const url = parseOpenProjectorMessage(event.nativeEvent.data || "");
+            const url = parseOpenProjectorMessage(raw);
             if (url) openProjector(url);
           }}
           onShouldStartLoadWithRequest={(request) => {
@@ -448,65 +514,11 @@ function WebPlancia({
         </View>
       ) : null}
 
-      <Modal
-        visible={Boolean(projectorUrl)}
-        animationType="fade"
-        presentationStyle="fullScreen"
-        onRequestClose={closeProjector}
-      >
-        <View style={styles.projectorRoot}>
-          <View
-            style={[
-              styles.projectorChrome,
-              {
-                paddingTop: Math.max(insets.top, 8),
-                paddingRight: insets.right + 8,
-                paddingLeft: insets.left + 8,
-              },
-            ]}
-          >
-            <Pressable
-              onPress={closeProjector}
-              style={styles.back}
-              accessibilityRole="button"
-              accessibilityLabel="Chiudi schermo"
-            >
-              <Text style={styles.backText}>Chiudi schermo</Text>
-            </Pressable>
-            <Text style={styles.chromeCredit}>Proiettore</Text>
-          </View>
-          {projectorUrl ? (
-            <WebView
-              source={{ uri: projectorUrl }}
-              style={styles.web}
-              allowsInlineMediaPlayback
-              mediaPlaybackRequiresUserAction={false}
-              javaScriptEnabled
-              domStorageEnabled
-              allowsFullscreenVideo
-              setSupportMultipleWindows={false}
-              onShouldStartLoadWithRequest={(request) => {
-                const next = request.url || "";
-                if (!next) return true;
-                if (isDisplayProjectorUrl(next)) return true;
-                try {
-                  const target = new URL(next);
-                  const host = new URL(DEFAULT_HOST);
-                  if (target.origin !== host.origin) return false;
-                  return (
-                    target.pathname.startsWith("/_next/") ||
-                    target.pathname.startsWith("/grafiche/") ||
-                    target.pathname.startsWith("/audio/") ||
-                    target.pathname.startsWith("/api/")
-                  );
-                } catch {
-                  return false;
-                }
-              }}
-            />
-          ) : null}
-        </View>
-      </Modal>
+      {projectorUrl && externalScreenId ? (
+        <ExternalDisplay screen={externalScreenId}>
+          <View style={styles.projectorRoot}>{projectorWebView}</View>
+        </ExternalDisplay>
+      ) : null}
 
       <EventoSheet
         visible={eventoOpen}
