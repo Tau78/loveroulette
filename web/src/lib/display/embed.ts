@@ -97,16 +97,32 @@ function popupFeatures(screen?: ProjectorScreenLike | null): string {
   ].join(",");
 }
 
-function notifyNativeOpenProjector(url: string): boolean {
+type RnWebViewBridge = {
+  ReactNativeWebView?: { postMessage?: (msg: string) => void };
+};
+
+export function isReactNativeWebView(): boolean {
   if (typeof window === "undefined") return false;
-  const rn = (
-    window as unknown as {
-      ReactNativeWebView?: { postMessage?: (msg: string) => void };
-    }
-  ).ReactNativeWebView;
+  return Boolean(
+    (window as unknown as RnWebViewBridge).ReactNativeWebView?.postMessage,
+  );
+}
+
+function postNativeProjectorMessage(payload: object): boolean {
+  if (typeof window === "undefined") return false;
+  const rn = (window as unknown as RnWebViewBridge).ReactNativeWebView;
   if (!rn?.postMessage) return false;
-  rn.postMessage(JSON.stringify({ type: "lr-open-projector", url }));
+  rn.postMessage(JSON.stringify(payload));
   return true;
+}
+
+function notifyNativeOpenProjector(url: string): boolean {
+  return postNativeProjectorMessage({ type: "lr-open-projector", url });
+}
+
+/** Chiude il proiettore nativo (secondo schermo / Modal) sulla plancia iPad. */
+export function notifyNativeCloseProjector(): boolean {
+  return postNativeProjectorMessage({ type: "lr-close-projector" });
 }
 
 export type OpenProjectorMode =
@@ -123,7 +139,8 @@ export type OpenProjectorResult = {
 
 /**
  * Apre `/display` preferendo uno schermo secondario (Window Management API,
- * Chrome/Edge desktop). Fallback: popup. In WebView iPad: bridge nativo.
+ * Chrome/Edge desktop). In WebView iPad: bridge nativo **prima** di
+ * `window.open` (evita crash WKWebView con HDMI / mirror).
  */
 export async function openProjectorWindowAsync(
   eventCode: string,
@@ -136,6 +153,11 @@ export async function openProjectorWindowAsync(
     present: options.present ?? true,
     origin: options.origin ?? window.location.origin,
   });
+
+  // iPad / plancia nativa: niente window.open (crash con secondo schermo).
+  if (notifyNativeOpenProjector(url)) {
+    return { window: null, mode: "native-bridge", url };
+  }
 
   try {
     const getScreenDetails = (
@@ -162,9 +184,6 @@ export async function openProjectorWindowAsync(
   const win = window.open(url, PROJECTOR_WINDOW_NAME, popupFeatures());
   if (win) return { window: win, mode: "popup", url };
 
-  if (notifyNativeOpenProjector(url)) {
-    return { window: null, mode: "native-bridge", url };
-  }
   return { window: null, mode: "blocked", url };
 }
 
@@ -178,10 +197,9 @@ export function openProjectorWindow(
     present: options.present,
     origin: options.origin ?? window.location.origin,
   });
+  if (notifyNativeOpenProjector(url)) return null;
   const win = window.open(url, PROJECTOR_WINDOW_NAME, popupFeatures());
-  if (win) return win;
-  notifyNativeOpenProjector(url);
-  return null;
+  return win;
 }
 
 export function isDisplayEmbedMode(
@@ -200,5 +218,14 @@ export function isOpenProjectorNativeMessage(
     return { url: data.url };
   } catch {
     return null;
+  }
+}
+
+export function isCloseProjectorNativeMessage(raw: string): boolean {
+  try {
+    const data = JSON.parse(raw) as { type?: string };
+    return data?.type === "lr-close-projector";
+  } catch {
+    return false;
   }
 }

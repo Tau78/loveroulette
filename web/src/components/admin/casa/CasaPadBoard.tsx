@@ -46,7 +46,12 @@ import {
   BOARD_DISPLAY_CUES,
   type BoardDisplayCueId,
 } from "@/lib/admin/board-display-cues";
-import { displayUrl, openProjectorWindowAsync } from "@/lib/display/embed";
+import {
+  displayUrl,
+  isReactNativeWebView,
+  notifyNativeCloseProjector,
+  openProjectorWindowAsync,
+} from "@/lib/display/embed";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
   DEFAULT_CASA_CLOCK,
@@ -532,6 +537,26 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const [help, setHelp] = useState(false);
   const [externalScreenOn, setExternalScreenOn] = useState(false);
   const projectorWinRef = useRef<Window | null>(null);
+  /** WebView iPad: niente Window da chiudere — toggle via bridge. */
+  const nativeProjectorOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onNative = (event: Event) => {
+      const detail = (event as CustomEvent<{ open?: boolean }>).detail;
+      if (detail?.open === true) {
+        nativeProjectorOpenRef.current = true;
+        setExternalScreenOn(true);
+        return;
+      }
+      if (detail?.open === false) {
+        nativeProjectorOpenRef.current = false;
+        setExternalScreenOn(false);
+      }
+    };
+    window.addEventListener("lr-native-projector", onNative);
+    return () => window.removeEventListener("lr-native-projector", onNative);
+  }, []);
   const [rail, setRail] = useState<RailTab>("plancia");
   const [expand, setExpand] = useState<ExpandPanel>(null);
   const [layout, setLayout] = useState<BoardLayout>(DEFAULT_BOARD_LAYOUT);
@@ -1903,7 +1928,16 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
 
   async function activateExternalScreen() {
     setCmdError(null);
-    // Se già aperta, chiudi (toggle).
+    // Toggle nativo iPad (secondo schermo HDMI / AirPlay).
+    if (isReactNativeWebView() && nativeProjectorOpenRef.current) {
+      notifyNativeCloseProjector();
+      nativeProjectorOpenRef.current = false;
+      setExternalScreenOn(false);
+      flashBoardToast("Schermo proiettore chiuso");
+      return;
+    }
+
+    // Se già aperta (popup desktop), chiudi (toggle).
     const existing = projectorWinRef.current;
     if (existing && !existing.closed) {
       try {
@@ -1923,17 +1957,21 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     projectorWinRef.current = result.window;
     if (result.mode === "blocked") {
       setExternalScreenOn(false);
+      nativeProjectorOpenRef.current = false;
       setCmdError(
         "Popup bloccato. Consenti le finestre o usa «Copia link» su un altro device.",
       );
       return;
+    }
+    if (result.mode === "native-bridge") {
+      nativeProjectorOpenRef.current = true;
     }
     setExternalScreenOn(true);
     const tip =
       result.mode === "secondary"
         ? "Proiettore sullo schermo collegato (HDMI)"
         : result.mode === "native-bridge"
-          ? "Proiettore a tutto schermo — con HDMI in mirror lo vedi sul TV"
+          ? "Proiettore sul secondo schermo (HDMI / AirPlay)"
           : "Proiettore aperto — in Stage Manager trascinalo sulla HDMI";
     flashBoardToast(tip);
   }
