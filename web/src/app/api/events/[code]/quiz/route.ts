@@ -9,6 +9,7 @@ import {
   setQuizDisplayPhase,
   setQuizSkipResults,
   replaceNextQuizQuestion,
+  replayQuizCurrentQuestion,
   resumeQuizAtIndex,
   skipQuizPhase,
   startQuizSession,
@@ -33,6 +34,7 @@ const bodySchema = z.object({
     "replaceNextQuestion",
     "setSkipResults",
     "resumeAt",
+    "replayCurrent",
   ]),
   autoplaySeconds: z.number().int().min(3).max(120).optional(),
   questionCount: z.number().int().min(1).max(200).optional(),
@@ -221,6 +223,10 @@ export async function POST(
           event.id,
           body.targetIndex,
         );
+        return NextResponse.json({ quiz, runtimeState: "quiz" as const });
+      }
+      case "replayCurrent": {
+        const quiz = await replayQuizCurrentQuestion(supabase, event.id);
         return NextResponse.json({ quiz, runtimeState: "quiz" as const });
       }
       default:

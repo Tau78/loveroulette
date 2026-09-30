@@ -108,7 +108,8 @@ export async function postQuizAction(
       | "setPhase"
       | "replaceNextQuestion"
       | "setSkipResults"
-      | "resumeAt";
+      | "resumeAt"
+      | "replayCurrent";
     autoplaySeconds?: number;
     questionCount?: number;
     questionSeconds?: number;

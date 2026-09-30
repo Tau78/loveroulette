@@ -1003,6 +1003,38 @@ export async function resumeQuizAtIndex(
   return quiz;
 }
 
+/**
+ * Recovery plancia «RIPETI»: cancella le risposte della domanda corrente
+ * e riparte da quella Q (theme_intro). Non altera l’ordine del binario.
+ */
+export async function replayQuizCurrentQuestion(
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<QuizSessionState> {
+  const current = await loadCurrentQuiz(supabase, eventId);
+  const questionId = current.questionIds[current.currentIndex];
+  if (!questionId) {
+    throw new Error("Nessuna domanda corrente da ripetere.");
+  }
+
+  const { error: answersError } = await supabase
+    .from("love_roulette_answers")
+    .delete()
+    .eq("question_id", questionId);
+  if (answersError) {
+    throw new Error(answersError.message);
+  }
+
+  logAvantiBinary("info", "replay current question (wipe answers)", {
+    eventId,
+    index: current.currentIndex,
+    questionId,
+    from: current.displayPhase,
+  });
+
+  return resumeQuizAtIndex(supabase, eventId, current.currentIndex);
+}
+
 export async function setQuizDisplayPhase(
   supabase: SupabaseClient,
   eventId: string,
