@@ -1692,7 +1692,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     player: BoardPlayer,
     field: PlayerScreenField = "card",
   ) {
-    if (live.controlsDisabled || !live.pinReady) return;
+    if (live.controlsDisabled) return;
+    if (!live.pinReady) {
+      flashBoardToast("PIN animatore richiesto");
+      live.openPinModal();
+      return;
+    }
     if (playerScreenBlocked) {
       flashBoardToast("Non durante il countdown risposte");
       return;

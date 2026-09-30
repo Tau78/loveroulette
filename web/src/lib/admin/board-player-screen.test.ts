@@ -64,6 +64,14 @@ describe("board player → schermo", () => {
       body: "Sara",
       imageUrl: "https://cdn.example/sara.jpg",
     });
+    // Chi è → valore LEI in title; kicker testuale (non F) così /display non usa la card present.
+    expect(playerDetailDisplayCommand(sara, "gender")).toEqual({
+      type: "slide",
+      kicker: "Chi è",
+      title: "LEI",
+      body: "Sara",
+      imageUrl: "https://cdn.example/sara.jpg",
+    });
   });
 
   it("falls back to avatar when photo is a local blob", () => {
