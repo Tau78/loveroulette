@@ -93,6 +93,7 @@ import {
   stepAvanti,
   type CasaBeat,
 } from "@/lib/admin/casa-avanti";
+import { logAvantiBinary } from "@/lib/admin/avanti-binary-log";
 import { casaQrDisplayCommand } from "@/lib/admin/casa-qr-display";
 import { openingAutoplayHoldSeconds } from "@/lib/admin/casa-opening-autoplay";
 import { boardCueQuestionIndex } from "@/lib/admin/board-cue-question";
@@ -620,7 +621,11 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }, [padSetIds, padBankRev]);
   const [msgs, setMsgs] = useState<
     { id: string; who: string; text: string }[]
-  >([]);
+  >(() => [
+    { id: "1", who: "Anonimo", text: "come si entra?" },
+    { id: "2", who: "Anonimo", text: "dov’è il Wi‑Fi?" },
+    { id: "3", who: "Luca", text: "si parte o no?" },
+  ]);
   const [bedFolder, setBedFolder] = useState<string | null>(null);
   const [bedList, setBedList] = useState<CasaMediaTrack[]>([]);
   const [bedIndex, setBedIndex] = useState(0);
@@ -1752,6 +1757,19 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     if (toastNick) flashBoardToast(`${toastNick} tolto dallo schermo`);
   }
 
+  /** Presenti: salta il resto della presentazione → stacco (niente click uno a uno). */
+  function skipPresentiRoll() {
+    if (beat !== "presenti") return;
+    logAvantiBinary("skip", "presenti roll skipped → stacco", {
+      from: beat,
+      to: "stacco",
+      roll,
+    });
+    setBeat("stacco");
+    setCount(5);
+    flashBoardToast("Presentazione saltata → stacco");
+  }
+
   /** Chiude il riquadro: se c’era un giocatore a schermo, torna al gioco. */
   function closeExpand() {
     if (expand === "players" && pickedId) {
@@ -2817,10 +2835,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             <div className="casa-board-msgs">
               {msgs.length === 0 ? (
                 <p className="casa-board-empty">
-                  Nessun messaggio · «10 coppie test» in Lista li riempie
+                  Nessun messaggio · «10 coppie test» in Lista ne aggiunge
                 </p>
               ) : (
-                msgs.slice(0, 4).map((m) => (
+                msgs.slice(0, 6).map((m) => (
                   <div key={m.id} className="casa-board-msg">
                     <div>
                       <strong>{m.who}</strong>
@@ -3143,20 +3161,32 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 <button
                   type="button"
                   className={
-                    resumeOpen
+                    beat === "presenti"
                       ? "casa-board-cmd casa-board-cmd-warn"
-                      : "casa-board-cmd"
+                      : resumeOpen
+                        ? "casa-board-cmd casa-board-cmd-warn"
+                        : "casa-board-cmd"
                   }
                   disabled={
-                    !liveQuizActive || cmdBusy || live.controlsDisabled
+                    beat === "presenti"
+                      ? live.controlsDisabled
+                      : !liveQuizActive || cmdBusy || live.controlsDisabled
                   }
-                  title="Riprendi da una domanda (solo quiz, senza wipe)"
-                  aria-pressed={resumeOpen}
+                  title={
+                    beat === "presenti"
+                      ? "Salta la presentazione giocatori → stacco"
+                      : "Riprendi da una domanda (solo quiz, senza wipe)"
+                  }
+                  aria-pressed={beat === "presenti" ? undefined : resumeOpen}
                   onClick={() => {
+                    if (beat === "presenti") {
+                      skipPresentiRoll();
+                      return;
+                    }
                     openResumeRow();
                   }}
                 >
-                  Riprendi
+                  {beat === "presenti" ? "Salta" : "Riprendi"}
                 </button>
               </div>
               {resumeOpen ? (
