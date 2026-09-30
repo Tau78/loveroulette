@@ -2,12 +2,14 @@
 
 import type { EventState } from "@/lib/types";
 import type { QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
+import type { SpecialTrialStatus } from "@/lib/musicpro/special-trial";
 import { useLoveRouletteSoundtrack } from "@/hooks/useLoveRouletteSoundtrack";
 
 interface SoundtrackPlayerProps {
   runtimeState: EventState;
   quizDisplayPhase?: QuizDisplayPhase | null;
   quizThemeCategory?: string | null;
+  specialTrialStatus?: SpecialTrialStatus | null;
   stingerId?: string | null;
   stingerToken?: number;
   stingerDedupKey?: string | null;
@@ -23,6 +25,7 @@ export function SoundtrackPlayer({
   runtimeState,
   quizDisplayPhase = null,
   quizThemeCategory = null,
+  specialTrialStatus = null,
   stingerId = null,
   stingerToken = 0,
   stingerDedupKey = null,
@@ -34,6 +37,7 @@ export function SoundtrackPlayer({
     runtimeState,
     quizDisplayPhase,
     quizThemeCategory,
+    specialTrialStatus,
     enabled: !embedMode,
     stingerId,
     stingerToken,

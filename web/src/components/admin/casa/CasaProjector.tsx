@@ -42,6 +42,9 @@ import {
   CasaPlayerSpotlight,
   type CasaSpotlight,
 } from "@/components/admin/casa/CasaPlayerSpotlight";
+import { DisplaySpecialTrialStage } from "@/components/display/DisplaySpecialTrialStage";
+import type { SpecialTrialState } from "@/lib/musicpro/special-trial";
+import { isSpecialTrialBlockingQuiz } from "@/lib/musicpro/special-trial";
 
 export type CasaBeat =
   | "casa"
@@ -94,6 +97,9 @@ type Props = {
   onClearMediaOnScreen?: () => void;
   /** Solo plancia admin: notifica se l’asset bundled manca (mai testo pubblico). */
   onSiglaAvailability?: (available: boolean) => void;
+  /** Prova speciale live — priorità sul quiz (countdown / risultati). */
+  specialTrial?: SpecialTrialState | null;
+  onSpecialTrialTick?: () => void;
 };
 
 function isVideoMedia(media: { url: string; name: string } | null | undefined) {
@@ -125,6 +131,8 @@ export function CasaProjector({
   mediaOnScreen = null,
   onClearMediaOnScreen,
   onSiglaAvailability,
+  specialTrial = null,
+  onSpecialTrialTick,
 }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
@@ -161,14 +169,18 @@ export function CasaProjector({
   const useSiglaAudioFallback = siglaFullscreen && !mountSigla;
   const mediaVideoOn = Boolean(mediaOnScreen && isVideoMedia(mediaOnScreen));
   const theme = categoryThemeLabel(quizQuestion?.category ?? FALLBACK_QUIZ.category);
+  const showSpecialTrial =
+    beat === "quiz" && isSpecialTrialBlockingQuiz(specialTrial);
   const previewQuizPhase: QuizDisplayPhase | null =
-    beat === "quiz"
+    beat === "quiz" && !showSpecialTrial
       ? quizPhase ?? (quizGate === "tema" ? "theme_intro" : "question")
       : null;
   const stageKey = help
     ? "help"
     : beat === "sigla"
       ? `sigla:${sigla}:${mountSigla ? "v" : useSiglaAudioFallback ? "a" : "i"}`
+      : showSpecialTrial
+        ? `special-trial:${specialTrial?.status}:${specialTrial?.updatedAt ?? ""}`
       : beat === "quiz"
         ? "quiz"
           : beat === "presenti"
@@ -490,6 +502,12 @@ export function CasaProjector({
               </div>
             ) : beat === "stacco" && count != null ? (
               <DisplayStaccoStage value={count} />
+            ) : showSpecialTrial && specialTrial ? (
+              <DisplaySpecialTrialStage
+                trial={specialTrial}
+                eventSlug={eventCode}
+                onTick={onSpecialTrialTick}
+              />
             ) : beat === "quiz" ? (
               <QuizPreview
                 gate={quizGate}

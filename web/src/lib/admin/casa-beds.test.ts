@@ -57,6 +57,24 @@ describe("casa auto beds", () => {
     ).toContain("LR_01_Lobby_Ambient");
   });
 
+  it("plays countdown bed while special trial is running", () => {
+    expect(
+      casaAutoBedSrc("quiz", "next_question", "fun", {
+        specialTrial: "running",
+      }),
+    ).toContain("LR_03_Quiz_Countdown");
+    expect(
+      casaAutoBedLabel("quiz", "next_question", "fun", {
+        specialTrial: "running",
+      }),
+    ).toMatch(/prova speciale/i);
+    expect(
+      casaAutoBedSrc("quiz", "theme_intro", "romantic", {
+        specialTrial: "closing",
+      }),
+    ).toContain("LR_03_Quiz_Countdown");
+  });
+
   it("lets a local folder override Auto fase", () => {
     const folder = [{ name: "mio.mp3", url: "blob:x" }];
     expect(resolveCasaBed("quiz", folder, 0)).toEqual(folder[0]);

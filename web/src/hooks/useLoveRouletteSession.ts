@@ -237,7 +237,11 @@ export function useLoveRouletteSession(
 
   const applySpecialTrialUpdate = useCallback(
     (trial: SpecialTrialState | null, quiz?: QuizSessionState | null) => {
-      setSpecialTrial((prev) => mergeSpecialTrialState(prev, trial));
+      if (trial === null) {
+        setSpecialTrial(null);
+      } else {
+        setSpecialTrial((prev) => mergeSpecialTrialState(prev, trial));
+      }
       if (quiz !== undefined) {
         applyQuizUpdate(quiz);
       }

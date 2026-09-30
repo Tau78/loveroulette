@@ -33,6 +33,8 @@ export const CASA_PRESHOW_BED_TARGET =
 export type CasaBedOpts = {
   sigla?: SiglaGate | null;
   displayCue?: BoardDisplayCueId | null;
+  /** Prova speciale in onda → bed countdown (non tema quiz). */
+  specialTrial?: "running" | "closing" | "setup" | "results" | "booked" | null;
 };
 
 function wantsPreshow(
@@ -46,6 +48,10 @@ function wantsPreshow(
   return false;
 }
 
+function wantsSpecialTrialBed(opts?: CasaBedOpts | null): boolean {
+  return opts?.specialTrial === "running" || opts?.specialTrial === "closing";
+}
+
 export function casaAutoBedSrc(
   beat: CasaBeat,
   quizPhase?: QuizDisplayPhase | null,
@@ -57,6 +63,8 @@ export function casaAutoBedSrc(
     return null;
   }
   if (wantsPreshow(beat, opts)) return PRESHOW;
+  // Prova speciale: pulse countdown (votazione sala sul telefono).
+  if (beat === "quiz" && wantsSpecialTrialBed(opts)) return QUIZ_COUNTDOWN;
   // Stacco 5–4–3–2–1: parla solo il file countdown (niente bed sotto).
   if (beat === "stacco") return null;
   if (beat === "presenti") return EXTRACT;
@@ -79,6 +87,9 @@ export function casaAutoBedLabel(
     return "Pausa — parla la sigla";
   }
   if (wantsPreshow(beat, opts)) return "Pre-show · prendete posto";
+  if (beat === "quiz" && wantsSpecialTrialBed(opts)) {
+    return "Prova speciale · countdown";
+  }
   if (beat === "stacco") return "Pausa — countdown";
   if (beat === "presenti") return "Estrazione";
   if (beat === "quiz") {

@@ -142,6 +142,7 @@ export default function DisplayPage() {
   const hideBackgroundRoulette =
     runtimeState === "extraction" ||
     runtimeState === "matching" ||
+    showSpecialTrial ||
     finalsShow?.phase === "couple_reveal" ||
     finalsShow?.phase === "challenge_intro" ||
     finalsShow?.phase === "voting" ||
@@ -200,6 +201,7 @@ export default function DisplayPage() {
         runtimeState={runtimeState}
         quizDisplayPhase={isQuiz ? quizState!.displayPhase : null}
         quizThemeCategory={currentQuestion?.category ?? null}
+        specialTrialStatus={showSpecialTrial ? specialTrial?.status ?? null : null}
         viewerMode
         embedMode={embedMode || displayAudioCue?.enabled !== true}
         externalUnlockAt={

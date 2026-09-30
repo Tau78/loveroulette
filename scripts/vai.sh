@@ -433,7 +433,13 @@ run_build() {
 
   # iOS: Xcode TestFlight se presente; altrimenti EAS da root (legacy)
   if [[ "$STACK_IOS" == "1" && -x "$ROOT/scripts/xcode-testflight.sh" ]]; then
-    bash "$ROOT/scripts/xcode-testflight.sh"
+    local ios_flags=()
+    # Nuovo modulo nativo / plugin Expo → serve prebuild (cartella ios/ spesso in .gitignore).
+    if printf '%s\n' "$TOUCHED" | grep -qE '^mobile/(package(-lock)?\.json|app\.json|app\.config\.(js|ts))$'; then
+      ios_flags+=(--prebuild)
+      log "Build: mobile deps/config toccati → xcode-testflight --prebuild"
+    fi
+    bash "$ROOT/scripts/xcode-testflight.sh" "${ios_flags[@]}"
     log "Build: Xcode / TestFlight avviata."
     built=1
   elif [[ "$STACK_IOS" == "1" && -f eas.json ]]; then

@@ -166,7 +166,9 @@ export function mergeSpecialTrialState(
   prev: SpecialTrialState | null,
   incoming: SpecialTrialState | null,
 ): SpecialTrialState | null {
-  if (!incoming) return prev;
+  // null = chiusura esplicita (AVANTI da risultati / poll dopo clear).
+  // Non conservare prev: altrimenti plancia resta su PROVA SPECIALE e AVANTI 404.
+  if (!incoming) return null;
   if (!prev) return incoming;
 
   const prevAt = Date.parse(prev.updatedAt);
