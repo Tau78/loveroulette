@@ -94,7 +94,11 @@ import { avantiLabel, stepAvanti } from "@/lib/admin/casa-avanti";
 import { casaQrDisplayCommand } from "@/lib/admin/casa-qr-display";
 import { logAvantiBinary } from "@/lib/admin/avanti-binary-log";
 import { categoryThemeLabel } from "@/lib/musicpro/quiz-display";
-import { casaAutoBedLabel, resolveCasaBed } from "@/lib/admin/casa-beds";
+import {
+  casaAutoBedLabel,
+  casaEffectiveBedBeat,
+  resolveCasaBed,
+} from "@/lib/admin/casa-beds";
 import {
   playCasaResultsRevealHit,
   resetCasaResultsRevealHit,
@@ -826,11 +830,21 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
     live.runtimeState,
   );
 
+  const prevQuizPhaseForRevealRef = useRef<string | null | undefined>(
+    undefined,
+  );
   useEffect(() => {
+    const prev = prevQuizPhaseForRevealRef.current;
+    prevQuizPhaseForRevealRef.current = liveQuizActive
+      ? liveQuizPhase
+      : null;
+
     if (!liveQuizActive || liveQuizPhase !== "results") {
       if (liveQuizPhase !== "results") resetCasaResultsRevealHit();
       return;
     }
+    // Solo ingresso vivo in % (es. answers→results). Skip mount/unlock già in %.
+    if (prev === undefined || prev === "results") return;
     const cue = `${live.quizState?.currentIndex ?? 0}:${live.quizState?.phaseStartedAt ?? "results"}`;
     playCasaResultsRevealHit({ cueKey: cue });
   }, [
@@ -891,10 +905,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
   const effVol = (id: (typeof FADERS)[number]["id"]) =>
     mute[id] ? 0 : (vols[id] / 100) * masterScale;
 
+  const bedBeat = casaEffectiveBedBeat(beat, liveQuizActive);
   const activeBed = useMemo(
     () =>
       resolveCasaBed(
-        beat,
+        bedBeat,
         bedFolder ? bedList : null,
         bedIndex,
         liveQuizActive ? liveQuizPhase : null,
@@ -902,7 +917,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         { sigla },
       ),
     [
-      beat,
+      bedBeat,
       bedFolder,
       bedList,
       bedIndex,
@@ -2246,7 +2261,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             <p className="casa-sub">
               {bedFolder
                 ? `${bedFolder} · ${bedList.length} brani`
-                : `Colonna · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null)}`}
+                : `Colonna · ${casaAutoBedLabel(bedBeat, liveQuizActive ? liveQuizPhase : null)}`}
             </p>
             {bedList.length ? (
               <div className="casa-playlist">
@@ -2926,7 +2941,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
                   <span>
                     {bedFolder
                       ? `${bedFolder} · ${bedList.length} brani`
-                      : `Colonna · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null)}`}
+                      : `Colonna · ${casaAutoBedLabel(bedBeat, liveQuizActive ? liveQuizPhase : null)}`}
                   </span>
                 </div>
                 {bedList.length ? (
