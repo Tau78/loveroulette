@@ -29,20 +29,18 @@ export function PlayerMobileShell({
   });
 
   const [promptVisible, setPromptVisible] = useState(false);
-  const [standalone, setStandalone] = useState<boolean | null>(null);
-
-  useEffect(() => {
+  const standalone = (() => {
+    if (typeof window === "undefined") return false;
     const navigatorWithStandalone = navigator as Navigator & {
       standalone?: boolean;
     };
-    setStandalone(
+    return (
       window.matchMedia("(display-mode: standalone)").matches ||
-        navigatorWithStandalone.standalone === true,
+      navigatorWithStandalone.standalone === true
     );
-  }, []);
+  })();
 
   useEffect(() => {
-    if (standalone === null) return;
     if (!fullscreenPrompt || standalone || isFullscreen) {
       setPromptVisible(false);
       return;
