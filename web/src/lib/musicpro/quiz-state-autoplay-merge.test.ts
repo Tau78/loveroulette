@@ -19,7 +19,6 @@ function baseQuiz(
     displayPhase: "theme_intro",
     phaseStartedAt: "2026-01-01T00:00:00.000Z",
     timing: DEFAULT_QUIZ_TIMING,
-    manche: null,
     hideRankingLastN: 5,
     rankingEveryN: 5,
     skipResults: false,
