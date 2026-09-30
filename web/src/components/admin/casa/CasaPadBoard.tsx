@@ -1684,12 +1684,19 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }
 
   const picked = guests.find((g) => g.id === pickedId) ?? null;
+  /** Niente overlay giocatore sopra il countdown risposte. */
+  const playerScreenBlocked =
+    liveQuizActive && liveQuizPhase === "answers";
 
   async function sendPlayerToScreen(
     player: BoardPlayer,
     field: PlayerScreenField = "card",
   ) {
     if (live.controlsDisabled || !live.pinReady) return;
+    if (playerScreenBlocked) {
+      flashBoardToast("Non durante il countdown risposte");
+      return;
+    }
     const command = playerDetailDisplayCommand(player, field);
     setScreenField(field);
     try {
@@ -1713,7 +1720,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       const hint =
         field === "card" || field === "photo" || field === "nick"
           ? `${player.nick} a schermo`
-          : `${player.nick} · ${detail?.label ?? field}`;
+          : `${player.nick} · ${detail?.label ?? field}: ${detail?.value ?? ""}`;
       flashBoardToast(hint);
     } catch (err) {
       setCmdError(
@@ -1740,6 +1747,14 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     if (toastNick) flashBoardToast(`${toastNick} tolto dallo schermo`);
   }
 
+  /** Chiude il riquadro: se c’era un giocatore a schermo, torna al gioco. */
+  function closeExpand() {
+    if (expand === "players" && pickedId) {
+      clearPlayerFromScreen();
+    }
+    setExpand(null);
+  }
+
   /** Toggle on per 5s: highlight + schermo, poi spegne. */
   function armPickedHold(playerId: string) {
     clearPickedHold();
@@ -1763,6 +1778,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       clearPlayerFromScreen(player.nick);
       return;
     }
+    if (playerScreenBlocked) {
+      flashBoardToast("Non durante il countdown risposte");
+      return;
+    }
     armPickedHold(player.id);
     void sendPlayerToScreen(player, "card");
   }
@@ -1773,9 +1792,27 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       clearPlayerFromScreen();
       return;
     }
+    if (playerScreenBlocked) {
+      flashBoardToast("Non durante il countdown risposte");
+      return;
+    }
     armPickedHold(player.id);
     setScreenField("card");
     void sendPlayerToScreen(player, "card");
+  }
+
+  /** Toggle dettaglio nel foglio giocatore (stesso campo = off). */
+  function togglePlayerDetail(player: BoardPlayer, field: PlayerScreenField) {
+    if (screenField === field && pickedId === player.id) {
+      clearPlayerFromScreen(player.nick);
+      return;
+    }
+    if (playerScreenBlocked) {
+      flashBoardToast("Non durante il countdown risposte");
+      return;
+    }
+    armPickedHold(player.id);
+    void sendPlayerToScreen(player, field);
   }
 
   function resizeCols(edge: 0 | 1, deltaPx: number, containerSize: number) {
@@ -3526,7 +3563,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             type="button"
             className="casa-board-expand-veil"
             aria-label="Chiudi"
-            onClick={() => setExpand(null)}
+            onClick={closeExpand}
           />
           <div
             className="casa-board-expand-panel"
@@ -3539,7 +3576,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               <button
                 type="button"
                 className="casa-board-mini"
-                onClick={() => setExpand(null)}
+                onClick={closeExpand}
               >
                 Chiudi
               </button>
@@ -3615,11 +3652,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                                 ? "1"
                                 : undefined
                             }
-                            disabled={live.controlsDisabled}
-                            onClick={() => {
-                              armPickedHold(picked.id);
-                              void sendPlayerToScreen(picked, d.field);
-                            }}
+                            disabled={
+                              live.controlsDisabled || playerScreenBlocked
+                            }
+                            onClick={() =>
+                              togglePlayerDetail(picked, d.field)
+                            }
                           >
                             <span>{d.label}</span>
                             <strong>{d.value}</strong>
@@ -3637,7 +3675,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     type="button"
                     className="casa-board-chip-btn casa-board-chip-btn-wide"
                     onClick={() => {
-                      setExpand(null);
+                      closeExpand();
                       openRail("giocatori");
                     }}
                   >

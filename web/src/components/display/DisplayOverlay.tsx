@@ -91,7 +91,7 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
               ? `stacco:${overlay.title ?? ""}`
               : overlayKey(overlay)
           }
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-50 bg-black"
           initial={reduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reduceMotion ? undefined : { opacity: 0 }}
@@ -126,7 +126,7 @@ function OverlayBody({
     const gender = playerGenderFromOverlay(overlay);
     if (gender && overlay.title) {
       return (
-        <div className="flex h-full items-center justify-center p-10">
+        <div className="relative h-full w-full bg-black">
           <DisplayPlayerPresentSwitch
             nick={overlay.title}
             gender={gender}
@@ -138,7 +138,7 @@ function OverlayBody({
 
     if (isStaccoSlide(overlay) && overlay.title) {
       return (
-        <div className="h-full">
+        <div className="h-full bg-black">
           <DisplayStaccoStage value={Number(overlay.title)} />
         </div>
       );
@@ -146,14 +146,14 @@ function OverlayBody({
 
     if (isSiglaWarnSlide(overlay)) {
       return (
-        <div className="flex h-full items-center justify-center p-10">
+        <div className="flex h-full items-center justify-center bg-black p-10">
           <DisplaySiglaWarn />
         </div>
       );
     }
 
     return (
-      <div className="flex h-full items-center justify-center p-10">
+      <div className="flex h-full w-full items-center justify-center bg-black p-10">
         <DisplayPhaseHero
           kicker={overlay.kicker}
           headline={overlay.title ?? ""}

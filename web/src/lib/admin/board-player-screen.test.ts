@@ -53,14 +53,14 @@ describe("board player → schermo", () => {
     expect(playerDetailDisplayCommand(sara, "seeking")).toEqual({
       type: "slide",
       kicker: "Cerca",
-      title: "SARA · UOMINI",
+      title: "UOMINI",
       body: "Sara",
       imageUrl: "https://cdn.example/sara.jpg",
     });
     expect(playerDetailDisplayCommand(sara, "name")).toEqual({
       type: "slide",
       kicker: "Nome",
-      title: "SARA · SARA ROSSI",
+      title: "SARA ROSSI",
       body: "Sara",
       imageUrl: "https://cdn.example/sara.jpg",
     });
