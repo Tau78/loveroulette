@@ -439,7 +439,12 @@ run_build() {
       ios_flags+=(--prebuild)
       log "Build: mobile deps/config toccati → xcode-testflight --prebuild"
     fi
-    bash "$ROOT/scripts/xcode-testflight.sh" "${ios_flags[@]}"
+    # Con `set -u`, array vuoto + "${ios_flags[@]}" fallisce su bash macOS.
+    if ((${#ios_flags[@]} > 0)); then
+      bash "$ROOT/scripts/xcode-testflight.sh" "${ios_flags[@]}"
+    else
+      bash "$ROOT/scripts/xcode-testflight.sh"
+    fi
     log "Build: Xcode / TestFlight avviata."
     built=1
   elif [[ "$STACK_IOS" == "1" && -f eas.json ]]; then
