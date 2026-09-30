@@ -129,15 +129,11 @@ export function playerDetailDisplayCommand(
   const detail = playerScreenDetails(player).find((d) => d.field === field);
   const value = (detail?.value || player.nick).trim();
   const owner = player.nick.trim();
-  const title = (
-    value.toLowerCase() === owner.toLowerCase()
-      ? owner
-      : `${owner} · ${value}`
-  ).toUpperCase();
+  /** Headline = valore del campo; kicker = etichetta; body = nick. */
   return {
     type: "slide",
     kicker: detail?.label || owner,
-    title,
+    title: value.toUpperCase(),
     body: owner,
     imageUrl: playerScreenPhoto(player),
   };

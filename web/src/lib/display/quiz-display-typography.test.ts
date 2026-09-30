@@ -22,7 +22,8 @@ describe("quiz-display-typography scale", () => {
   });
 
   it("uses CSS-var token classes for runtime settings", () => {
-    expect(QUIZ_QUESTION_TEXT_CLASS).toContain("lr-dt-36");
+    expect(QUIZ_QUESTION_TEXT_CLASS).toContain("lr-dt-question");
+    expect(QUIZ_QUESTION_TEXT_CLASS).toContain("line-clamp-3");
     expect(QUIZ_ANSWER_TEXT_CLASS).toContain("lr-dt-28");
     expect(QUIZ_THEME_TITLE_CLASS).toContain("lr-dt-theme-title");
   });

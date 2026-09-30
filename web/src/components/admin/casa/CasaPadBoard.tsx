@@ -93,6 +93,7 @@ import {
   stepAvanti,
   type CasaBeat,
 } from "@/lib/admin/casa-avanti";
+import { logAvantiBinary } from "@/lib/admin/avanti-binary-log";
 import { casaQrDisplayCommand } from "@/lib/admin/casa-qr-display";
 import { openingAutoplayHoldSeconds } from "@/lib/admin/casa-opening-autoplay";
 import { boardCueQuestionIndex } from "@/lib/admin/board-cue-question";
@@ -240,6 +241,8 @@ type FaderId = (typeof FADERS)[number]["id"];
 
 const BOARD_PAD_FALLBACK = CASA_PAD_HITS.slice(0, 6);
 const PLAYER_SLOTS = 6;
+/** Highlight «a schermo» sulla faccia in Giocatori. */
+const PLAYER_SCREEN_HOLD_MS = 5000;
 
 const EXPAND_TITLE: Record<Exclude<ExpandPanel, null>, string> = {
   players: "Giocatori",
@@ -547,9 +550,24 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   /** Roster locale in plancia; la lista API è nella tab Giocatori. */
   const [guests, setGuests] = useState<Guest[]>([]);
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const pickedIdRef = useRef<string | null>(null);
+  const pickedTimerRef = useRef<number | null>(null);
   const [screenField, setScreenField] = useState<PlayerScreenField | null>(
     null,
   );
+
+  useEffect(() => {
+    pickedIdRef.current = pickedId;
+  }, [pickedId]);
+
+  useEffect(() => {
+    return () => {
+      if (pickedTimerRef.current != null) {
+        window.clearTimeout(pickedTimerRef.current);
+        pickedTimerRef.current = null;
+      }
+    };
+  }, []);
   const [help, setHelp] = useState(false);
   /** Autoplay plancia: vale già in apertura (prima del quiz live). */
   const [boardAutoplay, setBoardAutoplay] = useState(false);
@@ -603,7 +621,11 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }, [padSetIds, padBankRev]);
   const [msgs, setMsgs] = useState<
     { id: string; who: string; text: string }[]
-  >([]);
+  >(() => [
+    { id: "1", who: "Anonimo", text: "come si entra?" },
+    { id: "2", who: "Anonimo", text: "dov’è il Wi‑Fi?" },
+    { id: "3", who: "Luca", text: "si parte o no?" },
+  ]);
   const [bedFolder, setBedFolder] = useState<string | null>(null);
   const [bedList, setBedList] = useState<CasaMediaTrack[]>([]);
   const [bedIndex, setBedIndex] = useState(0);
@@ -1667,12 +1689,24 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }
 
   const picked = guests.find((g) => g.id === pickedId) ?? null;
+  /** Niente overlay giocatore sopra il countdown risposte. */
+  const playerScreenBlocked =
+    liveQuizActive && liveQuizPhase === "answers";
 
   async function sendPlayerToScreen(
     player: BoardPlayer,
     field: PlayerScreenField = "card",
   ) {
-    if (live.controlsDisabled || !live.pinReady) return;
+    if (live.controlsDisabled) return;
+    if (!live.pinReady) {
+      flashBoardToast("PIN animatore richiesto");
+      live.openPinModal();
+      return;
+    }
+    if (playerScreenBlocked) {
+      flashBoardToast("Non durante il countdown risposte");
+      return;
+    }
     const command = playerDetailDisplayCommand(player, field);
     setScreenField(field);
     try {
@@ -1696,7 +1730,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       const hint =
         field === "card" || field === "photo" || field === "nick"
           ? `${player.nick} a schermo`
-          : `${player.nick} · ${detail?.label ?? field}`;
+          : `${player.nick} · ${detail?.label ?? field}: ${detail?.value ?? ""}`;
       flashBoardToast(hint);
     } catch (err) {
       setCmdError(
@@ -1705,17 +1739,103 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     }
   }
 
-  /** Card Giocatori: tap faccia → solo a schermo (non apre il riquadro). */
+  function clearPickedHold() {
+    if (pickedTimerRef.current != null) {
+      window.clearTimeout(pickedTimerRef.current);
+      pickedTimerRef.current = null;
+    }
+  }
+
+  function clearPlayerFromScreen(toastNick?: string) {
+    clearPickedHold();
+    pickedIdRef.current = null;
+    setPickedId(null);
+    setScreenField(null);
+    if (!live.controlsDisabled && live.pinReady) {
+      void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
+    }
+    if (toastNick) flashBoardToast(`${toastNick} tolto dallo schermo`);
+  }
+
+  /** Presenti: salta il resto della presentazione → stacco (niente click uno a uno). */
+  function skipPresentiRoll() {
+    if (beat !== "presenti") return;
+    logAvantiBinary("skip", "presenti roll skipped → stacco", {
+      from: beat,
+      to: "stacco",
+      roll,
+    });
+    setBeat("stacco");
+    setCount(5);
+    flashBoardToast("Presentazione saltata → stacco");
+  }
+
+  /** Chiude il riquadro: se c’era un giocatore a schermo, torna al gioco. */
+  function closeExpand() {
+    if (expand === "players" && pickedId) {
+      clearPlayerFromScreen();
+    }
+    setExpand(null);
+  }
+
+  /** Toggle on per 5s: highlight + schermo, poi spegne. */
+  function armPickedHold(playerId: string) {
+    clearPickedHold();
+    pickedIdRef.current = playerId;
+    setPickedId(playerId);
+    pickedTimerRef.current = window.setTimeout(() => {
+      pickedTimerRef.current = null;
+      if (pickedIdRef.current !== playerId) return;
+      pickedIdRef.current = null;
+      setPickedId(null);
+      setScreenField(null);
+      if (!live.controlsDisabled && live.pinReady) {
+        void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
+      }
+    }, PLAYER_SCREEN_HOLD_MS);
+  }
+
+  /** Card Giocatori: tap = toggle a schermo (on 5s); ritap = off + clear. */
   function sendPlayerFromCard(player: BoardPlayer) {
-    setPickedId(player.id);
+    if (pickedId === player.id) {
+      clearPlayerFromScreen(player.nick);
+      return;
+    }
+    if (playerScreenBlocked) {
+      flashBoardToast("Non durante il countdown risposte");
+      return;
+    }
+    armPickedHold(player.id);
     void sendPlayerToScreen(player, "card");
   }
 
   /** Riquadro espanso: seleziona, mostra dettagli e manda card a schermo. */
   function pickPlayerInExpand(player: BoardPlayer) {
-    setPickedId(player.id);
+    if (pickedId === player.id) {
+      clearPlayerFromScreen();
+      return;
+    }
+    if (playerScreenBlocked) {
+      flashBoardToast("Non durante il countdown risposte");
+      return;
+    }
+    armPickedHold(player.id);
     setScreenField("card");
     void sendPlayerToScreen(player, "card");
+  }
+
+  /** Toggle dettaglio nel foglio giocatore (stesso campo = off). */
+  function togglePlayerDetail(player: BoardPlayer, field: PlayerScreenField) {
+    if (screenField === field && pickedId === player.id) {
+      clearPlayerFromScreen(player.nick);
+      return;
+    }
+    if (playerScreenBlocked) {
+      flashBoardToast("Non durante il countdown risposte");
+      return;
+    }
+    armPickedHold(player.id);
+    void sendPlayerToScreen(player, field);
   }
 
   function resizeCols(edge: 0 | 1, deltaPx: number, containerSize: number) {
@@ -2651,11 +2771,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 Lista
               </button>
             </BoardCardHead>
-            <div className="casa-board-players">
-              {Array.from({ length: PLAYER_SLOTS }, (_, i) => {
-                const g = guests[i];
-                if (!g) {
-                  return (
+            <div className="casa-board-players" data-scroll="y">
+              {guests.length === 0
+                ? Array.from({ length: PLAYER_SLOTS }, (_, i) => (
                     <button
                       key={`slot-${i}`}
                       type="button"
@@ -2666,51 +2784,40 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                       <span>?</span>
                       <em>Libero</em>
                     </button>
-                  );
-                }
-                return (
-                  <button
-                    key={g.id}
-                    type="button"
-                    className="casa-board-avatar"
-                    data-g={g.gender}
-                    data-on={pickedId === g.id ? "1" : undefined}
-                    title={`${g.nick} a schermo`}
-                    onClick={() => sendPlayerFromCard(g)}
-                  >
-                    <span
-                      style={
-                        g.photo
-                          ? {
-                              backgroundImage: `url(${g.photo})`,
-                              backgroundSize: "cover",
-                              backgroundPosition: "center",
-                              color: "transparent",
-                            }
-                          : undefined
-                      }
+                  ))
+                : guests.map((g) => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      className="casa-board-avatar"
+                      data-g={g.gender}
+                      data-on={pickedId === g.id ? "1" : undefined}
+                      title={`${g.nick} a schermo · tap di nuovo per togliere`}
+                      onClick={() => sendPlayerFromCard(g)}
                     >
-                      {g.nick.slice(0, 1).toUpperCase()}
-                    </span>
-                    <em>{g.nick}</em>
-                  </button>
-                );
-              })}
+                      <span
+                        style={
+                          g.photo
+                            ? {
+                                backgroundImage: `url(${g.photo})`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
+                                color: "transparent",
+                              }
+                            : undefined
+                        }
+                      >
+                        {g.nick.slice(0, 1).toUpperCase()}
+                      </span>
+                      <em>{g.nick}</em>
+                    </button>
+                  ))}
             </div>
             {guests.length === 0 ? (
               <p className="casa-board-empty casa-board-empty-tight">
                 In attesa dal QR
                 {onlineHint ? ` · ${onlineHint} in sala` : ""}
               </p>
-            ) : guests.length > PLAYER_SLOTS ? (
-              <button
-                type="button"
-                className="casa-board-empty casa-board-empty-tight casa-board-empty-btn"
-                onClick={() => openExpand("players")}
-              >
-                +{guests.length - PLAYER_SLOTS} · tap titolo per tutti (
-                {guests.length})
-              </button>
             ) : null}
           </article>
 
@@ -2728,10 +2835,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             <div className="casa-board-msgs">
               {msgs.length === 0 ? (
                 <p className="casa-board-empty">
-                  Nessun messaggio · «10 coppie test» in Lista li riempie
+                  Nessun messaggio · «10 coppie test» in Lista ne aggiunge
                 </p>
               ) : (
-                msgs.slice(0, 4).map((m) => (
+                msgs.slice(0, 6).map((m) => (
                   <div key={m.id} className="casa-board-msg">
                     <div>
                       <strong>{m.who}</strong>
@@ -3054,20 +3161,32 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 <button
                   type="button"
                   className={
-                    resumeOpen
+                    beat === "presenti"
                       ? "casa-board-cmd casa-board-cmd-warn"
-                      : "casa-board-cmd"
+                      : resumeOpen
+                        ? "casa-board-cmd casa-board-cmd-warn"
+                        : "casa-board-cmd"
                   }
                   disabled={
-                    !liveQuizActive || cmdBusy || live.controlsDisabled
+                    beat === "presenti"
+                      ? live.controlsDisabled
+                      : !liveQuizActive || cmdBusy || live.controlsDisabled
                   }
-                  title="Riprendi da una domanda (solo quiz, senza wipe)"
-                  aria-pressed={resumeOpen}
+                  title={
+                    beat === "presenti"
+                      ? "Salta la presentazione giocatori → stacco"
+                      : "Riprendi da una domanda (solo quiz, senza wipe)"
+                  }
+                  aria-pressed={beat === "presenti" ? undefined : resumeOpen}
                   onClick={() => {
+                    if (beat === "presenti") {
+                      skipPresentiRoll();
+                      return;
+                    }
                     openResumeRow();
                   }}
                 >
-                  Riprendi
+                  {beat === "presenti" ? "Salta" : "Riprendi"}
                 </button>
               </div>
               {resumeOpen ? (
@@ -3479,7 +3598,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             type="button"
             className="casa-board-expand-veil"
             aria-label="Chiudi"
-            onClick={() => setExpand(null)}
+            onClick={closeExpand}
           />
           <div
             className="casa-board-expand-panel"
@@ -3492,7 +3611,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               <button
                 type="button"
                 className="casa-board-mini"
-                onClick={() => setExpand(null)}
+                onClick={closeExpand}
               >
                 Chiudi
               </button>
@@ -3507,8 +3626,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     </p>
                   ) : (
                     <p className="casa-board-empty">
-                      Tap un giocatore: dettagli + nome/foto a schermo. Poi
-                      scegli un altro dato. Scorri con due dita.
+                      Tap = a schermo (on 5s). Ritap = off. Swipe per tutti.
+                      Poi scegli un altro dato.
                     </p>
                   )}
                   <div className="casa-board-players casa-board-players-expand">
@@ -3568,9 +3687,11 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                                 ? "1"
                                 : undefined
                             }
-                            disabled={live.controlsDisabled}
+                            disabled={
+                              live.controlsDisabled || playerScreenBlocked
+                            }
                             onClick={() =>
-                              void sendPlayerToScreen(picked, d.field)
+                              togglePlayerDetail(picked, d.field)
                             }
                           >
                             <span>{d.label}</span>
@@ -3589,7 +3710,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     type="button"
                     className="casa-board-chip-btn casa-board-chip-btn-wide"
                     onClick={() => {
-                      setExpand(null);
+                      closeExpand();
                       openRail("giocatori");
                     }}
                   >

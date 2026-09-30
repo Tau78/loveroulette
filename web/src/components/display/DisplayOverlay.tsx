@@ -23,15 +23,18 @@ interface DisplayOverlayProps {
   joinUrl: string;
 }
 
+/**
+ * Card giocatore: kicker = sola lettera F/M/N (vedi playerCardDisplayCommand).
+ * I dettagli (Cerca, Nome, …) usano kicker testuale e NON devono finire qui,
+ * altrimenti headline/valore spariscono e resta solo nick + sesso.
+ */
 function playerGenderFromOverlay(
   overlay: DisplayOverlayData,
 ): StageGender | null {
-  const raw = (overlay.kicker ?? overlay.body ?? "").trim().toLowerCase();
-  if (raw === "f" || raw === "lei" || raw === "female") return "F";
-  if (raw === "n" || raw === "nb" || raw === "non binary" || raw === "nonbinary") {
-    return "N";
-  }
-  if (raw === "m" || raw === "lui" || raw === "male") return "M";
+  const raw = (overlay.kicker ?? "").trim().toUpperCase();
+  if (raw === "F") return "F";
+  if (raw === "N") return "N";
+  if (raw === "M") return "M";
   return null;
 }
 
@@ -91,7 +94,7 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
               ? `stacco:${overlay.title ?? ""}`
               : overlayKey(overlay)
           }
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-50 bg-black"
           initial={reduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reduceMotion ? undefined : { opacity: 0 }}
@@ -126,7 +129,7 @@ function OverlayBody({
     const gender = playerGenderFromOverlay(overlay);
     if (gender && overlay.title) {
       return (
-        <div className="flex h-full items-center justify-center p-10">
+        <div className="relative h-full w-full bg-black">
           <DisplayPlayerPresentSwitch
             nick={overlay.title}
             gender={gender}
@@ -138,7 +141,7 @@ function OverlayBody({
 
     if (isStaccoSlide(overlay) && overlay.title) {
       return (
-        <div className="h-full">
+        <div className="h-full bg-black">
           <DisplayStaccoStage value={Number(overlay.title)} />
         </div>
       );
@@ -146,14 +149,23 @@ function OverlayBody({
 
     if (isSiglaWarnSlide(overlay)) {
       return (
-        <div className="flex h-full items-center justify-center p-10">
+        <div className="flex h-full items-center justify-center bg-black p-10">
           <DisplaySiglaWarn />
         </div>
       );
     }
 
+    // Dettaglio giocatore (o altra slide testo): cover pieno + valore in headline.
     return (
-      <div className="flex h-full items-center justify-center p-10">
+      <div className="relative flex h-full w-full flex-col items-center justify-center gap-8 bg-black p-10">
+        {overlay.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={overlay.imageUrl}
+            alt=""
+            className="relative z-10 size-[min(26vh,200px)] rounded-full border-[5px] border-primary/85 object-cover shadow-[0_0_48px_rgba(233,30,140,0.45)]"
+          />
+        ) : null}
         <DisplayPhaseHero
           kicker={overlay.kicker}
           headline={overlay.title ?? ""}

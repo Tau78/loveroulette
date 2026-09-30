@@ -58,8 +58,8 @@ export const DEFAULT_SLIDES: Record<CasaSlideId, CasaSlide> = {
   },
   stasera: {
     kicker: "Love Roulette",
-    headline: "STASERA",
-    sub: "Tenete il telefono pronto: tra poco partono le domande.",
+    headline: "STASERA GIOCA CON NOI",
+    sub: "Tenete il telefono pronto: tra poco presentiamo la sala e partono le domande.",
   },
 };
 
@@ -94,6 +94,10 @@ export function loadSlides(eventCode: string): Record<CasaSlideId, CasaSlide> {
         // Sottotitolo vuoto in storage = lacuna: usa la frase di default.
         sub: saved.sub?.trim() ? saved.sub : base.sub,
       };
+    }
+    // Copy nuova: vecchio headline «STASERA» → «STASERA GIOCA CON NOI».
+    if (next.stasera.headline.trim().toUpperCase() === "STASERA") {
+      next.stasera = { ...DEFAULT_SLIDES.stasera };
     }
     return next;
   } catch {

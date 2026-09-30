@@ -53,14 +53,22 @@ describe("board player → schermo", () => {
     expect(playerDetailDisplayCommand(sara, "seeking")).toEqual({
       type: "slide",
       kicker: "Cerca",
-      title: "SARA · UOMINI",
+      title: "UOMINI",
       body: "Sara",
       imageUrl: "https://cdn.example/sara.jpg",
     });
     expect(playerDetailDisplayCommand(sara, "name")).toEqual({
       type: "slide",
       kicker: "Nome",
-      title: "SARA · SARA ROSSI",
+      title: "SARA ROSSI",
+      body: "Sara",
+      imageUrl: "https://cdn.example/sara.jpg",
+    });
+    // Chi è → valore LEI in title; kicker testuale (non F) così /display non usa la card present.
+    expect(playerDetailDisplayCommand(sara, "gender")).toEqual({
+      type: "slide",
+      kicker: "Chi è",
+      title: "LEI",
       body: "Sara",
       imageUrl: "https://cdn.example/sara.jpg",
     });
