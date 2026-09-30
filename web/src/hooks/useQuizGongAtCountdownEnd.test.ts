@@ -5,7 +5,10 @@ import {
 } from "@/lib/musicpro/quiz-display";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 
-/** Contratto allineato a useQuizGongAtCountdownEnd (niente gong stale). */
+/**
+ * Contratto allineato a useQuizGongAtCountdownEnd: al join con remaining ≤ 0
+ * non si deve considerare un falling edge (niente gong stale).
+ */
 function shouldArmGongWatch(quiz: QuizSessionState): boolean {
   const clock = resolveSyncedQuizClock(quiz);
   return clock.displayPhase === "answers" && clock.remaining > 0;

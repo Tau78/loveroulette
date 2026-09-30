@@ -37,7 +37,7 @@ export function useQuizGongAtCountdownEnd({
 
     const initial = resolveSyncedQuizClock(quizState);
 
-    // Join / apertura in ritardo: già a 0 o fuori answers → niente gong stale.
+    // Join in ritardo: già a 0 / fuori da answers → non sparare il gong stale.
     if (initial.displayPhase !== "answers" || initial.remaining <= 0) {
       playedRef.current = cueKey;
       return;

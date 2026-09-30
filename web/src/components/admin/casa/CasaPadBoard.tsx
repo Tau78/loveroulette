@@ -96,8 +96,14 @@ import {
 import { casaQrDisplayCommand } from "@/lib/admin/casa-qr-display";
 import { openingAutoplayHoldSeconds } from "@/lib/admin/casa-opening-autoplay";
 import { boardCueQuestionIndex } from "@/lib/admin/board-cue-question";
-import { casaAutoBedLabel, resolveCasaBed, resolveCasaBedOrLobby } from "@/lib/admin/casa-beds";
 import {
+  casaAutoBedLabel,
+  casaEffectiveBedBeat,
+  resolveCasaBed,
+  resolveCasaBedOrLobby,
+} from "@/lib/admin/casa-beds";
+import {
+  consumeCasaResultsRevealCue,
   playCasaResultsRevealHit,
   resetCasaResultsRevealHit,
 } from "@/lib/admin/casa-results-reveal";
@@ -600,7 +606,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const [bedIndex, setBedIndex] = useState(0);
   const [bedRepeat, setBedRepeat] = useState<CasaRepeatMode>("all");
   const [bedPlaying, setBedPlaying] = useState(false);
-  /** Dopo Play / AVANTI colonna: abilita gong (niente gong stale all’apertura). */
+  /** Dopo il primo Play riuscito (o AVANTI che avvia la colonna): abilita gong/reveal. */
   const [audioArmed, setAudioArmed] = useState(false);
   const [masterVol, setMasterVol] = useState(100);
   const [audioRoute, setAudioRoute] = useState<CasaAudioRoute>(() =>
@@ -777,7 +783,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         live.applyQuizUpdate(quiz, runtime);
       },
     });
-  // Gong sullo «0» del countdown — solo dopo Play (niente gong a caso in apertura).
+  // Gong sullo «0» del countdown risposte — solo dopo Play (niente stale all’apertura).
   useQuizGongAtCountdownEnd({
     quizState: live.quizState,
     enabled:
@@ -792,6 +798,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     live.quizState,
     live.runtimeState,
   );
+
+  const bedBeat = casaEffectiveBedBeat(beat, liveQuizActive);
 
   // Bianco (STOP): silenzia il bed countdown sotto al gong.
   useEffect(() => {
@@ -910,7 +918,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const activeBed = useMemo(
     () =>
       resolveCasaBed(
-        beat,
+        bedBeat,
         gameOwnsAv || beat === "sigla" || specialTrialActive
           ? null
           : bedFolder
@@ -922,6 +930,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         bedOpts,
       ),
     [
+      bedBeat,
       beat,
       bedFolder,
       bedList,
@@ -1471,6 +1480,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     setBedFolder(name);
     setBedList(tracks);
     setBedIndex(0);
+    setAudioArmed(true);
     setBedPlaying(true);
   }
 
@@ -1561,6 +1571,17 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       return;
     }
 
+    // Arm FX prima del play: se siamo già a results / answers=0, consuma le cue
+    // stale così il primo Play non spara gong+reveal insieme alla lobby.
+    if (liveQuizActive && live.quizState) {
+      const cue = `${live.quizState.currentIndex}:${live.quizState.phaseStartedAt}`;
+      if (
+        liveQuizPhase === "results" ||
+        (liveQuizPhase === "answers" && (liveQuizRemaining ?? 0) <= 0)
+      ) {
+        consumeCasaResultsRevealCue(cue);
+      }
+    }
     setAudioArmed(true);
 
     if (remoteAudio) {
@@ -1572,7 +1593,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     const bed =
       activeBed ??
       resolveCasaBedOrLobby(
-        beat,
+        bedBeat,
         null,
         0,
         liveQuizActive ? liveQuizPhase : null,
@@ -3129,10 +3150,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 title={currentTrackName ?? undefined}
               >
                 {gameOwnsAv || beat === "sigla"
-                  ? `Gioco · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null, null, bedOpts)}`
+                  ? `Gioco · ${casaAutoBedLabel(bedBeat, liveQuizActive ? liveQuizPhase : null, null, bedOpts)}`
                   : hasPlaylist
                     ? `${currentTrackName} · ${bedIndex + 1}/${bedList.length}`
-                    : `Colonna · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null, null, bedOpts)}`}
+                    : `Colonna · ${casaAutoBedLabel(bedBeat, liveQuizActive ? liveQuizPhase : null, null, bedOpts)}`}
               </p>
               <div className="casa-board-miniplayer-transport">
                 <MediaIco
@@ -3773,7 +3794,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   <p className="casa-board-audio-meta">
                     {hasPlaylist
                       ? `${bedFolder} · ${bedList.length} tracce`
-                      : `Colonna auto · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null, null, bedOpts)}`}
+                      : `Colonna auto · ${casaAutoBedLabel(bedBeat, liveQuizActive ? liveQuizPhase : null, null, bedOpts)}`}
                   </p>
                   {bedPickError ? (
                     <p className="casa-board-audio-err">{bedPickError}</p>
