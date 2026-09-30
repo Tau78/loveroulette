@@ -39,6 +39,11 @@ interface DisplayProjectorRootProps {
   children: ReactNode;
   embedMode: boolean;
   presentMode: boolean;
+  /**
+   * Secondo schermo nativo / finestra dedicata: già a tutta area.
+   * Niente overlay «Clicca per schermo intero» e niente Fullscreen API.
+   */
+  fillMode?: boolean;
   className?: string;
   /** Evento per scala tipografia Schermo. */
   eventCode?: string;
@@ -55,23 +60,27 @@ export function DisplayProjectorRoot({
   children,
   embedMode,
   presentMode,
+  fillMode = false,
   className,
   eventCode,
 }: DisplayProjectorRootProps) {
   const { prefs } = useTypeScalePrefs(eventCode ?? "default");
+  const skipBrowserFullscreen = embedMode || fillMode;
   const { containerRef, isFullscreen, supported, enter, toggle } = useFullscreen({
     storageKey: "lr_display_fullscreen_pref",
-    enableShortcut: !embedMode,
-    alwaysListenShortcut: !embedMode,
+    enableShortcut: !skipBrowserFullscreen,
+    alwaysListenShortcut: !skipBrowserFullscreen,
   });
 
   const [showPresentOverlay, setShowPresentOverlay] = useState(
-    presentMode && !embedMode,
+    presentMode && !embedMode && !fillMode,
   );
   const [controlsVisible, setControlsVisible] = useState(true);
 
+  const effectivelyFullscreen = isFullscreen || fillMode;
+
   useEffect(() => {
-    if (embedMode || !isFullscreen) {
+    if (embedMode || fillMode || !isFullscreen) {
       setControlsVisible(true);
       return;
     }
@@ -90,7 +99,7 @@ export function DisplayProjectorRoot({
       window.clearTimeout(timer);
       document.removeEventListener("mousemove", onMove);
     };
-  }, [embedMode, isFullscreen]);
+  }, [embedMode, fillMode, isFullscreen]);
 
   const handlePresentStart = useCallback(() => {
     setShowPresentOverlay(false);
@@ -99,18 +108,19 @@ export function DisplayProjectorRoot({
 
   const handleDoubleClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
-      if (embedMode || !supported || isInteractiveTarget(event.target)) return;
+      if (skipBrowserFullscreen || !supported || isInteractiveTarget(event.target))
+        return;
       event.preventDefault();
       void toggle();
     },
-    [embedMode, supported, toggle],
+    [skipBrowserFullscreen, supported, toggle],
   );
 
   const contextValue: DisplayProjectorFullscreenValue = {
-    isFullscreen,
-    supported: supported && !embedMode,
+    isFullscreen: effectivelyFullscreen,
+    supported: supported && !skipBrowserFullscreen,
     toggle,
-    controlsVisible,
+    controlsVisible: fillMode ? false : controlsVisible,
   };
 
   return (
@@ -118,13 +128,14 @@ export function DisplayProjectorRoot({
       <div
         ref={containerRef}
         data-display-embed={embedMode ? "1" : undefined}
-        data-display-fullscreen={isFullscreen || undefined}
+        data-display-fill={fillMode ? "1" : undefined}
+        data-display-fullscreen={effectivelyFullscreen || undefined}
         onDoubleClick={handleDoubleClick}
         className={cn(
           "lr-display-type-root",
           className,
           "outline-none",
-          isFullscreen &&
+          effectivelyFullscreen &&
             "fixed inset-0 z-[9999] h-full max-h-none w-full max-w-none bg-black",
         )}
         style={

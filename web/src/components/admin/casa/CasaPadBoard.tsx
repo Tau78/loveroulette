@@ -1964,8 +1964,11 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
 
   async function activateExternalScreen() {
     setCmdError(null);
-    // Toggle nativo iPad (secondo schermo HDMI / AirPlay).
-    if (isReactNativeWebView() && nativeProjectorOpenRef.current) {
+    // Toggle nativo iPad: usa stato UI (non solo ref) così OFF funziona sempre.
+    if (
+      isReactNativeWebView() &&
+      (nativeProjectorOpenRef.current || externalScreenOn)
+    ) {
       notifyNativeCloseProjector();
       nativeProjectorOpenRef.current = false;
       setExternalScreenOn(false);
@@ -1987,6 +1990,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       return;
     }
 
+    // Ottimistico: la plancia resta usabile subito (il nativo conferma/annulla).
+    if (isReactNativeWebView()) {
+      nativeProjectorOpenRef.current = true;
+      setExternalScreenOn(true);
+    }
+
     const result = await openProjectorWindowAsync(eventCode, {
       present: true,
     });
@@ -2001,14 +2010,15 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     }
     if (result.mode === "native-bridge") {
       nativeProjectorOpenRef.current = true;
+      setExternalScreenOn(true);
+      flashBoardToast("Proiettore sul secondo schermo (HDMI / AirPlay)");
+      return;
     }
     setExternalScreenOn(true);
     const tip =
       result.mode === "secondary"
         ? "Proiettore sullo schermo collegato (HDMI)"
-        : result.mode === "native-bridge"
-          ? "Proiettore sul secondo schermo (HDMI / AirPlay)"
-          : "Proiettore aperto — in Stage Manager trascinalo sulla HDMI";
+        : "Proiettore aperto — in Stage Manager trascinalo sulla HDMI";
     flashBoardToast(tip);
   }
 
@@ -2631,12 +2641,16 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   type="button"
                   className="casa-board-mini"
                   data-on={externalScreenOn ? "1" : undefined}
-                  title="Apri /display sullo schermo HDMI o monitor collegato"
+                  title={
+                    externalScreenOn
+                      ? "Chiudi proiettore sul secondo schermo"
+                      : "Apri /display sullo schermo HDMI o monitor collegato"
+                  }
                   onClick={() => {
                     void activateExternalScreen();
                   }}
                 >
-                  {externalScreenOn ? "Schermo on" : "Schermo"}
+                  {externalScreenOn ? "Schermo off" : "Schermo"}
                 </button>
                 <button
                   type="button"

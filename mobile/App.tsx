@@ -279,7 +279,18 @@ function WebPlancia({
   const allowed = canRunPlancia(status);
   const crashReloadsRef = useRef(0);
   const [projectorUrl, setProjectorUrl] = useState<string | null>(null);
-  const externalScreens = useExternalDisplay();
+  const projectorOpenAtRef = useRef(0);
+  const externalScreens = useExternalDisplay({
+    onScreenConnect: () => {},
+    onScreenChange: () => {},
+    onScreenDisconnect: () => {
+      // Chiudi solo su disconnect reale, non su flicker di mount.
+      setProjectorUrl(null);
+      webRef.current?.injectJavaScript(
+        `(function(){try{window.dispatchEvent(new CustomEvent('lr-native-projector',{detail:{open:false}}));}catch(e){}})();true;`,
+      );
+    },
+  });
   const externalScreenId = useMemo(
     () => pickExternalScreenId(externalScreens),
     [externalScreens],
@@ -293,31 +304,36 @@ function WebPlancia({
           "Secondo schermo",
           "Collega HDMI o AirPlay. Se è in «Duplica», passa a Schermo esteso / Separate Mode dal Centro di Controllo, poi ritocca Schermo.",
         );
-        webRef.current?.injectJavaScript(
-          `(function(){try{window.dispatchEvent(new CustomEvent('lr-native-projector',{detail:{open:false}}));}catch(e){}})();true;`,
-        );
+        // Non inject su fail: la board ha già settato ON ottimistico → reset via event leggero.
+        requestAnimationFrame(() => {
+          webRef.current?.injectJavaScript(
+            `(function(){try{window.dispatchEvent(new CustomEvent('lr-native-projector',{detail:{open:false}}));}catch(e){}})();true;`,
+          );
+        });
         return;
       }
+      projectorOpenAtRef.current = Date.now();
       setProjectorUrl(url);
-      webRef.current?.injectJavaScript(
-        `(function(){try{window.dispatchEvent(new CustomEvent('lr-native-projector',{detail:{open:true}}));}catch(e){}})();true;`,
-      );
+      // Niente inject «open:true»: la plancia ha già UI ON; inject può bloccare il WKWebView.
     },
     [externalScreenId, webRef],
   );
 
   const closeProjector = useCallback(() => {
     setProjectorUrl(null);
-    webRef.current?.injectJavaScript(
-      `(function(){try{window.dispatchEvent(new CustomEvent('lr-native-projector',{detail:{open:false}}));}catch(e){}})();true;`,
-    );
+    requestAnimationFrame(() => {
+      webRef.current?.injectJavaScript(
+        `(function(){try{window.dispatchEvent(new CustomEvent('lr-native-projector',{detail:{open:false}}));}catch(e){}})();true;`,
+      );
+    });
   }, [webRef]);
 
-  // Se stacca HDMI mentre il proiettore è aperto, chiudi senza crash.
+  // Se lo schermo sparisce dopo un po' (non durante il mount), chiudi.
   useEffect(() => {
-    if (projectorUrl && !externalScreenId) {
-      closeProjector();
-    }
+    if (!projectorUrl) return;
+    if (externalScreenId) return;
+    if (Date.now() - projectorOpenAtRef.current < 1500) return;
+    closeProjector();
   }, [projectorUrl, externalScreenId, closeProjector]);
 
   // Re-inject quando notch/home indicator cambiano (rotate / primo layout).
@@ -409,6 +425,7 @@ function WebPlancia({
 
       {allowed && adminUrl ? (
         <WebView
+          key="plancia-board"
           ref={webRef}
           source={{ uri: adminUrl }}
           style={styles.web}
@@ -515,8 +532,13 @@ function WebPlancia({
       ) : null}
 
       {projectorUrl && externalScreenId ? (
-        <ExternalDisplay screen={externalScreenId}>
-          <View style={styles.projectorRoot}>{projectorWebView}</View>
+        <ExternalDisplay
+          screen={externalScreenId}
+          fallbackInMainScreen={false}
+        >
+          <View style={styles.projectorRoot} pointerEvents="box-none">
+            {projectorWebView}
+          </View>
         </ExternalDisplay>
       ) : null}
 

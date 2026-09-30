@@ -65,6 +65,7 @@ export default function DisplayPage() {
   const searchParams = useSearchParams();
   const embedMode = isDisplayEmbedMode(searchParams);
   const presentMode = searchParams.get("present") === "1";
+  const fillMode = searchParams.get("fill") === "1";
   const rawSlug = String(params.eventCode ?? "");
   const eventSlug = useMemo(
     () => (isEventUuid(rawSlug) ? rawSlug : normalizeEventSlug(rawSlug)),
@@ -187,6 +188,7 @@ export default function DisplayPage() {
       eventCode={eventSlug}
       embedMode={embedMode}
       presentMode={presentMode}
+      fillMode={fillMode}
       className="fixed inset-0 bg-black outline-none"
     >
       <DisplayFixedCanvas>
