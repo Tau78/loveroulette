@@ -236,6 +236,7 @@ export async function postVotingAction(
     | { action: "proclaim_winner" }
     | { action: "simulate_bot_votes" }
     | { action: "vote"; participantId: string; pairId: string }
+    | { action: "animator_vote"; pairId: string }
     | { action: "close" },
   pin: string | null,
 ): Promise<Response> {

@@ -151,13 +151,27 @@ export function DisplaySpecialTrialStage({
         kicker="Prova speciale"
         headline={presentation?.displayTitle ?? "PROVA SPECIALE"}
         subline={
-          trial.status === "setup"
-            ? "In preparazione in plancia"
-            : presentation?.headline ?? ""
+          trial.status === "setup" && presentation
+            ? presentation.headline
+            : trial.status === "setup"
+              ? "In preparazione in plancia"
+              : presentation?.headline ?? ""
         }
         challengeTitle
         uppercase
       />
+      {trial.status === "setup" && presentation ? (
+        <p
+          className={cn(
+            "relative mt-8 max-w-3xl rounded-2xl border border-white/15",
+            "bg-black/55 px-8 py-5 text-center text-lg md:text-2xl",
+            "font-semibold uppercase tracking-[0.08em] text-white/85 backdrop-blur-md",
+          )}
+          style={{ textShadow: "0 2px 16px rgba(0,0,0,0.95)" }}
+        >
+          Prova dichiarata — la plancia sceglie chi va in scena
+        </p>
+      ) : null}
 
       {names.length > 0 ? (
         <div
