@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SIGLA_VIDEO_OVERLAY,
   SIGLA_WARN_LINE_1,
   SIGLA_WARN_LINE_2,
   SIGLA_WARN_SLIDE,
@@ -23,5 +24,9 @@ describe("sigla warn copy", () => {
       isSiglaWarnSlide({ type: "slide", title: "SIGLA", kicker: "Tra un attimo" }),
     ).toBe(false);
     expect(isSiglaWarnSlide({ type: "clear" })).toBe(false);
+  });
+
+  it("declares the shared video overlay for /display", () => {
+    expect(SIGLA_VIDEO_OVERLAY).toEqual({ type: "sigla" });
   });
 });

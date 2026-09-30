@@ -8,6 +8,7 @@ import {
   DisplayRevealSplash,
 } from "@/components/display/DisplayShowText";
 import { DisplayPlayerPresentSwitch } from "@/components/display/DisplayPlayerPresent";
+import { DisplaySiglaStage } from "@/components/display/DisplaySiglaStage";
 import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
 import { DisplayStaccoStage } from "@/components/display/DisplayStaccoStage";
 import { isSiglaWarnSlide } from "@/lib/display/sigla-warn";
@@ -18,9 +19,14 @@ import type { StageGender } from "@/lib/player/identity";
 
 const CUSTOM_DURATION_MS = 8000;
 
+/** postMessage dalla sigla in iframe embed → plancia avanza a fine video. */
+export const LR_SIGLA_ENDED_MESSAGE = "lr-sigla-ended";
+
 interface DisplayOverlayProps {
   overlay: DisplayOverlayData | null;
   joinUrl: string;
+  /** Anteprima embed: sigla muta (HDMI ha l’audio). */
+  embedMode?: boolean;
 }
 
 /**
@@ -49,7 +55,11 @@ function overlayKey(overlay: DisplayOverlayData): string {
   ].join("|");
 }
 
-export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
+export function DisplayOverlay({
+  overlay,
+  joinUrl,
+  embedMode = false,
+}: DisplayOverlayProps) {
   const [visible, setVisible] = useState(false);
   const reduceMotion = useReducedMotion();
   const fadeSec = (reduceMotion ? 0 : AVANTI_CROSSFADE_MS) / 1000;
@@ -60,7 +70,11 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
       return;
     }
 
-    if (overlay.type === "show_qr" || overlay.type === "slide") {
+    if (
+      overlay.type === "show_qr" ||
+      overlay.type === "slide" ||
+      overlay.type === "sigla"
+    ) {
       setVisible(true);
       return;
     }
@@ -100,7 +114,11 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
           exit={reduceMotion ? undefined : { opacity: 0 }}
           transition={{ duration: activeFadeSec, ease: "easeInOut" }}
         >
-          <OverlayBody overlay={overlay} joinUrl={joinUrl} />
+          <OverlayBody
+            overlay={overlay}
+            joinUrl={joinUrl}
+            notifyParentOnSiglaEnd={embedMode}
+          />
         </motion.div>
       ) : null}
     </AnimatePresence>
@@ -110,10 +128,31 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
 function OverlayBody({
   overlay,
   joinUrl,
+  notifyParentOnSiglaEnd,
 }: {
   overlay: DisplayOverlayData;
   joinUrl: string;
+  notifyParentOnSiglaEnd: boolean;
 }) {
+  if (overlay.type === "sigla") {
+    return (
+      <DisplaySiglaStage
+        muted={false}
+        onEnded={() => {
+          if (!notifyParentOnSiglaEnd || typeof window === "undefined") return;
+          try {
+            window.parent?.postMessage(
+              { type: LR_SIGLA_ENDED_MESSAGE },
+              window.location.origin,
+            );
+          } catch {
+            /* cross-origin parent */
+          }
+        }}
+      />
+    );
+  }
+
   if (overlay.type === "show_qr") {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8">

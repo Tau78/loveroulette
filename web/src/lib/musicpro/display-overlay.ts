@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type DisplayOverlayType = "show_qr" | "custom" | "clear" | "slide";
+export type DisplayOverlayType =
+  | "show_qr"
+  | "custom"
+  | "clear"
+  | "slide"
+  | "sigla";
 
 export interface DisplayOverlay {
   type: DisplayOverlayType;
@@ -18,6 +23,7 @@ const OVERLAY_TYPES = new Set<DisplayOverlayType>([
   "custom",
   "clear",
   "slide",
+  "sigla",
 ]);
 
 export function getDisplayOverlay(

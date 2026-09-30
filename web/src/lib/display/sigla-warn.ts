@@ -16,6 +16,11 @@ export const SIGLA_WARN_SLIDE = {
   body: SIGLA_WARN_LINE_2,
 };
 
+/** Overlay video sigla — anteprima e HDMI sulla stessa strada /display. */
+export const SIGLA_VIDEO_OVERLAY = {
+  type: "sigla" as const,
+};
+
 export function isSiglaWarnSlide(overlay: {
   type?: string;
   title?: string;

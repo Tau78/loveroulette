@@ -7,7 +7,7 @@ import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
 const bodySchema = z
   .object({
-    type: z.enum(["show_qr", "custom", "clear", "slide"]),
+    type: z.enum(["show_qr", "custom", "clear", "slide", "sigla"]),
     title: z.string().trim().max(120).optional(),
     body: z.string().trim().max(280).optional(),
     kicker: z.string().trim().max(80).optional(),

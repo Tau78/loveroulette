@@ -12,13 +12,17 @@ import {
 import { AdminConfirmDialog } from "@/components/admin/AdminConfirmDialog";
 import { AdminPlayersManager } from "@/components/admin/AdminPlayersManager";
 import { AdminRegiaPanel } from "@/components/admin/AdminRegiaPanel";
-import { CasaProjector } from "@/components/admin/casa/CasaProjector";
+import { ScaledProjectorPreview } from "@/components/admin/ScaledProjectorPreview";
 import { CasaPrep } from "@/components/admin/casa/CasaPrep";
 import { BoardSpecialTrialPanel } from "@/components/admin/casa/BoardSpecialTrialPanel";
 import { BoardVideoRegiaPanel } from "@/components/admin/casa/BoardVideoRegiaPanel";
 import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
 import { useCasaLiveSession } from "@/components/admin/casa/casa-live-session-context";
-import { JoinQrCode } from "@/components/display/JoinQrCode";
+import { LR_SIGLA_ENDED_MESSAGE } from "@/components/display/DisplayOverlay";
+import {
+  postRegiaLocalMediaMessage,
+  stopPresetMedia,
+} from "@/lib/admin/regia-local-media";
 import { isSpecialTrialBlockingQuiz } from "@/lib/musicpro/special-trial";
 import {
   fetchParticipants,
@@ -138,7 +142,10 @@ import {
   SIGLA_SRC,
   type CasaSlideId,
 } from "@/lib/admin/casa-slides";
-import { SIGLA_WARN_SLIDE } from "@/lib/display/sigla-warn";
+import {
+  SIGLA_VIDEO_OVERLAY,
+  SIGLA_WARN_SLIDE,
+} from "@/lib/display/sigla-warn";
 import { STACCO_KICKER } from "@/lib/display/stacco";
 import "@/components/admin/casa/casa.css";
 import "@/components/admin/casa/casa-board.css";
@@ -544,8 +551,19 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const [goError, setGoError] = useState<string | null>(null);
   const [slides, setSlides] = useState(DEFAULT_SLIDES);
   const [siglaBundledOk, setSiglaBundledOk] = useState<boolean | null>(null);
-  const onSiglaAvailability = useCallback((ok: boolean) => {
-    setSiglaBundledOk(ok);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(SIGLA_SRC, { method: "HEAD" })
+      .then((res) => {
+        if (!cancelled) setSiglaBundledOk(res.ok);
+      })
+      .catch(() => {
+        if (!cancelled) setSiglaBundledOk(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
   /** Roster locale in plancia; la lista API è nella tab Giocatori. */
   const [guests, setGuests] = useState<Guest[]>([]);
@@ -908,34 +926,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     nextCueIndex >= 0 &&
     nextCueIndex < cueLineup.length &&
     cueQuestions.length > 0;
-  const projectorQuizGate: "tema" | "play" = liveQuizActive
-    ? liveQuizPhase === "theme_intro" || liveQuizPhase === "start_countdown"
-      ? "tema"
-      : "play"
-    : quizGate;
-  const projectorQuestion = useMemo(() => {
-    if (!liveQuizActive || !liveQuestion) return null;
-    return {
-      text: liveQuestion.body,
-      category: liveQuestion.category,
-      options: [
-        liveQuestion.options[0]?.label ?? "",
-        liveQuestion.options[1]?.label ?? "",
-        liveQuestion.options[2]?.label ?? "",
-        liveQuestion.options[3]?.label ?? "",
-      ] as [string, string, string, string],
-    };
-  }, [
-    liveQuizActive,
-    liveQuestion?.id,
-    liveQuestion?.body,
-    liveQuestion?.category,
-    liveQuestion?.options[0]?.label,
-    liveQuestion?.options[1]?.label,
-    liveQuestion?.options[2]?.label,
-    liveQuestion?.options[3]?.label,
-  ]);
-
   const elapsedNow = formatElapsed(now - clockPrefs.originMs);
   const exactNow = formatExact(now);
 
@@ -1132,6 +1122,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           }
           if (beat === "sigla" && sigla === "warn") {
             await postDisplayCommand(eventCode, SIGLA_WARN_SLIDE, live.pin);
+            return;
+          }
+          if (beat === "sigla" && (sigla === "on" || sigla === "hold")) {
+            await postDisplayCommand(eventCode, SIGLA_VIDEO_OVERLAY, live.pin);
             return;
           }
           if (beat === "sigla") {
@@ -1563,6 +1557,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       onScreenUrl: null,
       onScreenName: null,
     }));
+    stopPresetMedia(eventCode);
   }
 
   function sendVideoToScreen(t: CasaMediaTrack, index: number) {
@@ -1572,6 +1567,21 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       onScreenUrl: t.url,
       onScreenName: t.name,
     }));
+    const kind =
+      /\.(jpg|jpeg|png|gif|webp|avif|bmp)(\?|$)/i.test(t.name) ||
+      /\.(jpg|jpeg|png|gif|webp|avif|bmp)(\?|$)/i.test(t.url)
+        ? "image"
+        : "video";
+    postRegiaLocalMediaMessage(eventCode, {
+      type: "state",
+      state: {
+        folderName: "Plancia",
+        items: [{ url: t.url, name: t.name, kind }],
+        index: 0,
+        playing: true,
+        muted: false,
+      },
+    });
   }
 
   function onVideoTrackPointer(t: CasaMediaTrack, index: number) {
@@ -1659,17 +1669,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const currentTrackName = hasPlaylist
     ? bedList[bedIndex]?.name ?? "—"
     : null;
-
-  const mediaOnScreen =
-    gameOwnsAv || beat === "sigla"
-      ? null
-      : videoState.onScreenUrl && videoState.onScreenName
-        ? {
-            url: videoState.onScreenUrl,
-            name: videoState.onScreenName,
-            muted: videoState.muted,
-          }
-        : null;
 
   const eventTitle =
     live.event?.title?.trim() || venue || eventCode;
@@ -1903,10 +1902,19 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     setExpand(null);
   }
 
-  function holdSiglaFrame() {
-    // Fine video/audio sigla: stesso passo di AVANTI → BENVENUTI + lobby.
-    leaveSiglaToWelcome("sigla_ended");
-  }
+  // Anteprima iframe (= /display): fine sigla → stesso passo di AVANTI.
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { type?: string } | null;
+      if (data?.type !== LR_SIGLA_ENDED_MESSAGE) return;
+      leaveSiglaToWelcome("sigla_ended");
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+    // leaveSiglaToWelcome legge beat/sigla freschi a ogni messaggio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [beat, sigla]);
 
   function fadeOutBed(done: () => void) {
     const el = bedAudio.current;
@@ -2909,58 +2917,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               </span>
             </BoardCardHead>
             <div className="casa-board-proj-host">
-              <CasaProjector
-                eventCode={eventCode}
-                beat={beat}
-                sigla={sigla}
-                help={help}
-                count={count}
-                onStage={onStage}
-                slides={slides}
-                siglaSrc={SIGLA_SRC}
-                siglaVolume={effVol("sigla")}
-                quizGate={projectorQuizGate}
-                quizPhase={liveQuizActive ? liveQuizPhase : null}
-                quizRemaining={liveQuizActive ? liveQuizRemaining : null}
-                quizSecondsTotal={
-                  live.quizState?.timing.questionSeconds ?? 15
-                }
-                quizQuestion={projectorQuestion}
-                mediaOnScreen={mediaOnScreen}
-                onSiglaAvailability={onSiglaAvailability}
-                onSiglaEnded={holdSiglaFrame}
-                specialTrial={live.specialTrial}
-                onSpecialTrialTick={() => {
-                  void postSpecialTrialAction(
-                    eventCode,
-                    { action: "tick" },
-                    live.pin,
-                  ).then(async (res) => {
-                    if (!res.ok) return;
-                    const data = (await res.json().catch(() => null)) as {
-                      specialTrial?: typeof live.specialTrial;
-                      quiz?: typeof live.quizState;
-                    } | null;
-                    live.applySpecialTrialUpdate(
-                      data?.specialTrial ?? null,
-                      data?.quiz ?? undefined,
-                    );
-                  });
-                }}
-              />
-              {help ? (
-                <div className="casa-board-qr">
-                  <JoinQrCode
-                    url={
-                      typeof window !== "undefined"
-                        ? `${window.location.origin}/s/${eventCode}/play`
-                        : `/s/${eventCode}/play`
-                    }
-                    size={88}
-                    showUrl={false}
-                  />
-                </div>
-              ) : null}
+              {/* Stessa strada dello schermo esterno: /display?embed=1 */}
+              <ScaledProjectorPreview eventCode={eventCode} />
             </div>
           </article>
 
@@ -3992,28 +3950,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
 
               {expand === "preview" ? (
                 <div className="casa-board-proj-host casa-board-proj-expand">
-                  <CasaProjector
-                    eventCode={eventCode}
-                    beat={beat}
-                    sigla={sigla}
-                    help={help}
-                    count={count}
-                    onStage={onStage}
-                    slides={slides}
-                    siglaSrc={SIGLA_SRC}
-                    siglaVolume={effVol("sigla")}
-                    quizGate={projectorQuizGate}
-                    quizPhase={liveQuizActive ? liveQuizPhase : null}
-                    quizRemaining={liveQuizActive ? liveQuizRemaining : null}
-                    quizSecondsTotal={
-                      live.quizState?.timing.questionSeconds ?? 15
-                    }
-                    quizQuestion={projectorQuestion}
-                    mediaOnScreen={mediaOnScreen}
-                    enlarge
-                    onSiglaEnded={holdSiglaFrame}
-                    specialTrial={live.specialTrial}
-                  />
+                  <ScaledProjectorPreview eventCode={eventCode} />
                 </div>
               ) : null}
 

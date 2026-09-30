@@ -442,7 +442,11 @@ export default function DisplayPage() {
         </footer>
       ) : null}
 
-      <DisplayOverlay overlay={displayOverlay} joinUrl={effectiveJoinUrl} />
+      <DisplayOverlay
+        overlay={displayOverlay}
+        joinUrl={effectiveJoinUrl}
+        embedMode={embedMode}
+      />
         </div>
       </DisplayFixedCanvas>
     </DisplayProjectorRoot>
