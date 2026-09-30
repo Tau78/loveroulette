@@ -110,7 +110,12 @@ import {
 } from "@/lib/admin/casa-results-reveal";
 import { whenQuizGongCleared } from "@/lib/audio/quiz-gong-results-gate";
 import { AVANTI_CROSSFADE_MS } from "@/lib/audio/types";
-import { getMediaVolume, resumeMediaAudio, setMediaVolume } from "@/lib/audio/media-element-gain";
+import {
+  getMediaVolume,
+  rampMediaVolume,
+  resumeMediaAudio,
+  setMediaVolume,
+} from "@/lib/audio/media-element-gain";
 import {
   applyLineupReplacement,
   pickLineupReplacement,
@@ -665,8 +670,18 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     useState<BoardDisplayCueId | null>(null);
   /** Dopo Partenza: playlist/regia locali cedono a sigla e colonna del gioco. */
   const [gameOwnsAv, setGameOwnsAv] = useState(false);
-  const bedAudio = useRef<HTMLAudioElement | null>(null);
-  const bedFadeRaf = useRef<number | null>(null);
+  const bedAudioA = useRef<HTMLAudioElement | null>(null);
+  const bedAudioB = useRef<HTMLAudioElement | null>(null);
+  /** Quale dei due <audio> è la bed attiva (l’altro è idle per overlap). */
+  const bedActiveIsA = useRef(true);
+  const bedFadeToken = useRef(0);
+
+  function bedActiveEl(): HTMLAudioElement | null {
+    return bedActiveIsA.current ? bedAudioA.current : bedAudioB.current;
+  }
+  function bedIdleEl(): HTMLAudioElement | null {
+    return bedActiveIsA.current ? bedAudioB.current : bedAudioA.current;
+  }
   const bedDirInput = useRef<HTMLInputElement>(null);
   const bedFilesInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
@@ -1002,7 +1017,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }, [expand]);
 
   useEffect(() => {
-    void applyAudioSink(bedAudio.current, audioRoute);
+    void applyAudioSink(bedAudioA.current, audioRoute);
+    void applyAudioSink(bedAudioB.current, audioRoute);
   }, [audioRoute]);
 
   useEffect(() => {
@@ -1175,7 +1191,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           /* display non bloccante */
         }
       })();
-    }, 80);
+    }, 0);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
@@ -1193,104 +1209,116 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   ]);
 
   useEffect(() => {
-    const el = bedAudio.current;
+    const el = bedActiveEl();
     if (!el) return;
-    if (bedFadeRaf.current != null) return;
     setMediaVolume(el, effVol("bed"));
   }, [vols.bed, mute.bed, masterVol]);
 
   useEffect(() => {
-    const el = bedAudio.current;
-    if (!el) return;
-    if (!activeBed?.url) {
-      el.pause();
-      el.removeAttribute("src");
-      el.load();
-      setBedSeek({ current: 0, duration: 0 });
-      return;
-    }
-    const abs = new URL(activeBed.url, window.location.origin).href;
+    const active = bedActiveEl();
+    const idle = bedIdleEl();
+    if (!active || !idle) return;
+
+    const token = ++bedFadeToken.current;
     const shouldPlay =
       bedPlaying && !remoteAudio && !(gameOwnsAv && beat === "sigla");
     const targetVol = Math.min(1, Math.max(0, effVol("bed")));
     const fadeMs = AVANTI_CROSSFADE_MS;
-    el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
+    const loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
 
-    const cancelFade = () => {
-      if (bedFadeRaf.current != null) {
-        cancelAnimationFrame(bedFadeRaf.current);
-        bedFadeRaf.current = null;
+    const stopEl = (el: HTMLAudioElement) => {
+      el.pause();
+      el.removeAttribute("src");
+      try {
+        el.load();
+      } catch {
+        /* ignore */
       }
     };
 
-    const fadeTo = (toVol: number, ms: number, onDone?: () => void) => {
-      cancelFade();
-      const startVol = getMediaVolume(el);
-      const t0 = performance.now();
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - t0) / ms);
-        setMediaVolume(el, startVol + (toVol - startVol) * t);
-        if (t < 1) {
-          bedFadeRaf.current = requestAnimationFrame(tick);
-          return;
-        }
-        bedFadeRaf.current = null;
-        setMediaVolume(el, toVol);
-        onDone?.();
-      };
-      bedFadeRaf.current = requestAnimationFrame(tick);
-    };
-
-    if (el.src === abs) {
-      el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
-      if (shouldPlay) {
-        const wasPaused = el.paused;
-        void el.play().then(() => {
-          if (wasPaused || getMediaVolume(el) < targetVol * 0.85) {
-            setMediaVolume(el, 0);
-            fadeTo(targetVol, fadeMs);
-          } else {
-            setMediaVolume(el, targetVol);
-          }
-        }).catch(() => setBedPlaying(false));
-      } else if (!el.paused) {
-        fadeTo(0, fadeMs, () => {
-          el.pause();
-          setMediaVolume(el, targetVol);
+    // Nessuna bed (sigla on, stacco, …): fade-out, mai hard-cut.
+    if (!activeBed?.url) {
+      if (!active.paused && active.currentSrc) {
+        rampMediaVolume(active, 0, fadeMs, () => {
+          if (token !== bedFadeToken.current) return;
+          stopEl(active);
+          setBedSeek({ current: 0, duration: 0 });
         });
       } else {
-        setMediaVolume(el, targetVol);
+        stopEl(active);
+        setBedSeek({ current: 0, duration: 0 });
+      }
+      if (idle.currentSrc) stopEl(idle);
+      return;
+    }
+
+    const abs = new URL(activeBed.url, window.location.origin).href;
+    active.loop = loop;
+
+    // Stesso URL sulla bed attiva: solo play/pause con fade.
+    if (active.src === abs || active.currentSrc === abs) {
+      if (shouldPlay) {
+        const wasPaused = active.paused;
+        void active.play().then(() => {
+          if (token !== bedFadeToken.current) return;
+          if (wasPaused || getMediaVolume(active) < targetVol * 0.85) {
+            setMediaVolume(active, 0);
+            rampMediaVolume(active, targetVol, fadeMs);
+          } else {
+            setMediaVolume(active, targetVol);
+          }
+        }).catch(() => setBedPlaying(false));
+      } else if (!active.paused) {
+        rampMediaVolume(active, 0, fadeMs, () => {
+          if (token !== bedFadeToken.current) return;
+          active.pause();
+          setMediaVolume(active, targetVol);
+        });
+      } else {
+        setMediaVolume(active, targetVol);
       }
       return;
     }
 
-    // Crossover morbido su cambio bed (AVANTI / fasi quiz / playlist).
-    cancelFade();
+    // Crossfade vero: idle entra mentre active esce (overlap).
+    idle.src = activeBed.url;
+    idle.loop = loop;
+    setMediaVolume(idle, 0);
+    setBedSeek({ current: 0, duration: 0 });
 
-    const swapIn = () => {
-      el.src = activeBed.url;
-      setBedSeek({ current: 0, duration: 0 });
-      el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
-      setMediaVolume(el, 0);
-      if (!shouldPlay) {
-        el.pause();
-        setMediaVolume(el, targetVol);
-        return;
-      }
-      void el.play().then(() => {
-        fadeTo(targetVol, fadeMs);
-      }).catch(() => setBedPlaying(false));
+    const promoteIdle = () => {
+      bedActiveIsA.current = !bedActiveIsA.current;
     };
 
-    if (!el.paused && el.currentSrc) {
-      fadeTo(0, fadeMs, () => {
-        el.pause();
-        swapIn();
-      });
+    if (!shouldPlay) {
+      if (!active.paused && active.currentSrc) {
+        rampMediaVolume(active, 0, fadeMs, () => {
+          if (token !== bedFadeToken.current) return;
+          stopEl(active);
+          promoteIdle();
+          setMediaVolume(idle, targetVol);
+        });
+      } else {
+        stopEl(active);
+        promoteIdle();
+        setMediaVolume(idle, targetVol);
+      }
       return;
     }
 
-    swapIn();
+    void idle.play().then(() => {
+      if (token !== bedFadeToken.current) return;
+      rampMediaVolume(idle, targetVol, fadeMs);
+      if (!active.paused && active.currentSrc) {
+        rampMediaVolume(active, 0, fadeMs, () => {
+          if (token !== bedFadeToken.current) return;
+          stopEl(active);
+        });
+      } else {
+        stopEl(active);
+      }
+      promoteIdle();
+    }).catch(() => setBedPlaying(false));
   }, [
     activeBed?.url,
     bedFolder,
@@ -1302,7 +1330,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   ]);
 
   useEffect(() => {
-    const el = bedAudio.current;
+    const el = bedActiveEl();
     if (!el) return;
     const onTime = () => {
       setBedSeek({
@@ -1333,7 +1361,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       el.removeEventListener("loadedmetadata", onTime);
       el.removeEventListener("ended", onEnded);
     };
-  }, [bedFolder, bedList.length, bedIndex, bedRepeat]);
+  }, [activeBed?.url, bedFolder, bedList.length, bedIndex, bedRepeat]);
 
   /**
    * Apertura locale (casa→stacco) + ingresso quiz come /serata.
@@ -1587,7 +1615,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }
 
   function seekBed(ratio: number) {
-    const el = bedAudio.current;
+    const el = bedActiveEl();
     if (!el || !Number.isFinite(el.duration) || el.duration <= 0) return;
     el.currentTime = Math.max(0, Math.min(el.duration, ratio * el.duration));
   }
@@ -1597,12 +1625,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
    * Senza playlist locale usa la bed auto (lobby su beat casa).
    */
   async function toggleBedPlayback() {
-    const el = bedAudio.current;
+    const el = bedActiveEl();
     if (!el) return;
 
     if (bedPlaying) {
+      // Fade-out nel bed effect (bedPlaying → false), niente hard pause.
       setBedPlaying(false);
-      el.pause();
       return;
     }
 
@@ -1909,31 +1937,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }
 
   function fadeOutBed(done: () => void) {
-    const el = bedAudio.current;
-    if (bedFadeRaf.current != null) {
-      cancelAnimationFrame(bedFadeRaf.current);
-      bedFadeRaf.current = null;
-    }
-    if (!el || el.paused) {
-      done();
-      return;
-    }
-    const startVol = getMediaVolume(el);
-    const t0 = performance.now();
-    const dur = AVANTI_CROSSFADE_MS;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - t0) / dur);
-      setMediaVolume(el, startVol * (1 - t));
-      if (t < 1) {
-        bedFadeRaf.current = requestAnimationFrame(tick);
-        return;
-      }
-      bedFadeRaf.current = null;
-      el.pause();
-      setMediaVolume(el, Math.min(1, Math.max(0, effVol("bed"))));
-      done();
-    };
-    bedFadeRaf.current = requestAnimationFrame(tick);
+    // Delega al bed effect (null URL / bedPlaying false) per un solo owner di fade.
+    setBedPlaying(false);
+    window.setTimeout(done, AVANTI_CROSSFADE_MS);
   }
 
   async function changeNextQuestion() {
@@ -2489,7 +2495,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   return (
     <div className="casa-board-shell" data-casa-board-shell="">
     <div className="casa-board" data-casa-board="">
-      <audio ref={bedAudio} hidden preload="auto" />
+      <audio ref={bedAudioA} hidden preload="auto" />
+      <audio ref={bedAudioB} hidden preload="auto" />
       <input
         ref={bedDirInput}
         type="file"
@@ -3336,7 +3343,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   label="Stop"
                   onClick={() => {
                     setBedPlaying(false);
-                    const el = bedAudio.current;
+                    const el = bedActiveEl();
                     if (el) el.currentTime = 0;
                   }}
                 >

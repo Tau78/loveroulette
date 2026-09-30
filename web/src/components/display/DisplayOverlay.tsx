@@ -94,11 +94,13 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
               ? `stacco:${overlay.title ?? ""}`
               : overlayKey(overlay)
           }
-          className="fixed inset-0 z-50 bg-black"
+          /* Niente bg-black qui: con sync due matte nere → dip-to-black.
+             Il cover pieno resta sui body slide (player/dettaglio). */
+          className="fixed inset-0 z-50"
           initial={reduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reduceMotion ? undefined : { opacity: 0 }}
-          transition={{ duration: activeFadeSec, ease: "easeInOut" }}
+          transition={{ duration: activeFadeSec, ease: [0.22, 1, 0.36, 1] }}
         >
           <OverlayBody overlay={overlay} joinUrl={joinUrl} />
         </motion.div>

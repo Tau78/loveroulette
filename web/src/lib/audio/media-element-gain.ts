@@ -112,6 +112,58 @@ export function getMediaVolume(el: HTMLMediaElement): number {
   return mediaGain(el).getVolume();
 }
 
+/**
+ * Ramp morbido del volume (Web Audio linearRamp; fallback RAF).
+ * Evita zipper noise e buchi secchi tra bed.
+ */
+export function rampMediaVolume(
+  el: HTMLMediaElement,
+  to: number,
+  durationMs: number,
+  onDone?: () => void,
+): void {
+  const handle = mediaGain(el);
+  const entry = wired.get(el);
+  const target = clamp01(to);
+  const ms = Math.max(0, durationMs);
+
+  if (entry?.gain && entry.ctx && ms > 0) {
+    const ctx = entry.ctx;
+    if (ctx.state === "suspended") {
+      void ctx.resume().catch(() => undefined);
+    }
+    const g = entry.gain.gain;
+    const now = ctx.currentTime;
+    const from = entry.linear;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(from, now);
+    g.linearRampToValueAtTime(target, now + ms / 1000);
+    entry.linear = target;
+    if (onDone) window.setTimeout(onDone, ms);
+    return;
+  }
+
+  if (ms <= 0) {
+    handle.setVolume(target);
+    onDone?.();
+    return;
+  }
+
+  const startVol = handle.getVolume();
+  const t0 = performance.now();
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - t0) / ms);
+    handle.setVolume(startVol + (target - startVol) * t);
+    if (t < 1) {
+      requestAnimationFrame(tick);
+      return;
+    }
+    handle.setVolume(target);
+    onDone?.();
+  };
+  requestAnimationFrame(tick);
+}
+
 /** Riprende AudioContext (serve gesto utente su Safari / WKWebView). */
 export function resumeMediaAudio(el: HTMLMediaElement): Promise<void> {
   const handle = mediaGain(el);
