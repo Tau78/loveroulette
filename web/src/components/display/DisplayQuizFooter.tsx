@@ -218,7 +218,7 @@ export function DisplayQuizFooter({
   return (
     <footer
       className={cn(
-        "relative z-20 w-full shrink-0 px-10 pb-3 pt-[52px]",
+        "relative z-20 w-full shrink-0 px-10 pb-3 pt-[72px]",
         className,
       )}
     >

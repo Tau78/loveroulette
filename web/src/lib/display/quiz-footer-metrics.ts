@@ -46,12 +46,12 @@ export const QUIZ_FOOTER_COUNTDOWN_OFFSET_CLASS =
 
 /**
  * Slot brand sx/dx — stessa altezza e baseline (`items-end`).
- * Cuore e logo appoggiano sullo stesso bordo basso.
+ * Cuore e logo appoggiano sullo stesso bordo basso (×2 vs 72).
  */
 export const QUIZ_FOOTER_BRAND_SLOT_CLASS =
-  "relative z-20 flex h-[72px] shrink-0 items-end";
+  "relative z-20 flex h-[144px] shrink-0 items-end";
 
-export const QUIZ_FOOTER_BRAND_HEART_CLASS = "size-[72px]";
+export const QUIZ_FOOTER_BRAND_HEART_CLASS = "size-[144px]";
 
 export const QUIZ_FOOTER_BRAND_LOGO_CLASS =
-  "h-[72px] w-auto max-w-[180px] object-contain object-bottom drop-shadow-[0_6px_24px_rgba(233,30,140,0.55)]";
+  "h-[144px] w-auto max-w-[360px] object-contain object-bottom drop-shadow-[0_6px_24px_rgba(233,30,140,0.55)]";
