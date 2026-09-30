@@ -32,6 +32,7 @@ for candidate in /opt/homebrew/opt/node@22/bin/node /opt/homebrew/opt/node@20/bi
 done
 [[ -n "$NODE_BIN" ]] || NODE_BIN="$(command -v node)"
 export PATH="$(dirname "$NODE_BIN"):$PATH"
+mkdir -p ios
 {
   printf 'export NODE_BINARY=%s\n' "$NODE_BIN"
   printf 'export PROJECT_ROOT=%s\n' "$ROOT"
@@ -41,7 +42,8 @@ echo "→ NODE_BINARY=$NODE_BIN ROOT=$ROOT"
 
 UPLOAD=1
 SKIP_PREBUILD=1
-[[ -d ios ]] || SKIP_PREBUILD=0
+# ios/ è gitignored: senza workspace serve prebuild (mkdir vuoto non conta).
+[[ -d ios/LoveRoulette.xcworkspace || -d ios/LoveRoulette.xcodeproj ]] || SKIP_PREBUILD=0
 for arg in "$@"; do
   case "$arg" in
     --no-upload) UPLOAD=0 ;;
