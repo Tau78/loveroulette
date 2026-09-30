@@ -18,6 +18,13 @@ const OPTIONAL_PARTICIPANT_COLUMNS = [
   "seeking",
   "real_name",
   "data_visibility",
+  "first_name",
+  "last_name",
+  "phone",
+  "email",
+  "photo_url",
+  "nick",
+  "public_name_mode",
 ] as const;
 
 /** Colonna opzionale assente nel DB remoto, se il payload la sta scrivendo. */

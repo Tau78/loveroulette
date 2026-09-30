@@ -3,7 +3,9 @@
 
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender_enum') THEN
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'love_roulette_gender') THEN
+    ALTER TYPE love_roulette_gender ADD VALUE IF NOT EXISTS 'nonbinary';
+  ELSIF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender_enum') THEN
     ALTER TYPE gender_enum ADD VALUE IF NOT EXISTS 'nonbinary';
   END IF;
 END $$;

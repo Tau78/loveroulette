@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { isDataVisibilitySchemaError } from "./participant-schema";
+import {
+  isDataVisibilitySchemaError,
+  missingOptionalParticipantColumn,
+} from "./participant-schema";
 
 describe("isDataVisibilitySchemaError", () => {
   it("detects schema cache message from PostgREST", () => {
@@ -32,5 +35,19 @@ describe("isDataVisibilitySchemaError", () => {
     expect(
       isDataVisibilitySchemaError({ message: "duplicate key nickname" }),
     ).toBe(false);
+  });
+});
+
+describe("missingOptionalParticipantColumn", () => {
+  it("detects missing email in schema cache", () => {
+    expect(
+      missingOptionalParticipantColumn(
+        {
+          message:
+            "Could not find the 'email' column of 'love_roulette_participants' in the schema cache",
+        },
+        { email: "a@b.c", nickname: "Tau" },
+      ),
+    ).toBe("email");
   });
 });
