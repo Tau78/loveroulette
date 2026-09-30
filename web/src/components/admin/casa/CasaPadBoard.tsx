@@ -31,6 +31,7 @@ import {
   BOARD_DISPLAY_CUES,
   type BoardDisplayCueId,
 } from "@/lib/admin/board-display-cues";
+import { displayUrl } from "@/lib/display/embed";
 import { DEFAULT_CASA_PREP, loadPrep, savePrep, type CasaPrep as Prep } from "@/lib/admin/casa-prep";
 import {
   DEFAULT_CASA_CLOCK,
@@ -1515,6 +1516,22 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     }
   }
 
+  async function copyProjectorLink() {
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const url = displayUrl(eventCode, { origin: origin || undefined });
+    try {
+      await navigator.clipboard.writeText(url);
+      const host =
+        typeof window !== "undefined" ? window.location.hostname : "";
+      const where =
+        host === "localhost" || host === "127.0.0.1" ? "locale" : "remoto";
+      flashBoardToast(`Link proiettore copiato · ${where}`);
+    } catch {
+      setCmdError("Non riesco a copiare il link proiettore.");
+    }
+  }
+
   async function toggleSpecialTrialBook() {
     if (!liveQuizActive || cmdBusy || live.controlsDisabled) return;
     const trial = live.specialTrial;
@@ -2103,14 +2120,26 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             style={{ flex: `${layout.center[0]} 1 0` }}
           >
             <BoardCardHead title="Proiettore" onExpand={() => openExpand("preview")}>
-              <button
-                type="button"
-                className="casa-board-mini"
-                data-on={help ? "1" : undefined}
-                onClick={() => setHelp((v) => !v)}
-              >
-                {help ? "QR on" : "QR"}
-              </button>
+              <span className="casa-board-head-actions">
+                <button
+                  type="button"
+                  className="casa-board-mini"
+                  data-on={help ? "1" : undefined}
+                  onClick={() => setHelp((v) => !v)}
+                >
+                  {help ? "QR on" : "QR"}
+                </button>
+                <button
+                  type="button"
+                  className="casa-board-mini"
+                  title="Copia link proiettore (/display)"
+                  onClick={() => {
+                    void copyProjectorLink();
+                  }}
+                >
+                  Copia link
+                </button>
+              </span>
             </BoardCardHead>
             <div className="casa-board-proj-host">
               <CasaProjector

@@ -1359,6 +1359,14 @@ body.casa-board-resizing iframe {
   color: #a0a0b0;
 }
 
+.casa-board-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
 .casa-board-mini {
   margin: 0;
   height: clamp(26px, 3.6vh, 32px);
