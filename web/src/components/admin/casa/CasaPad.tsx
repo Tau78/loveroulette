@@ -898,6 +898,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         bedIndex,
         liveQuizActive ? liveQuizPhase : null,
         liveQuizActive ? liveQuestion?.category ?? null : null,
+        { sigla },
       ),
     [
       beat,
@@ -907,6 +908,7 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       liveQuizActive,
       liveQuizPhase,
       liveQuestion?.category,
+      sigla,
     ],
   );
   const shown = useMemo(() => {
@@ -1586,7 +1588,11 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         });
 
   function holdSiglaFrame() {
-    setSigla((s) => (s === "on" ? "hold" : s));
+    // Fine sigla: stesso passo di AVANTI → BENVENUTI + lobby.
+    if (sigla !== "on" && sigla !== "hold") return;
+    setBeat("pres");
+    setSigla("idle");
+    setBedPlaying(true);
   }
 
   function editSlide(id: CasaSlideId, patch: Partial<CasaSlide>) {

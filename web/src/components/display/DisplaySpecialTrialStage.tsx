@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { specialTrialPresentation } from "@/lib/game/special-trial-challenges";
 import {
+  formatSpecialTrialClock,
   isSpecialTrialRunningExpired,
   specialTrialRemainingSeconds,
+  specialTrialVoteRanking,
   type SpecialTrialState,
 } from "@/lib/musicpro/special-trial";
 import { cn } from "@/lib/utils";
@@ -47,7 +49,101 @@ export function DisplaySpecialTrialStage({
       : null;
 
   const names = trial.participants.map((p) => p.nickname.toUpperCase());
-  const closing = trial.status === "closing" || isSpecialTrialRunningExpired(trial);
+  const closing =
+    trial.status === "closing" || isSpecialTrialRunningExpired(trial);
+  const showingResults = trial.status === "results";
+  const ranking = specialTrialVoteRanking(trial);
+  const maxVotes = Math.max(1, ...ranking.map((r) => r.votes));
+  const totalVotes = ranking.reduce((sum, r) => sum + r.votes, 0);
+
+  if (showingResults) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 py-6">
+        <DisplayPhaseHero
+          kicker="Prova speciale"
+          headline="RISULTATI"
+          subline={
+            totalVotes > 0
+              ? `${totalVotes} vot${totalVotes === 1 ? "o" : "i"} dalla sala`
+              : "Voti della sala"
+          }
+          uppercase
+        />
+
+        <div className="mt-10 grid w-full max-w-4xl gap-4">
+          {ranking.map((row, index) => {
+            const barPct = (row.votes / maxVotes) * 100;
+            const isLeader = row.votes === maxVotes && row.votes > 0;
+            return (
+              <div
+                key={row.id}
+                className={cn(
+                  "relative overflow-hidden rounded-2xl border px-6 py-4",
+                  "bg-black/55 backdrop-blur-md",
+                  isLeader
+                    ? "border-primary/50 shadow-[0_0_32px_rgba(233,30,140,0.35)]"
+                    : "border-white/15",
+                )}
+              >
+                <div className="relative z-10 flex items-end justify-between gap-4">
+                  <div className="min-w-0 text-left">
+                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">
+                      {index + 1}°
+                    </p>
+                    <p
+                      className="mt-1 truncate font-display text-[clamp(1.4rem,min(3.5vw,4vh),2.75rem)] font-bold uppercase text-white"
+                      style={{
+                        textShadow:
+                          "0 0 20px rgba(233,30,140,0.4), 0 2px 8px rgba(0,0,0,1)",
+                      }}
+                    >
+                      {row.nickname}
+                    </p>
+                  </div>
+                  <p className="shrink-0 font-display text-[clamp(1.75rem,min(5vw,6vh),3.5rem)] font-bold tabular-nums text-white">
+                    {row.votes}
+                  </p>
+                </div>
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-0 bg-primary/25"
+                  style={{ width: `${barPct}%` }}
+                  aria-hidden
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="mt-8 text-xs uppercase tracking-[0.2em] text-white/45">
+          {eventSlug}
+        </p>
+      </div>
+    );
+  }
+
+  if (closing) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 py-6">
+        <DisplayPhaseHero
+          kicker="Prova speciale"
+          headline="FINE PROVA"
+          subline={
+            names.length > 0
+              ? names.join(" · ")
+              : presentation?.displayTitle ?? "Tempo scaduto"
+          }
+          challengeTitle
+          uppercase
+        />
+        <p className="mt-10 text-sm font-semibold uppercase tracking-[0.28em] text-white/60">
+          AVANTI → risultati votazione
+        </p>
+        <p className="mt-6 text-xs uppercase tracking-[0.2em] text-white/45">
+          {eventSlug}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 py-6">
@@ -55,11 +151,9 @@ export function DisplaySpecialTrialStage({
         kicker="Prova speciale"
         headline={presentation?.displayTitle ?? "PROVA SPECIALE"}
         subline={
-          closing
-            ? "Tempo scaduto — in chiusura"
-            : trial.status === "setup"
-              ? "In preparazione in plancia"
-              : presentation?.headline ?? ""
+          trial.status === "setup"
+            ? "In preparazione in plancia"
+            : presentation?.headline ?? ""
         }
         challengeTitle
         uppercase
@@ -68,8 +162,8 @@ export function DisplaySpecialTrialStage({
       {names.length > 0 ? (
         <div
           className={cn(
-            "relative mt-10 max-w-4xl rounded-2xl border border-white/15",
-            "bg-black/55 px-8 py-6 text-center backdrop-blur-md",
+            "relative mt-8 max-w-4xl rounded-2xl border border-white/15",
+            "bg-black/55 px-8 py-5 text-center backdrop-blur-md",
           )}
         >
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary/90">
@@ -87,17 +181,21 @@ export function DisplaySpecialTrialStage({
         </div>
       ) : null}
 
-      {trial.status === "running" || closing ? (
-        <p
-          className="mt-12 font-display text-[clamp(3rem,min(12vw,18vh),9rem)] font-bold tabular-nums text-white"
-          aria-live="polite"
-          style={{
-            textShadow:
-              "0 0 32px rgba(233,30,140,0.55), 0 4px 16px rgba(0,0,0,1)",
-          }}
-        >
-          {closing ? "0" : remaining}
-        </p>
+      {trial.status === "running" ? (
+        <div className="mt-12 text-center" aria-live="polite">
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-white/55">
+            Tempo · {formatSpecialTrialClock(trial.durationSec)} totali
+          </p>
+          <p
+            className="mt-3 font-display text-[clamp(3.5rem,min(14vw,20vh),10rem)] font-bold tabular-nums text-white"
+            style={{
+              textShadow:
+                "0 0 32px rgba(233,30,140,0.55), 0 4px 16px rgba(0,0,0,1)",
+            }}
+          >
+            {formatSpecialTrialClock(remaining)}
+          </p>
+        </div>
       ) : null}
 
       <p className="mt-6 text-xs uppercase tracking-[0.2em] text-white/45">

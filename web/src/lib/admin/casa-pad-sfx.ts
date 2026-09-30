@@ -1,35 +1,26 @@
-export const CASA_PAD_HITS = [
-  { id: "applausi", label: "Applausi" },
-  { id: "risate", label: "Risate" },
-  { id: "ohno", label: "Oh no" },
-  { id: "buuuh", label: "Buuuh" },
-  { id: "tuono", label: "Tuono" },
-  { id: "cuore", label: "Cuore che batte" },
-  { id: "sospiro", label: "Sospiro innamorato" },
-  { id: "spavento", label: "Urlo di spavento" },
-  { id: "dolore", label: "Asino" },
-] as const;
+import {
+  CASA_PAD_BUILTIN,
+  CASA_PAD_SRC,
+  type CasaPadHitId,
+} from "@/lib/admin/casa-pad-bank";
 
-export type CasaPadHitId = (typeof CASA_PAD_HITS)[number]["id"];
+export type { CasaPadHitId } from "@/lib/admin/casa-pad-bank";
+export { CASA_PAD_HITS, CASA_PAD_SRC } from "@/lib/admin/casa-pad-bank";
 
-/** Pad samples: Mixkit License, plus CC0 Freesound for ohno + sospiro. */
-export const CASA_PAD_SRC: Record<CasaPadHitId, string> = {
-  applausi: "/grafiche/audio/pad/applausi.mp3",
-  risate: "/grafiche/audio/pad/risate.mp3",
-  ohno: "/grafiche/audio/pad/ohno.mp3?v=2",
-  buuuh: "/grafiche/audio/pad/buuuh.mp3",
-  tuono: "/grafiche/audio/pad/tuono.mp3",
-  cuore: "/grafiche/audio/pad/cuore.mp3",
-  sospiro: "/grafiche/audio/pad/sospiro.mp3?v=2",
-  spavento: "/grafiche/audio/pad/spavento.mp3",
-  dolore: "/grafiche/audio/pad/dolore.mp3",
-};
+/** @deprecated Prefer CASA_PAD_BUILTIN from casa-pad-bank. */
+export const CASA_PAD_HITS_LEGACY = CASA_PAD_BUILTIN.map(({ id, label }) => ({
+  id,
+  label,
+}));
 
 let ctx: AudioContext | null = null;
 
 function audio(): AudioContext | null {
   if (typeof window === "undefined") return null;
-  const AC = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const AC =
+    window.AudioContext ||
+    (window as Window & { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext;
   if (!AC) return null;
   if (!ctx) ctx = new AC();
   if (ctx.state === "suspended") void ctx.resume();
@@ -37,7 +28,11 @@ function audio(): AudioContext | null {
 }
 
 function noise(ac: AudioContext, seconds: number): AudioBufferSourceNode {
-  const buffer = ac.createBuffer(1, Math.floor(ac.sampleRate * seconds), ac.sampleRate);
+  const buffer = ac.createBuffer(
+    1,
+    Math.floor(ac.sampleRate * seconds),
+    ac.sampleRate,
+  );
   const data = buffer.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
   const src = ac.createBufferSource();
@@ -56,7 +51,10 @@ function env(
   const g = ac.createGain();
   g.gain.setValueAtTime(0, ac.currentTime);
   g.gain.linearRampToValueAtTime(gain, ac.currentTime + attack);
-  g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + attack + release);
+  g.gain.exponentialRampToValueAtTime(
+    0.0001,
+    ac.currentTime + attack + release,
+  );
   node.connect(g);
   g.connect(dest);
 }
@@ -83,7 +81,8 @@ function tone(
   osc.stop(ac.currentTime + start + dur + 0.05);
 }
 
-function playSynth(id: CasaPadHitId, volume: number): void {
+/** Fallback sintetico solo se manca il file MP3. */
+function playSynth(id: string, volume: number): void {
   const ac = audio();
   if (!ac) return;
   const master = ac.createGain();
@@ -160,6 +159,7 @@ function playSynth(id: CasaPadHitId, volume: number): void {
     osc.stop(ac.currentTime + 0.5);
     return;
   }
+  // gong / rullo / confetti / … o dolore
   const osc = ac.createOscillator();
   osc.type = "sawtooth";
   osc.frequency.setValueAtTime(340, ac.currentTime);
@@ -169,15 +169,18 @@ function playSynth(id: CasaPadHitId, volume: number): void {
   osc.stop(ac.currentTime + 0.65);
 }
 
-const buffers = new Map<CasaPadHitId, AudioBuffer>();
+const buffers = new Map<string, AudioBuffer>();
 
-async function decodeHit(id: CasaPadHitId): Promise<AudioBuffer | null> {
+async function decodeHit(
+  id: string,
+  src: string,
+): Promise<AudioBuffer | null> {
   const cached = buffers.get(id);
   if (cached) return cached;
   const ac = audio();
   if (!ac) return null;
   try {
-    const res = await fetch(CASA_PAD_SRC[id]);
+    const res = await fetch(src);
     if (!res.ok) return null;
     const raw = await res.arrayBuffer();
     const buf = await ac.decodeAudioData(raw.slice(0));
@@ -189,15 +192,15 @@ async function decodeHit(id: CasaPadHitId): Promise<AudioBuffer | null> {
 }
 
 export function prefetchCasaPadHits(): void {
-  for (const hit of CASA_PAD_HITS) {
-    void fetch(CASA_PAD_SRC[hit.id]);
+  for (const hit of CASA_PAD_BUILTIN) {
+    void fetch(hit.src);
   }
 }
 
-const playing = new Map<CasaPadHitId, AudioBufferSourceNode>();
-const pending = new Set<CasaPadHitId>();
+const playing = new Map<string, AudioBufferSourceNode>();
+const pending = new Set<string>();
 
-function stopSource(id: CasaPadHitId): void {
+function stopSource(id: string): void {
   const src = playing.get(id);
   if (!src) return;
   try {
@@ -208,11 +211,15 @@ function stopSource(id: CasaPadHitId): void {
   playing.delete(id);
 }
 
-/** Tap on: starts. Tap again: stops. Returns whether it is now playing. */
+/**
+ * Tap on: starts. Tap again: stops.
+ * `src` opzionale — default dal catalogo builtin.
+ */
 export function toggleCasaPadHit(
   id: CasaPadHitId,
   volume = 0.7,
   onEnded?: () => void,
+  src?: string,
 ): boolean {
   if (playing.has(id) || pending.has(id)) {
     pending.delete(id);
@@ -224,8 +231,9 @@ export function toggleCasaPadHit(
   const ac = audio();
   if (!ac) return false;
 
+  const url = src ?? CASA_PAD_SRC[id] ?? "";
   pending.add(id);
-  void decodeHit(id).then((buf) => {
+  void decodeHit(id, url).then((buf) => {
     if (!pending.has(id)) return;
     pending.delete(id);
 
@@ -235,18 +243,18 @@ export function toggleCasaPadHit(
       return;
     }
 
-    const src = ac.createBufferSource();
+    const node = ac.createBufferSource();
     const g = ac.createGain();
     g.gain.value = gain;
-    src.buffer = buf;
-    src.connect(g);
+    node.buffer = buf;
+    node.connect(g);
     g.connect(ac.destination);
-    src.onended = () => {
-      if (playing.get(id) === src) playing.delete(id);
+    node.onended = () => {
+      if (playing.get(id) === node) playing.delete(id);
       onEnded?.();
     };
-    playing.set(id, src);
-    src.start();
+    playing.set(id, node);
+    node.start();
   });
   return true;
 }

@@ -9,6 +9,7 @@ import {
   CasaWidgetSessionGate,
   useCasaInvalidPinHandler,
 } from "@/components/admin/casa/widgets/casa-widget-live";
+import { postSpecialTrialAction } from "@/lib/admin/animator-api";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 
 /**
@@ -42,6 +43,8 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
     setExtractionMode,
     applyQuizUpdate,
     applyFinalsUpdate,
+    applySpecialTrialUpdate,
+    specialTrial,
     refreshSessionStats,
     runQuizAction,
   } = useCasaLiveSession();
@@ -49,6 +52,7 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
   const [startBusy, setStartBusy] = useState(false);
   const [stopBusy, setStopBusy] = useState(false);
   const [stopError, setStopError] = useState<string | null>(null);
+  const [trialBusy, setTrialBusy] = useState(false);
 
   const handleQuizChange = useCallback(
     (quiz: QuizSessionState | null) => {
@@ -56,6 +60,44 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
     },
     [applyQuizUpdate],
   );
+
+  const advanceSpecialTrial = useCallback(async () => {
+    if (controlsDisabled || trialBusy) return;
+    if (
+      specialTrial?.status !== "closing" &&
+      specialTrial?.status !== "results"
+    ) {
+      return;
+    }
+    setTrialBusy(true);
+    try {
+      const res = await postSpecialTrialAction(
+        eventCode,
+        { action: "advance" },
+        pin,
+      );
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+        specialTrial?: typeof specialTrial;
+        quiz?: QuizSessionState | null;
+      } | null;
+      if (!res.ok) {
+        if (res.status === 403) onInvalidPin();
+        throw new Error(data?.error ?? "Avanzamento prova fallito.");
+      }
+      applySpecialTrialUpdate(data?.specialTrial ?? null, data?.quiz);
+    } finally {
+      setTrialBusy(false);
+    }
+  }, [
+    applySpecialTrialUpdate,
+    controlsDisabled,
+    eventCode,
+    onInvalidPin,
+    pin,
+    specialTrial?.status,
+    trialBusy,
+  ]);
 
   const startQuiz = useCallback(async () => {
     if (controlsDisabled || startBusy) return;
@@ -105,6 +147,47 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
   }, [controlsDisabled, quizState?.autoplayEnabled, runQuizAction, stopBusy]);
 
   const autoplayOn = quizState?.autoplayEnabled === true;
+
+  // Prova speciale: AVANTI guida FINE PROVA → risultati → quiz.
+  if (
+    specialTrial &&
+    (specialTrial.status === "closing" || specialTrial.status === "results")
+  ) {
+    const label =
+      specialTrial.status === "closing"
+        ? trialBusy
+          ? "…"
+          : "Risultati"
+        : trialBusy
+          ? "…"
+          : "Avanti";
+    return (
+      <button
+        type="button"
+        className="casa-go"
+        disabled={controlsDisabled || trialBusy}
+        onClick={() => void advanceSpecialTrial()}
+      >
+        {label}
+      </button>
+    );
+  }
+
+  if (specialTrial?.status === "running") {
+    return (
+      <button type="button" className="casa-go" disabled aria-disabled>
+        Prova in corso
+      </button>
+    );
+  }
+
+  if (specialTrial?.status === "setup") {
+    return (
+      <button type="button" className="casa-go" disabled aria-disabled>
+        Setup prova
+      </button>
+    );
+  }
 
   const bar = (
       <AdminTransportBar

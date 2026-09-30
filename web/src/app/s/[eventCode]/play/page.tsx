@@ -12,6 +12,7 @@ import { PlayerRuntimeGlow } from "@/components/player/PlayerRuntimeGlow";
 import { PlayerStageTransition } from "@/components/player/PlayerStageTransition";
 import { QuizPlayer } from "@/components/player/QuizPlayer";
 import { SpecialTrialTeaser } from "@/components/player/SpecialTrialTeaser";
+import { SpecialTrialVoteCard } from "@/components/player/SpecialTrialVoteCard";
 import { VotingPlayer } from "@/components/player/VotingPlayer";
 import { FinalistCheerPlayer } from "@/components/player/FinalistCheerPlayer";
 import { PlayerIdentityFields } from "@/components/player/PlayerIdentityFields";
@@ -691,7 +692,20 @@ export default function PlayerPlayPage() {
                 ) : participantId ? (
                   <>
                     {specialTrial ? (
-                      <SpecialTrialTeaser trial={specialTrial} />
+                      specialTrial.status === "running" ||
+                      specialTrial.status === "closing" ? (
+                        participantId ? (
+                          <SpecialTrialVoteCard
+                            eventSlug={eventSlug}
+                            participantId={participantId}
+                            trial={specialTrial}
+                          />
+                        ) : (
+                          <SpecialTrialTeaser trial={specialTrial} />
+                        )
+                      ) : (
+                        <SpecialTrialTeaser trial={specialTrial} />
+                      )
                     ) : null}
                     <QuizPlayer
                       eventSlug={eventSlug}

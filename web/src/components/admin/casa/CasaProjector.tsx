@@ -325,18 +325,22 @@ export function CasaProjector({
       if (!video) return;
       const ms = reduceMotion ? 0 : AVANTI_CROSSFADE_MS;
       const tearDown = () => {
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
-      };
-      if (ms <= 0 || video.ended) {
-        // Frame finale resta in opacity fade (AnimatePresence); smonta dopo.
-        if (ms <= 0) {
-          tearDown();
-          return;
+        try {
+          video.pause();
+          video.removeAttribute("src");
+          video.load();
+        } catch {
+          /* ignore */
         }
-        const timer = window.setTimeout(tearDown, ms);
-        return () => window.clearTimeout(timer);
+      };
+      if (ms <= 0) {
+        tearDown();
+        return;
+      }
+      // Fine naturale o taglio AVANTI: fade audio + tieni il frame per il crossfade visuale.
+      if (video.ended || video.paused) {
+        window.setTimeout(tearDown, ms);
+        return;
       }
       const startVol = getMediaVolume(video);
       const t0 = performance.now();
@@ -361,32 +365,35 @@ export function CasaProjector({
       if (!audio) return;
       const ms = reduceMotion ? 0 : AVANTI_CROSSFADE_MS;
       const tearDown = () => {
-        audio.pause();
-        audio.removeAttribute("src");
-        audio.load();
-      };
-      if (ms <= 0 || audio.ended) {
-        if (ms <= 0) {
-          tearDown();
-          return;
+        try {
+          audio.pause();
+          audio.removeAttribute("src");
+          audio.load();
+        } catch {
+          /* ignore */
         }
-        const timer = window.setTimeout(tearDown, ms);
-        return () => window.clearTimeout(timer);
+      };
+      if (ms <= 0) {
+        tearDown();
+        return;
+      }
+      if (audio.ended || audio.paused) {
+        window.setTimeout(tearDown, ms);
+        return;
       }
       const startVol = getMediaVolume(audio);
       const t0 = performance.now();
-      let raf = 0;
       const tick = (now: number) => {
         const t = Math.min(1, (now - t0) / ms);
         setMediaVolume(audio, startVol * (1 - t));
         if (t < 1) {
-          raf = requestAnimationFrame(tick);
+          siglaFadeRaf.current = requestAnimationFrame(tick);
           return;
         }
+        siglaFadeRaf.current = null;
         tearDown();
       };
-      raf = requestAnimationFrame(tick);
-      return () => cancelAnimationFrame(raf);
+      siglaFadeRaf.current = requestAnimationFrame(tick);
     };
   }, [useSiglaAudioFallback, siglaAudioSrc, reduceMotion]);
 

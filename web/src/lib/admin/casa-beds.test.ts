@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { casaAutoBedLabel, casaAutoBedSrc, resolveCasaBed } from "./casa-beds";
+import {
+  casaAutoBedLabel,
+  casaAutoBedSrc,
+  resolveCasaBed,
+  resolveCasaBedOrLobby,
+} from "./casa-beds";
 
 describe("casa auto beds", () => {
   it("maps beats to the SUNO loops", () => {
@@ -24,12 +29,32 @@ describe("casa auto beds", () => {
     expect(casaAutoBedLabel("quiz", "theme_intro", "lifestyle")).toMatch(
       /stile di vita/i,
     );
-    expect(casaAutoBedSrc("sigla")).toBeNull();
   });
 
-  it("pauses the bed during the sigla", () => {
-    expect(resolveCasaBed("sigla", null, 0)).toBeNull();
-    expect(casaAutoBedLabel("sigla")).toMatch(/sigla/i);
+  it("keeps an electrifying bed on pre-sigla warn and Tra 5′", () => {
+    expect(
+      casaAutoBedSrc("sigla", null, null, { sigla: "warn" }),
+    ).toContain("LR_02_Quiz_Adventure");
+    expect(
+      casaAutoBedLabel("sigla", null, null, { sigla: "warn" }),
+    ).toMatch(/pre-show/i);
+    expect(
+      casaAutoBedSrc("casa", null, null, { displayCue: "tra5" }),
+    ).toContain("LR_02_Quiz_Adventure");
+    expect(
+      casaAutoBedLabel("casa", null, null, { displayCue: "tra5" }),
+    ).toMatch(/pre-show/i);
+  });
+
+  it("pauses the bed only while the sigla video owns audio", () => {
+    expect(casaAutoBedSrc("sigla", null, null, { sigla: "on" })).toBeNull();
+    expect(resolveCasaBed("sigla", null, 0, null, null, { sigla: "on" })).toBeNull();
+    expect(casaAutoBedLabel("sigla", null, null, { sigla: "on" })).toMatch(
+      /sigla/i,
+    );
+    expect(
+      resolveCasaBedOrLobby("sigla", null, 0, null, null, { sigla: "on" }).url,
+    ).toContain("LR_01_Lobby_Ambient");
   });
 
   it("lets a local folder override Auto fase", () => {

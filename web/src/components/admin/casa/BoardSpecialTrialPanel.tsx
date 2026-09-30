@@ -4,7 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchParticipants, postSpecialTrialAction } from "@/lib/admin/animator-api";
 import { SPECIAL_TRIAL_CHALLENGES } from "@/lib/game/special-trial-challenges";
 import type { SpecialTrialChallengeId } from "@/lib/game/special-trial-challenges";
-import type { SpecialTrialState } from "@/lib/musicpro/special-trial";
+import {
+  formatSpecialTrialClock,
+  specialTrialRemainingSeconds,
+  type SpecialTrialState,
+} from "@/lib/musicpro/special-trial";
 import { cn } from "@/lib/utils";
 
 type Guest = {
@@ -42,12 +46,50 @@ export function BoardSpecialTrialPanel({
   const [durationMin, setDurationMin] = useState(
     () => Math.max(1, Math.round((trial?.durationSec ?? 60) / 60)),
   );
+  const [remaining, setRemaining] = useState(0);
 
   useEffect(() => {
     if (trial?.durationSec) {
       setDurationMin(Math.max(1, Math.round(trial.durationSec / 60)));
     }
   }, [trial?.durationSec]);
+
+  useEffect(() => {
+    if (!trial || trial.status !== "running") {
+      setRemaining(0);
+      return;
+    }
+    const sync = () => setRemaining(specialTrialRemainingSeconds(trial));
+    sync();
+    const id = window.setInterval(sync, 250);
+    return () => window.clearInterval(id);
+  }, [trial]);
+
+  // Auto-tick → FINE PROVA a tempo scaduto.
+  useEffect(() => {
+    if (!trial || trial.status !== "running") return;
+    if (specialTrialRemainingSeconds(trial) > 0) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await postSpecialTrialAction(
+        eventCode,
+        { action: "tick" },
+        pin,
+      );
+      if (cancelled || !res.ok) return;
+      const data = (await res.json().catch(() => null)) as {
+        specialTrial?: SpecialTrialState | null;
+        quiz?: import("@/lib/musicpro/quiz-state").QuizSessionState | null;
+      } | null;
+      onUpdate({
+        specialTrial: data?.specialTrial ?? null,
+        quiz: data?.quiz,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [trial, eventCode, pin, onUpdate, remaining]);
 
   const loadGuests = useCallback(async () => {
     const res = await fetchParticipants(eventCode, pin);
@@ -114,7 +156,8 @@ export function BoardSpecialTrialPanel({
   return (
     <div
       className={cn("casa-board-prove", compact && "casa-board-prove-compact")}
-    >      <label className="casa-board-prove-row">
+    >
+      <label className="casa-board-prove-row">
         <span>DURATA</span>
         <input
           type="number"
@@ -226,32 +269,30 @@ export function BoardSpecialTrialPanel({
         </>
       ) : null}
 
-      {trial.status === "running" || trial.status === "closing" ? (
+      {trial.status === "running" ||
+      trial.status === "closing" ||
+      trial.status === "results" ? (
         <div className="casa-board-prove-live">
           <p className="casa-board-prove-label">
-            {trial.status === "closing" ? "Tempo scaduto" : "Prova in corso"}
+            {trial.status === "running"
+              ? `In corso · ${formatSpecialTrialClock(remaining)}`
+              : trial.status === "closing"
+                ? "FINE PROVA"
+                : "Risultati votazione"}
           </p>
           <p className="casa-board-prove-names">
             {trial.participants.map((p) => p.nickname).join(" · ")}
           </p>
-          {trial.status === "closing" ? (
-            <button
-              type="button"
-              className="casa-board-prove-via"
-              disabled={disabled || busy}
-              onClick={() => void act({ action: "close" })}
-            >
-              Chiudi e riprendi quiz
-            </button>
+          {trial.status === "running" ? (
+            <p className="casa-board-prove-hint">
+              Countdown sul proiettore · voti dalla sala sul telefono
+            </p>
           ) : (
-            <button
-              type="button"
-              className="casa-board-mini"
-              disabled={disabled || busy}
-              onClick={() => void act({ action: "tick" })}
-            >
-              Aggiorna timer
-            </button>
+            <p className="casa-board-prove-hint">
+              {trial.status === "closing"
+                ? "Premi AVANTI per i risultati delle votazioni"
+                : "Premi AVANTI per tornare alle domande"}
+            </p>
           )}
         </div>
       ) : null}

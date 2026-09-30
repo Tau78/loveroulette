@@ -96,7 +96,8 @@ export default function DisplayPage() {
     specialTrial != null &&
     (specialTrial.status === "setup" ||
       specialTrial.status === "running" ||
-      specialTrial.status === "closing");
+      specialTrial.status === "closing" ||
+      specialTrial.status === "results");
 
   const { remaining: finalsRemaining } = useFinalsShowSync({
     eventSlug,

@@ -1,4 +1,4 @@
-export type CasaAudioRouteKind = "local" | "projector" | "vercel";
+export type CasaAudioRouteKind = "local" | "projector" | "screen" | "vercel";
 
 export type CasaAudioRoute = {
   kind: CasaAudioRouteKind;
@@ -20,21 +20,33 @@ export const PROJECTOR_AUDIO_ROUTE: CasaAudioRoute = {
   label: "Proiettore",
 };
 
+/** Stesso cue remoto del proiettore: finestra /display su HDMI o monitor. */
+export const SCREEN_AUDIO_ROUTE: CasaAudioRoute = {
+  kind: "screen",
+  label: "Schermo collegato",
+};
+
 export const VERCEL_AUDIO_ROUTE: CasaAudioRoute = {
   kind: "vercel",
   label: "Vercel",
 };
 
 export function isRemoteAudioRoute(route: CasaAudioRoute): boolean {
-  return route.kind === "projector" || route.kind === "vercel";
+  return (
+    route.kind === "projector" ||
+    route.kind === "screen" ||
+    route.kind === "vercel"
+  );
 }
 
 export function parseCasaAudioRoute(raw: unknown): CasaAudioRoute {
   if (!raw || typeof raw !== "object") return { ...DEFAULT_CASA_AUDIO_ROUTE };
   const rec = raw as Record<string, unknown>;
   if (rec.kind === "projector") return { ...PROJECTOR_AUDIO_ROUTE };
+  if (rec.kind === "screen") return { ...SCREEN_AUDIO_ROUTE };
   if (rec.kind === "vercel") return { ...VERCEL_AUDIO_ROUTE };
-  const sinkId = typeof rec.sinkId === "string" && rec.sinkId ? rec.sinkId : "default";
+  const sinkId =
+    typeof rec.sinkId === "string" && rec.sinkId ? rec.sinkId : "default";
   const label =
     typeof rec.label === "string" && rec.label.trim()
       ? rec.label.trim()
@@ -70,7 +82,10 @@ export async function listCasaAudioOutputs(): Promise<CasaAudioOutputOption[]> {
     { id: "local:default", route: { ...DEFAULT_CASA_AUDIO_ROUTE } },
   ];
 
-  if (typeof navigator !== "undefined" && navigator.mediaDevices?.enumerateDevices) {
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.mediaDevices?.enumerateDevices
+  ) {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       for (const device of devices) {
@@ -91,22 +106,29 @@ export async function listCasaAudioOutputs(): Promise<CasaAudioOutputOption[]> {
   return [
     ...local,
     { id: "projector", route: { ...PROJECTOR_AUDIO_ROUTE } },
+    { id: "screen", route: { ...SCREEN_AUDIO_ROUTE } },
     { id: "vercel", route: { ...VERCEL_AUDIO_ROUTE } },
   ];
 }
 
 type MediaDevicesWithOutputPicker = MediaDevices & {
-  selectAudioOutput?: (options?: { deviceId?: string }) => Promise<MediaDeviceInfo>;
+  selectAudioOutput?: (options?: {
+    deviceId?: string;
+  }) => Promise<MediaDeviceInfo>;
 };
 
 export function canPickCasaLocalAudioOutput(): boolean {
   if (typeof navigator === "undefined") return false;
-  const devices = navigator.mediaDevices as MediaDevicesWithOutputPicker | undefined;
+  const devices = navigator.mediaDevices as
+    | MediaDevicesWithOutputPicker
+    | undefined;
   return typeof devices?.selectAudioOutput === "function";
 }
 
 export async function pickCasaLocalAudioOutput(): Promise<CasaAudioRoute | null> {
-  const devices = navigator.mediaDevices as MediaDevicesWithOutputPicker | undefined;
+  const devices = navigator.mediaDevices as
+    | MediaDevicesWithOutputPicker
+    | undefined;
   if (typeof devices?.selectAudioOutput !== "function") return null;
   try {
     const device = await devices.selectAudioOutput();
@@ -114,7 +136,9 @@ export async function pickCasaLocalAudioOutput(): Promise<CasaAudioRoute | null>
     return {
       kind: "local",
       sinkId,
-      label: device.label.trim() || (sinkId === "default" ? DEFAULT_CASA_AUDIO_ROUTE.label : sinkId),
+      label:
+        device.label.trim() ||
+        (sinkId === "default" ? DEFAULT_CASA_AUDIO_ROUTE.label : sinkId),
     };
   } catch {
     return null;
@@ -123,6 +147,7 @@ export async function pickCasaLocalAudioOutput(): Promise<CasaAudioRoute | null>
 
 export function casaAudioOptionId(route: CasaAudioRoute): string {
   if (route.kind === "projector") return "projector";
+  if (route.kind === "screen") return "screen";
   if (route.kind === "vercel") return "vercel";
   return `local:${route.sinkId || "default"}`;
 }

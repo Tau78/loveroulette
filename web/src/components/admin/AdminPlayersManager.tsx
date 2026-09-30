@@ -51,6 +51,11 @@ import {
   nicknameSaveErrorMessage,
   resolveNicknameOnSave,
 } from "@/lib/player/nickname-save";
+import {
+  buildSimDemoChatMessages,
+  dispatchSimDemoChat,
+  isDemoChatSimBadge,
+} from "@/lib/admin/casa-demo-chat";
 
 interface AdminPlayersManagerProps {
   eventCode: string;
@@ -128,8 +133,8 @@ export function AdminPlayersManager({
     storageKey: `lr_admin_fullscreen_players_${eventCode}`,
   });
 
-  const load = useCallback(async () => {
-    if (!pinReady) return;
+  const load = useCallback(async (): Promise<AdminParticipantRow[]> => {
+    if (!pinReady) return [];
     setLoading(true);
     setError(null);
     try {
@@ -141,9 +146,12 @@ export function AdminPlayersManager({
         throw new Error(data?.error ?? "Impossibile caricare i giocatori.");
       }
       const data = (await res.json()) as { participants: AdminParticipantRow[] };
-      setParticipants(data.participants ?? []);
+      const list = data.participants ?? [];
+      setParticipants(list);
+      return list;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore di rete.");
+      return [];
     } finally {
       setLoading(false);
     }
@@ -344,7 +352,16 @@ export function AdminPlayersManager({
           ? `Matching pronto — ${data?.pairCount ?? 0} coppie calcolate (${data?.answersInserted ?? 0} risposte). Torna alla dashboard per l'estrazione.`
           : `10 coppie pronte — ${data?.answersInserted ?? 0} risposte su ${data?.questionCount ?? "?"} domande.`,
       );
-      await load();
+      const rows = await load();
+      const nicks = rows
+        .filter((p) => isDemoChatSimBadge(p.badge_code))
+        .map((p) => p.nickname);
+      dispatchSimDemoChat(
+        buildSimDemoChatMessages(
+          nicks.length > 0 ? nicks : rows.map((p) => p.nickname),
+          8,
+        ),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore di rete.");
     } finally {
@@ -933,8 +950,8 @@ export function AdminPlayersManager({
 
           <p className="text-[11px] text-muted-foreground leading-relaxed">
             <strong>10 coppie test</strong> crea 20 giocatori con nomi, foto,
-            mix U/D/NB e cerco uomo/donna/entrambi, li segna online e compila le
-            risposte del quiz.
+            mix U/D/NB e cerco uomo/donna/entrambi, li segna online, compila le
+            risposte del quiz e riempie il riquadro Messaggi con chat demo.
             <strong className="font-semibold text-foreground/80">
               {" "}
               → matching

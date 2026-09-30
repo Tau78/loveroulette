@@ -12,7 +12,8 @@ export type SpecialTrialStatus =
   | "booked"
   | "setup"
   | "running"
-  | "closing";
+  | "closing"
+  | "results";
 
 export type SpecialTrialMode = "scegli" | "chiedi";
 
@@ -29,6 +30,10 @@ export interface SpecialTrialState {
   mode: SpecialTrialMode | null;
   participants: SpecialTrialParticipant[];
   phaseStartedAt: string | null;
+  /** Conteggio voti per participant id (sala). */
+  votes: Record<string, number>;
+  /** Votante → scelto. */
+  ballots: Record<string, string>;
 }
 
 export const DEFAULT_SPECIAL_TRIAL_DURATION_SEC = 60;
@@ -40,6 +45,7 @@ const VALID_STATUSES = new Set<SpecialTrialStatus>([
   "setup",
   "running",
   "closing",
+  "results",
 ]);
 
 const VALID_CHALLENGES = new Set<SpecialTrialChallengeId>([
@@ -53,6 +59,30 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function emptyVotes(): { votes: Record<string, number>; ballots: Record<string, string> } {
+  return { votes: {}, ballots: {} };
+}
+
+function parseVoteMap(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, number> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+      out[key] = Math.floor(value);
+    }
+  }
+  return out;
+}
+
+function parseBallotMap(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value === "string" && value.trim()) out[key] = value;
+  }
+  return out;
+}
+
 export class SpecialTrialError extends Error {
   constructor(
     message: string,
@@ -61,6 +91,25 @@ export class SpecialTrialError extends Error {
     super(message);
     this.name = "SpecialTrialError";
   }
+}
+
+/** Countdown leggibile (dinamico sui minuti scelti): `5:00`, `1:05`, `0:09`. */
+export function formatSpecialTrialClock(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
+
+export function specialTrialVoteRanking(
+  trial: SpecialTrialState,
+): Array<SpecialTrialParticipant & { votes: number }> {
+  return [...trial.participants]
+    .map((p) => ({
+      ...p,
+      votes: trial.votes[p.id] ?? 0,
+    }))
+    .sort((a, b) => b.votes - a.votes || a.nickname.localeCompare(b.nickname));
 }
 
 export function getSpecialTrialState(
@@ -108,6 +157,8 @@ export function getSpecialTrialState(
     participants,
     phaseStartedAt:
       typeof record.phaseStartedAt === "string" ? record.phaseStartedAt : null,
+    votes: parseVoteMap(record.votes),
+    ballots: parseBallotMap(record.ballots),
   };
 }
 
@@ -133,7 +184,12 @@ export function isSpecialTrialBlockingQuiz(
   trial: SpecialTrialState | null,
 ): boolean {
   if (!trial) return false;
-  return trial.status === "setup" || trial.status === "running" || trial.status === "closing";
+  return (
+    trial.status === "setup" ||
+    trial.status === "running" ||
+    trial.status === "closing" ||
+    trial.status === "results"
+  );
 }
 
 export function specialTrialRemainingSeconds(
@@ -233,6 +289,7 @@ export async function tryActivateSpecialTrialAtGate(
     status: "setup",
     updatedAt: at,
     phaseStartedAt: at,
+    ...emptyVotes(),
   });
 
   logAvantiBinary("advance", "gate → special_trial setup (hold quiz)", {
@@ -251,7 +308,9 @@ export type SpecialTrialAction =
   | "setParticipants"
   | "start"
   | "close"
-  | "tick";
+  | "advance"
+  | "tick"
+  | "vote";
 
 export interface SpecialTrialActionInput {
   action: SpecialTrialAction;
@@ -259,6 +318,10 @@ export interface SpecialTrialActionInput {
   challengeId?: SpecialTrialChallengeId;
   mode?: SpecialTrialMode;
   participants?: SpecialTrialParticipant[];
+  /** Votante (giocatore in sala). */
+  voterId?: string;
+  /** Partecipante in prova votato. */
+  choiceId?: string;
 }
 
 export async function handleSpecialTrialAction(
@@ -287,13 +350,18 @@ export async function handleSpecialTrialAction(
       mode: null,
       participants: [],
       phaseStartedAt: null,
+      ...emptyVotes(),
     };
     await writeSpecialTrialState(supabase, eventId, trial);
     return { specialTrial: trial, quiz, runtimeState: "quiz" };
   }
 
   if (input.action === "unbook") {
-    if (trial?.status === "running" || trial?.status === "closing") {
+    if (
+      trial?.status === "running" ||
+      trial?.status === "closing" ||
+      trial?.status === "results"
+    ) {
       throw new SpecialTrialError("Prova in corso — chiudi prima.", 409);
     }
     await writeSpecialTrialState(supabase, eventId, null);
@@ -305,7 +373,11 @@ export async function handleSpecialTrialAction(
   }
 
   if (input.action === "setDuration") {
-    if (trial.status === "running" || trial.status === "closing") {
+    if (
+      trial.status === "running" ||
+      trial.status === "closing" ||
+      trial.status === "results"
+    ) {
       throw new SpecialTrialError("Durata bloccata durante la prova.", 409);
     }
     trial = {
@@ -383,6 +455,7 @@ export async function handleSpecialTrialAction(
       status: "running",
       updatedAt: at,
       phaseStartedAt: at,
+      ...emptyVotes(),
     };
     await writeSpecialTrialState(supabase, eventId, trial);
     return { specialTrial: trial, quiz, runtimeState: "quiz" };
@@ -396,12 +469,87 @@ export async function handleSpecialTrialAction(
         updatedAt: at,
       };
       await writeSpecialTrialState(supabase, eventId, trial);
+      logAvantiBinary("advance", "special_trial → FINE PROVA (timer)", {
+        eventId,
+      });
     }
     return { specialTrial: trial, quiz, runtimeState: "quiz" };
   }
 
+  if (input.action === "vote") {
+    if (trial.status !== "running" && trial.status !== "closing") {
+      throw new SpecialTrialError("Votazione chiusa.", 409);
+    }
+    const voterId = input.voterId?.trim();
+    const choiceId = input.choiceId?.trim();
+    if (!voterId || !choiceId) {
+      throw new SpecialTrialError("Voto incompleto.", 400);
+    }
+    if (!trial.participants.some((p) => p.id === choiceId)) {
+      throw new SpecialTrialError("Scelta non in prova.", 400);
+    }
+
+    const ballots = { ...trial.ballots };
+    const votes = { ...trial.votes };
+    const previous = ballots[voterId];
+    if (previous && votes[previous] != null) {
+      votes[previous] = Math.max(0, (votes[previous] ?? 0) - 1);
+    }
+    ballots[voterId] = choiceId;
+    votes[choiceId] = (votes[choiceId] ?? 0) + 1;
+
+    trial = {
+      ...trial,
+      ballots,
+      votes,
+      updatedAt: at,
+    };
+    await writeSpecialTrialState(supabase, eventId, trial);
+    return { specialTrial: trial, quiz, runtimeState: "quiz" };
+  }
+
+  if (input.action === "advance") {
+    if (trial.status === "running" && isSpecialTrialRunningExpired(trial)) {
+      trial = {
+        ...trial,
+        status: "closing",
+        updatedAt: at,
+      };
+      await writeSpecialTrialState(supabase, eventId, trial);
+      return { specialTrial: trial, quiz, runtimeState: "quiz" };
+    }
+
+    if (trial.status === "closing") {
+      trial = {
+        ...trial,
+        status: "results",
+        updatedAt: at,
+      };
+      await writeSpecialTrialState(supabase, eventId, trial);
+      logAvantiBinary("advance", "special_trial FINE PROVA → risultati", {
+        eventId,
+      });
+      return { specialTrial: trial, quiz, runtimeState: "quiz" };
+    }
+
+    if (trial.status === "results") {
+      const advanced = await advanceQuizAfterSpecialTrial(supabase, eventId);
+      return {
+        specialTrial: null,
+        quiz: advanced.quiz,
+        runtimeState: advanced.runtimeState,
+      };
+    }
+
+    throw new SpecialTrialError("Niente da avanzare ora.", 409);
+  }
+
   if (input.action === "close") {
-    if (trial.status !== "closing" && trial.status !== "running") {
+    if (
+      trial.status !== "closing" &&
+      trial.status !== "running" &&
+      trial.status !== "results"
+    ) {
       throw new SpecialTrialError("Nessuna prova da chiudere.", 409);
     }
     const advanced = await advanceQuizAfterSpecialTrial(supabase, eventId);

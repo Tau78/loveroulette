@@ -34,32 +34,32 @@ export const DEFAULT_SLIDES: Record<CasaSlideId, CasaSlide> = {
   pres: {
     kicker: "Love Roulette",
     headline: "BENVENUTI",
-    sub: "La serata comincia",
+    sub: "Un quiz di affinità in sala: rispondete, formate le coppie, arriviamo alla finale.",
   },
   regole: {
     kicker: "Come si gioca",
     headline: "LE REGOLE",
-    sub: "Telefono in mano. Ascolta. Rispondi.",
+    sub: "Telefono in mano: ascolta la domanda, scegli la risposta. Più risposte in comune, più alta l’affinità.",
   },
   finale: {
     kicker: "Come si vince",
     headline: "LA FINALE",
-    sub: "In bocca al lupo",
+    sub: "Le coppie top salgono sul palco: prove live e voto della sala scelgono i vincitori.",
   },
   premio: {
     kicker: "Stasera",
     headline: "IL PREMIO",
-    sub: "",
+    sub: "In palio un premio per la coppia vincitrice — chi arriva in fondo se lo porta a casa.",
   },
   sponsor: {
     kicker: "Grazie a",
     headline: "SPONSOR",
-    sub: "",
+    sub: "Un grazie a chi rende possibile la serata: applauso ai nostri partner.",
   },
   stasera: {
     kicker: "Love Roulette",
     headline: "STASERA",
-    sub: "Gioca con noi",
+    sub: "Tenete il telefono pronto: tra poco partono le domande.",
   },
 };
 
@@ -85,7 +85,15 @@ export function loadSlides(eventCode: string): Record<CasaSlideId, CasaSlide> {
     const parsed = JSON.parse(raw) as Partial<Record<CasaSlideId, CasaSlide>>;
     const next = { ...DEFAULT_SLIDES };
     for (const id of SLIDE_ORDER) {
-      if (parsed[id]) next[id] = { ...DEFAULT_SLIDES[id], ...parsed[id] };
+      const saved = parsed[id];
+      if (!saved) continue;
+      const base = DEFAULT_SLIDES[id];
+      next[id] = {
+        kicker: saved.kicker?.trim() ? saved.kicker : base.kicker,
+        headline: saved.headline?.trim() ? saved.headline : base.headline,
+        // Sottotitolo vuoto in storage = lacuna: usa la frase di default.
+        sub: saved.sub?.trim() ? saved.sub : base.sub,
+      };
     }
     return next;
   } catch {

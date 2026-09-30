@@ -71,11 +71,15 @@ export async function postSpecialTrialAction(
       | "setParticipants"
       | "start"
       | "close"
-      | "tick";
+      | "advance"
+      | "tick"
+      | "vote";
     durationSec?: number;
     challengeId?: "dance" | "declaration" | "approach" | "gaze";
     mode?: "scegli" | "chiedi";
     participants?: Array<{ id: string; nickname: string }>;
+    voterId?: string;
+    choiceId?: string;
   },
   pin: string | null,
 ): Promise<Response> {

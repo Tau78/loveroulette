@@ -22,11 +22,25 @@ import { JoinQrCode } from "@/components/display/JoinQrCode";
 import {
   fetchParticipants,
   isInvalidAnimatorPinError,
+  postDisplayAudioStart,
   postDisplayCommand,
   postQuestionReport,
   postResetEvent,
   postSpecialTrialAction,
 } from "@/lib/admin/animator-api";
+import { stageLetter } from "@/lib/player/identity";
+import {
+  applyAudioSink,
+  canPickCasaLocalAudioOutput,
+  casaAudioOptionId,
+  isRemoteAudioRoute,
+  listCasaAudioOutputs,
+  loadCasaAudioRoute,
+  pickCasaLocalAudioOutput,
+  saveCasaAudioRoute,
+  type CasaAudioOutputOption,
+  type CasaAudioRoute,
+} from "@/lib/admin/casa-audio-route";
 import {
   BOARD_DISPLAY_CUES,
   type BoardDisplayCueId,
@@ -48,12 +62,26 @@ import {
   type CasaPadHitId,
 } from "@/lib/admin/casa-pad-sfx";
 import {
+  loadPadCustomHits,
+  loadPadLabelOverrides,
+  loadPadSetIds,
+  resolvePadLibrary,
+  resolvePadSet,
+  savePadSetIds,
+  type CasaPadHitId as PadId,
+} from "@/lib/admin/casa-pad-bank";
+import { BoardPadSamplerSuite } from "@/components/admin/casa/BoardPadSamplerSuite";
+import {
+  CASA_SIM_DEMO_CHAT_EVENT,
+  type CasaSimDemoChatDetail,
+} from "@/lib/admin/casa-demo-chat";
+import {
   avantiLabel,
   stepAvanti,
   type CasaBeat,
 } from "@/lib/admin/casa-avanti";
 import { boardCueQuestionIndex } from "@/lib/admin/board-cue-question";
-import { casaAutoBedLabel, resolveCasaBed } from "@/lib/admin/casa-beds";
+import { casaAutoBedLabel, resolveCasaBed, resolveCasaBedOrLobby } from "@/lib/admin/casa-beds";
 import {
   playCasaResultsRevealHit,
   resetCasaResultsRevealHit,
@@ -192,7 +220,7 @@ const FADERS = [
 
 type FaderId = (typeof FADERS)[number]["id"];
 
-const BOARD_PAD = CASA_PAD_HITS.slice(0, 6);
+const BOARD_PAD_FALLBACK = CASA_PAD_HITS.slice(0, 6);
 const PLAYER_SLOTS = 6;
 
 const EXPAND_TITLE: Record<Exclude<ExpandPanel, null>, string> = {
@@ -499,7 +527,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     setSiglaBundledOk(ok);
   }, []);
   /** Roster locale in plancia; la lista API è nella tab Giocatori. */
-  const [guests] = useState<Guest[]>([]);
+  const [guests, setGuests] = useState<Guest[]>([]);
   const [help, setHelp] = useState(false);
   const [externalScreenOn, setExternalScreenOn] = useState(false);
   const projectorWinRef = useRef<Window | null>(null);
@@ -513,6 +541,21 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }));
   const [now, setNow] = useState(() => Date.now());
   const [hits, setHits] = useState<Set<CasaPadHitId>>(() => new Set());
+  const [padSetIds, setPadSetIds] = useState<PadId[]>(() =>
+    typeof window === "undefined"
+      ? BOARD_PAD_FALLBACK.map((h) => h.id)
+      : loadPadSetIds(),
+  );
+  const [padBankRev, setPadBankRev] = useState(0);
+  const padSetHits = useMemo(() => {
+    const library = resolvePadLibrary(
+      loadPadCustomHits(),
+      loadPadLabelOverrides(),
+    );
+    return resolvePadSet(padSetIds, library);
+    // padBankRev: rilegge custom/label da localStorage dopo edit suite
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [padSetIds, padBankRev]);
   const [msgs, setMsgs] = useState<
     { id: string; who: string; text: string }[]
   >([]);
@@ -522,6 +565,13 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const [bedRepeat, setBedRepeat] = useState<CasaRepeatMode>("all");
   const [bedPlaying, setBedPlaying] = useState(false);
   const [masterVol, setMasterVol] = useState(100);
+  const [audioRoute, setAudioRoute] = useState<CasaAudioRoute>(() =>
+    typeof window === "undefined"
+      ? { kind: "local", sinkId: "default", label: "Questo dispositivo" }
+      : loadCasaAudioRoute(),
+  );
+  const [audioOutputs, setAudioOutputs] = useState<CasaAudioOutputOption[]>([]);
+  const remoteAudio = isRemoteAudioRoute(audioRoute);
   const [vols, setVols] = useState<Record<FaderId, number>>({
     sigla: 70,
     bed: 45,
@@ -599,12 +649,72 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     };
   }, []);
 
+  // Chat demo da «10 coppie test» → riquadro Messaggi.
+  useEffect(() => {
+    function onDemoChat(ev: Event) {
+      const detail = (ev as CustomEvent<CasaSimDemoChatDetail>).detail;
+      const messages = detail?.messages;
+      if (!messages?.length) return;
+      setMsgs(messages.map((m) => ({ id: m.id, who: m.who, text: m.text })));
+    }
+    window.addEventListener(CASA_SIM_DEMO_CHAT_EVENT, onDemoChat);
+    return () => {
+      window.removeEventListener(CASA_SIM_DEMO_CHAT_EVENT, onDemoChat);
+    };
+  }, []);
+
+  // Roster live → riquadro Giocatori (stesso fetch di CasaPad / tab Lista).
+  useEffect(() => {
+    if (!live.pinReady) return;
+    let cancelled = false;
+
+    async function loadRoster() {
+      try {
+        const res = await fetchParticipants(eventCode, live.pin);
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          participants?: {
+            id: string;
+            nickname: string;
+            gender: "male" | "female" | "nonbinary";
+            photo_url?: string | null;
+          }[];
+        };
+        const rows = data.participants ?? [];
+        if (cancelled) return;
+        if (rows.length === 0) {
+          setGuests([]);
+          return;
+        }
+        setGuests(
+          rows.map((p) => ({
+            id: p.id,
+            nick: p.nickname,
+            gender: stageLetter(p.gender),
+            photo: p.photo_url?.trim() || undefined,
+            score: 0,
+          })),
+        );
+      } catch {
+        /* keep last roster */
+      }
+    }
+
+    void loadRoster();
+    const id = window.setInterval(() => void loadRoster(), 8000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [eventCode, live.pin, live.pinReady]);
+
   const specialTrialPanelOpen =
     live.specialTrial != null &&
     (live.specialTrial.status === "booked" ||
       live.specialTrial.status === "setup" ||
       live.specialTrial.status === "running" ||
-      live.specialTrial.status === "closing");
+      live.specialTrial.status === "closing" ||
+      live.specialTrial.status === "results");
 
   const venue = prep.venueName || live.event?.title || live.event?.venueName || eventCode;
   const onStage = guests[roll];
@@ -747,6 +857,14 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const elapsedNow = formatElapsed(now - clockPrefs.originMs);
   const exactNow = formatExact(now);
 
+  const bedOpts = useMemo(
+    () => ({
+      sigla,
+      displayCue: activeDisplayCue,
+    }),
+    [sigla, activeDisplayCue],
+  );
+
   const activeBed = useMemo(
     () =>
       resolveCasaBed(
@@ -755,6 +873,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         bedIndex,
         liveQuizActive ? liveQuizPhase : null,
         liveQuizActive ? liveQuestion?.category ?? null : null,
+        bedOpts,
       ),
     [
       beat,
@@ -765,6 +884,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       liveQuizActive,
       liveQuizPhase,
       liveQuestion?.category,
+      bedOpts,
     ],
   );
 
@@ -773,8 +893,31 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     setClockPrefs(loadClock(eventCode));
     setLayout(loadBoardLayout());
     setSlides(loadSlides(eventCode));
+    setAudioRoute(loadCasaAudioRoute());
     prefetchCasaPadHits();
+    const refreshOutputs = () => {
+      void listCasaAudioOutputs().then(setAudioOutputs);
+    };
+    refreshOutputs();
+    const devices = navigator.mediaDevices;
+    if (!devices?.addEventListener) return;
+    devices.addEventListener("devicechange", refreshOutputs);
+    return () => devices.removeEventListener("devicechange", refreshOutputs);
   }, [eventCode]);
+
+  useEffect(() => {
+    if (expand !== "audio") return;
+    void listCasaAudioOutputs().then(setAudioOutputs);
+  }, [expand]);
+
+  useEffect(() => {
+    void applyAudioSink(bedAudio.current, audioRoute);
+  }, [audioRoute]);
+
+  useEffect(() => {
+    if (live.controlsDisabled || !live.pin) return;
+    void postDisplayAudioStart(eventCode, live.pin, remoteAudio);
+  }, [remoteAudio, eventCode, live.pin, live.controlsDisabled]);
 
   useEffect(() => {
     try {
@@ -962,7 +1105,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       return;
     }
     const abs = new URL(activeBed.url, window.location.origin).href;
-    const shouldPlay = bedPlaying && !(gameOwnsAv && beat === "sigla");
+    const shouldPlay =
+      bedPlaying && !remoteAudio && !(gameOwnsAv && beat === "sigla");
     const targetVol = Math.min(1, Math.max(0, effVol("bed")));
     const fadeMs = AVANTI_CROSSFADE_MS;
     el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
@@ -1042,7 +1186,15 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     }
 
     swapIn();
-  }, [activeBed?.url, bedFolder, bedRepeat, bedPlaying, gameOwnsAv, beat]);
+  }, [
+    activeBed?.url,
+    bedFolder,
+    bedRepeat,
+    bedPlaying,
+    gameOwnsAv,
+    beat,
+    remoteAudio,
+  ]);
 
   useEffect(() => {
     const el = bedAudio.current;
@@ -1095,11 +1247,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         guestCount: guests.length,
       });
 
-      // Partenza (casa → warn): fade audio + togli video regia → slide pre-sigla
+      // Partenza (casa → warn): slide pre-sigla + colonna più elettrizzante (non spegnere).
       if (beat === "casa" && step.beat === "sigla" && step.sigla === "warn") {
         setGameOwnsAv(true);
         clearMediaOnScreen();
-        fadeOutBed(() => setBedPlaying(false));
+        setActiveDisplayCue(null);
+        setBedPlaying(true);
       }
 
       // Sigla (warn → on): fade colonna, parte video+audio sigla sul proiettore
@@ -1181,20 +1334,37 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     setQuizGate("tema");
   }
 
-  function firePad(id: CasaPadHitId) {
-    const on = toggleCasaPadHit(id, effVol("fx"), () => {
-      setHits((cur) => {
-        const next = new Set(cur);
-        next.delete(id);
-        return next;
-      });
-    });
+  function firePad(id: CasaPadHitId, src?: string) {
+    if (remoteAudio) return;
+    const on = toggleCasaPadHit(
+      id,
+      effVol("fx"),
+      () => {
+        setHits((cur) => {
+          const next = new Set(cur);
+          next.delete(id);
+          return next;
+        });
+      },
+      src,
+    );
     setHits((cur) => {
       const next = new Set(cur);
       if (on) next.add(id);
       else next.delete(id);
       return next;
     });
+  }
+
+  function commitAudioRoute(route: CasaAudioRoute) {
+    setAudioRoute(route);
+    saveCasaAudioRoute(route);
+  }
+
+  function handlePadSetIdsChange(ids: PadId[]) {
+    setPadSetIds(ids);
+    savePadSetIds(ids);
+    setPadBankRev((n) => n + 1);
   }
 
   function applyBedFiles(name: string, files: File[]) {
@@ -1298,19 +1468,22 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       return;
     }
 
+    if (remoteAudio) {
+      setBedPlaying(true);
+      flashBoardToast(`Audio su ${audioRoute.label}`);
+      return;
+    }
+
     const bed =
       activeBed ??
-      resolveCasaBed(
+      resolveCasaBedOrLobby(
         beat,
         null,
         0,
         liveQuizActive ? liveQuizPhase : null,
         liveQuizActive ? liveQuestion?.category ?? null : null,
+        bedOpts,
       );
-    if (!bed?.url) {
-      setCmdError("Nessuna colonna audio (lobby) disponibile.");
-      return;
-    }
 
     const abs = new URL(bed.url, window.location.origin).href;
     if (el.src !== abs) {
@@ -1324,9 +1497,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     try {
       await resumeMediaAudio(el);
       await el.play();
-      flashBoardToast(
-        `${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null)} in play`,
-      );
+      flashBoardToast(`${bed.name} in play`);
     } catch {
       setBedPlaying(false);
       setCmdError("Play bloccato dal browser — ritocca Play");
@@ -1637,6 +1808,28 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     }
   }
 
+  async function confirmFinishManche() {
+    if (!liveQuizActive || cmdBusy || live.controlsDisabled) return;
+    setCmdBusy(true);
+    setCmdError(null);
+    try {
+      const result = await live.runQuizAction("finish");
+      if (!result.ok) {
+        setCmdError(result.error);
+        if (result.invalidPin) live.openPinModal();
+        return;
+      }
+      setResumeOpen(false);
+      flashBoardToast("Manche chiusa → matching");
+    } catch (err) {
+      setCmdError(
+        err instanceof Error ? err.message : "Chiusura manche non riuscita.",
+      );
+    } finally {
+      setCmdBusy(false);
+    }
+  }
+
   async function sendDisplayCue(cueId: BoardDisplayCueId) {
     if (cmdBusy || live.controlsDisabled) return;
     const cue = BOARD_DISPLAY_CUES.find((c) => c.id === cueId);
@@ -1669,6 +1862,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         }));
       } else {
         clearMediaOnScreen();
+      }
+      if (cueId === "tra5") {
+        setBedPlaying(true);
       }
       flashBoardToast(cue.title);
     } catch (err) {
@@ -1737,7 +1933,11 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     if (!liveQuizActive || cmdBusy || live.controlsDisabled) return;
     const trial = live.specialTrial;
     // In corso: pannello nel riquadro — niente tab, niente unbook da qui.
-    if (trial?.status === "running" || trial?.status === "closing") {
+    if (
+      trial?.status === "running" ||
+      trial?.status === "closing" ||
+      trial?.status === "results"
+    ) {
       return;
     }
 
@@ -2178,20 +2378,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 <button
                   type="button"
                   className="casa-board-action"
-                  onClick={() => videoInput.current?.click()}
-                >
-                  Apri file
-                </button>
-                <button
-                  type="button"
-                  className="casa-board-action"
-                  onClick={() => void pickVideoFolder()}
-                >
-                  Apri cartella
-                </button>
-                <button
-                  type="button"
-                  className="casa-board-action"
                   data-on={videoState.repeat === "one" ? "1" : undefined}
                   onClick={() =>
                     setVideoState((v) => ({
@@ -2257,7 +2443,20 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 }
                 return (
                   <div key={g.id} className="casa-board-avatar" data-g={g.gender}>
-                    <span>{g.nick.slice(0, 1).toUpperCase()}</span>
+                    <span
+                      style={
+                        g.photo
+                          ? {
+                              backgroundImage: `url(${g.photo})`,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                              color: "transparent",
+                            }
+                          : undefined
+                      }
+                    >
+                      {g.nick.slice(0, 1).toUpperCase()}
+                    </span>
                     <em>{g.nick}</em>
                   </div>
                 );
@@ -2267,6 +2466,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               <p className="casa-board-empty casa-board-empty-tight">
                 In attesa dal QR
                 {onlineHint ? ` · ${onlineHint} in sala` : ""}
+              </p>
+            ) : guests.length > PLAYER_SLOTS ? (
+              <p className="casa-board-empty casa-board-empty-tight">
+                +{guests.length - PLAYER_SLOTS} · tap per tutti ({guests.length})
               </p>
             ) : null}
           </article>
@@ -2632,6 +2835,17 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   </button>
                   <button
                     type="button"
+                    className="casa-board-confirm-quiet-btn casa-board-confirm-quiet-end"
+                    disabled={cmdBusy}
+                    title="Chiude la manche come se le domande fossero finite → matching"
+                    onClick={() => {
+                      void confirmFinishManche();
+                    }}
+                  >
+                    Termina
+                  </button>
+                  <button
+                    type="button"
                     className="casa-board-confirm-quiet-btn casa-board-confirm-quiet-go"
                     disabled={cmdBusy}
                     onClick={() => {
@@ -2662,7 +2876,21 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             className="casa-board-card casa-board-card-audio"
             style={{ flex: `${layout.right[0]} 1 0` }}
           >
-            <BoardCardHead title="Audio" onExpand={() => openExpand("audio")} />
+            <BoardCardHead title="Audio" onExpand={() => openExpand("audio")}>
+              <span className="casa-board-head-actions">
+                <button
+                  type="button"
+                  className="casa-board-mini"
+                  data-on={remoteAudio ? "1" : undefined}
+                  title="Apri Audio per cambiare uscita"
+                  onClick={() => openExpand("audio")}
+                >
+                  {audioRoute.label.length > 14
+                    ? `${audioRoute.label.slice(0, 12)}…`
+                    : audioRoute.label}
+                </button>
+              </span>
+            </BoardCardHead>
             <div className="casa-board-miniplayer">
               <label className="casa-board-fader casa-board-fader-master">
                 <span>Master</span>
@@ -2680,10 +2908,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 title={currentTrackName ?? undefined}
               >
                 {gameOwnsAv || beat === "sigla"
-                  ? `Gioco · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null)}`
+                  ? `Gioco · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null, null, bedOpts)}`
                   : hasPlaylist
                     ? `${currentTrackName} · ${bedIndex + 1}/${bedList.length}`
-                    : `Colonna · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null)}`}
+                    : `Colonna · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null, null, bedOpts)}`}
               </p>
               <div className="casa-board-miniplayer-transport">
                 <MediaIco
@@ -2802,19 +3030,19 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             style={{ flex: `${layout.right[1]} 1 0` }}
           >
             <BoardCardHead title="Pad effetti" onExpand={() => openExpand("pad")} />
-            <div className="casa-board-pad">
-              {BOARD_PAD.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className="casa-board-pad-btn"
-                  data-on={hits.has(p.id) ? "1" : undefined}
-                  onClick={() => firePad(p.id)}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+              <div className="casa-board-pad">
+                {padSetHits.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="casa-board-pad-btn"
+                    data-on={hits.has(p.id) ? "1" : undefined}
+                    onClick={() => firePad(p.id, p.src)}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
           </article>
 
           <BoardSplit
@@ -2829,6 +3057,34 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           >
             <header className="casa-board-card-h">
               <span>Avanti</span>
+              <span className="casa-board-head-actions">
+                <button
+                  type="button"
+                  className="casa-board-mini"
+                  data-on={
+                    live.quizState?.autoplayEnabled === true ? "1" : undefined
+                  }
+                  disabled={
+                    live.controlsDisabled ||
+                    !live.quizState ||
+                    live.runtimeState !== "quiz" ||
+                    cmdBusy
+                  }
+                  title={
+                    live.quizState?.autoplayEnabled === true
+                      ? "Autoplay acceso — le fasi in hold avanzano da sole"
+                      : "Autoplay spento — serve AVANTI sulle fasi in hold"
+                  }
+                  onClick={() => {
+                    if (!live.quizState || live.controlsDisabled) return;
+                    void live.runQuizAction("setAutoplayEnabled", {
+                      enabled: live.quizState.autoplayEnabled !== true,
+                    });
+                  }}
+                >
+                  Autoplay
+                </button>
+              </span>
             </header>
             <div className="casa-board-go-host">
               <WidgetConductor
@@ -2960,10 +3216,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     card o la tab Giocatori per la gestione completa.
                   </p>
                   <div className="casa-board-players casa-board-players-expand">
-                    {Array.from({ length: PLAYER_SLOTS }, (_, i) => {
-                      const g = guests[i];
-                      if (!g) {
-                        return (
+                    {guests.length === 0
+                      ? Array.from({ length: PLAYER_SLOTS }, (_, i) => (
                           <div
                             key={`ex-slot-${i}`}
                             className="casa-board-avatar casa-board-avatar-ph"
@@ -2971,19 +3225,30 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                             <span>?</span>
                             <em>Libero</em>
                           </div>
-                        );
-                      }
-                      return (
-                        <div
-                          key={g.id}
-                          className="casa-board-avatar"
-                          data-g={g.gender}
-                        >
-                          <span>{g.nick.slice(0, 1).toUpperCase()}</span>
-                          <em>{g.nick}</em>
-                        </div>
-                      );
-                    })}
+                        ))
+                      : guests.map((g) => (
+                          <div
+                            key={g.id}
+                            className="casa-board-avatar"
+                            data-g={g.gender}
+                          >
+                            <span
+                              style={
+                                g.photo
+                                  ? {
+                                      backgroundImage: `url(${g.photo})`,
+                                      backgroundSize: "cover",
+                                      backgroundPosition: "center",
+                                      color: "transparent",
+                                    }
+                                  : undefined
+                              }
+                            >
+                              {g.nick.slice(0, 1).toUpperCase()}
+                            </span>
+                            <em>{g.nick}</em>
+                          </div>
+                        ))}
                   </div>
                   <button
                     type="button"
@@ -3070,6 +3335,51 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
 
               {expand === "audio" ? (
                 <div className="casa-board-vol-panel">
+                  <p className="casa-board-sampler-label">Uscita audio</p>
+                  <div className="casa-board-audio-dest">
+                    {(audioOutputs.length
+                      ? audioOutputs
+                      : [
+                          {
+                            id: casaAudioOptionId(audioRoute),
+                            route: audioRoute,
+                          },
+                        ]
+                    ).map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className="casa-board-action"
+                        data-on={
+                          casaAudioOptionId(audioRoute) === option.id
+                            ? "1"
+                            : undefined
+                        }
+                        onClick={() => commitAudioRoute(option.route)}
+                      >
+                        {option.route.label}
+                      </button>
+                    ))}
+                    {canPickCasaLocalAudioOutput() ? (
+                      <button
+                        type="button"
+                        className="casa-board-action"
+                        onClick={() => {
+                          void pickCasaLocalAudioOutput().then((route) => {
+                            if (route) commitAudioRoute(route);
+                            void listCasaAudioOutputs().then(setAudioOutputs);
+                          });
+                        }}
+                      >
+                        Scegli uscita locale…
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="casa-board-audio-meta">
+                    {remoteAudio
+                      ? `Colonna su ${audioRoute.label} — questa plancia è muta`
+                      : `Audio su ${audioRoute.label}`}
+                  </p>
                   <div className="casa-board-miniplayer-actions">
                     <button
                       type="button"
@@ -3168,7 +3478,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   <p className="casa-board-audio-meta">
                     {hasPlaylist
                       ? `${bedFolder} · ${bedList.length} tracce`
-                      : `Colonna auto · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null)}`}
+                      : `Colonna auto · ${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null, null, bedOpts)}`}
                   </p>
                   {bedPickError ? (
                     <p className="casa-board-audio-err">{bedPickError}</p>
@@ -3203,19 +3513,22 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               ) : null}
 
               {expand === "pad" ? (
-                <div className="casa-board-pad casa-board-pad-expand">
-                  {BOARD_PAD.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className="casa-board-pad-btn"
-                      data-on={hits.has(p.id) ? "1" : undefined}
-                      onClick={() => firePad(p.id)}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+                <BoardPadSamplerSuite
+                  volume={effVol("fx")}
+                  muted={remoteAudio}
+                  hitsPlaying={hits}
+                  onHitPlayingChange={(id, playing) => {
+                    setHits((cur) => {
+                      const next = new Set(cur);
+                      if (playing) next.add(id);
+                      else next.delete(id);
+                      return next;
+                    });
+                  }}
+                  setIds={padSetIds}
+                  onSetIdsChange={handlePadSetIdsChange}
+                  onBankChange={() => setPadBankRev((n) => n + 1)}
+                />
               ) : null}
 
               {expand === "preview" ? (

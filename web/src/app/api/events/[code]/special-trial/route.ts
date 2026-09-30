@@ -23,7 +23,9 @@ const bodySchema = z.object({
     "setParticipants",
     "start",
     "close",
+    "advance",
     "tick",
+    "vote",
   ]),
   durationSec: z.number().int().min(10).max(600).optional(),
   challengeId: z
@@ -31,6 +33,8 @@ const bodySchema = z.object({
     .optional(),
   mode: z.enum(["scegli", "chiedi"]).optional(),
   participants: z.array(participantSchema).optional(),
+  voterId: z.string().min(1).optional(),
+  choiceId: z.string().min(1).optional(),
 });
 
 export async function POST(
@@ -55,7 +59,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const isPublicTick = body.action === "tick";
+  const isPublic = body.action === "tick" || body.action === "vote";
 
   try {
     const { createServiceClient } = await import("@/lib/supabase/service");
@@ -84,7 +88,7 @@ export async function POST(
       typeof metadata.animator_pin === "string" &&
       metadata.animator_pin.trim().length > 0;
 
-    if (pinRequired && !isPublicTick) {
+    if (pinRequired && !isPublic) {
       const pin = request.headers.get("X-Animator-Pin");
       if (!verifyAnimatorPin(metadata, pin)) {
         return NextResponse.json({ error: "Invalid animator pin" }, { status: 403 });
