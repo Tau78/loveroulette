@@ -335,8 +335,8 @@ export function CasaProjector({
           tearDown();
           return;
         }
-        const timer = window.setTimeout(tearDown, ms);
-        return () => window.clearTimeout(timer);
+        window.setTimeout(tearDown, ms);
+        return;
       }
       const startVol = getMediaVolume(video);
       const t0 = performance.now();
@@ -370,23 +370,21 @@ export function CasaProjector({
           tearDown();
           return;
         }
-        const timer = window.setTimeout(tearDown, ms);
-        return () => window.clearTimeout(timer);
+        window.setTimeout(tearDown, ms);
+        return;
       }
       const startVol = getMediaVolume(audio);
       const t0 = performance.now();
-      let raf = 0;
       const tick = (now: number) => {
         const t = Math.min(1, (now - t0) / ms);
         setMediaVolume(audio, startVol * (1 - t));
         if (t < 1) {
-          raf = requestAnimationFrame(tick);
+          requestAnimationFrame(tick);
           return;
         }
         tearDown();
       };
-      raf = requestAnimationFrame(tick);
-      return () => cancelAnimationFrame(raf);
+      requestAnimationFrame(tick);
     };
   }, [useSiglaAudioFallback, siglaAudioSrc, reduceMotion]);
 
