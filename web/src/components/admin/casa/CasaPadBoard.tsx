@@ -92,6 +92,7 @@ import {
   stepAvanti,
   type CasaBeat,
 } from "@/lib/admin/casa-avanti";
+import { casaQrDisplayCommand } from "@/lib/admin/casa-qr-display";
 import { boardCueQuestionIndex } from "@/lib/admin/board-cue-question";
 import { casaAutoBedLabel, resolveCasaBed, resolveCasaBedOrLobby } from "@/lib/admin/casa-beds";
 import {
@@ -1055,9 +1056,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       void (async () => {
         if (cancelled) return;
         try {
-          if (beat === "casa" || help) {
-            await postDisplayCommand(eventCode, { type: "show_qr" }, live.pin);
-            return;
+          {
+            const qrCmd = casaQrDisplayCommand(help, beat);
+            if (qrCmd) {
+              await postDisplayCommand(eventCode, qrCmd, live.pin);
+              return;
+            }
           }
           if (beat === "sigla" && sigla === "warn") {
             await postDisplayCommand(eventCode, SIGLA_WARN_SLIDE, live.pin);
@@ -2012,14 +2016,28 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       nativeProjectorOpenRef.current = true;
       setExternalScreenOn(true);
       flashBoardToast("Proiettore sul secondo schermo (HDMI / AirPlay)");
+      // Allinea overlay QR al toggle plancia (niente QR sticky se QR è off).
+      void syncQrOverlayAfterSchermo();
       return;
     }
     setExternalScreenOn(true);
+    void syncQrOverlayAfterSchermo();
     const tip =
       result.mode === "secondary"
         ? "Proiettore sullo schermo collegato (HDMI)"
         : "Proiettore aperto — in Stage Manager trascinalo sulla HDMI";
     flashBoardToast(tip);
+  }
+
+  async function syncQrOverlayAfterSchermo() {
+    if (!live.pinReady) return;
+    const qrCmd = casaQrDisplayCommand(help, beat);
+    if (!qrCmd) return;
+    try {
+      await postDisplayCommand(eventCode, qrCmd, live.pin);
+    } catch {
+      /* display non bloccante */
+    }
   }
 
   async function toggleSpecialTrialBook() {

@@ -91,6 +91,7 @@ import {
   type CasaAudioRoute,
 } from "@/lib/admin/casa-audio-route";
 import { avantiLabel, stepAvanti } from "@/lib/admin/casa-avanti";
+import { casaQrDisplayCommand } from "@/lib/admin/casa-qr-display";
 import { logAvantiBinary } from "@/lib/admin/avanti-binary-log";
 import { categoryThemeLabel } from "@/lib/musicpro/quiz-display";
 import { casaAutoBedLabel, resolveCasaBed } from "@/lib/admin/casa-beds";
@@ -1109,9 +1110,12 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
       void (async () => {
         if (cancelled) return;
         try {
-          if (beat === "casa" || help) {
-            await postDisplayCommand(eventCode, { type: "show_qr" }, live.pin);
-            return;
+          {
+            const qrCmd = casaQrDisplayCommand(help, beat);
+            if (qrCmd) {
+              await postDisplayCommand(eventCode, qrCmd, live.pin);
+              return;
+            }
           }
           if (beat === "sigla" && sigla === "warn") {
             await postDisplayCommand(eventCode, SIGLA_WARN_SLIDE, live.pin);

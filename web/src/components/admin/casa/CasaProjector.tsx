@@ -457,8 +457,7 @@ export function CasaProjector({
               </div>
             ) : beat === "casa" ? (
               <div className="casa-proj-lobby">
-                <p className="casa-proj-line">Scansiona il QR e preparati al gioco</p>
-                <JoinQrCode url={joinUrl} showUrl={false} size={240} />
+                <p className="casa-proj-line">Benvenuti in sala</p>
               </div>
             ) : beat === "sigla" && sigla === "warn" ? (
               <div className="casa-proj-center">
