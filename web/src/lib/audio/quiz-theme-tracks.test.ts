@@ -21,9 +21,9 @@ describe("quiz-theme-tracks", () => {
     expect(trackIdForQuizPhase("question", "fun")).toBe("LR_02_Quiz_Fun");
   });
 
-  it("switches to countdown bed when answers appear", () => {
+  it("keeps theme bed through answers until gong", () => {
     expect(trackIdForQuizPhase("answers", "romantic")).toBe(
-      "LR_03_Quiz_Countdown",
+      "LR_02_Quiz_Romantic",
     );
   });
 

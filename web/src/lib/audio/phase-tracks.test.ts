@@ -13,8 +13,8 @@ describe("trackIdForPhase special trial", () => {
 
   it("keeps quiz beds when trial is only booked/setup/results", () => {
     expect(
-      trackIdForPhase("quiz", "answers", null, null, "setup"),
-    ).toBe("LR_03_Quiz_Countdown");
+      trackIdForPhase("quiz", "answers", null, "romantic", "setup"),
+    ).toBe("LR_02_Quiz_Romantic");
     expect(
       trackIdForPhase("quiz", "next_question", null, null, "booked"),
     ).not.toBeNull();

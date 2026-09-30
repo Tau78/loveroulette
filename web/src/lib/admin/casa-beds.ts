@@ -14,7 +14,7 @@ const LOBBY = audioUrl("dark_fuchsia/loops/LR_01_Lobby_Ambient_A.mp3");
  * Stand-in elettrizzante finché non arriva la colonna dedicata (Suno → LR_26).
  */
 const PRESHOW = audioUrl("dark_fuchsia/loops/LR_02_Quiz_Adventure_A.mp3");
-/** Countdown risposte — quando appaiono A–D. */
+/** Pulse countdown — prova speciale (non più sulle risposte quiz). */
 const QUIZ_COUNTDOWN = audioUrl(
   "dark_fuchsia/loops/LR_03_Quiz_Countdown_A.mp3",
 );
@@ -81,8 +81,7 @@ export function casaAutoBedSrc(
   if (beat === "presenti") return EXTRACT;
   if (beat === "quiz") {
     if (quizPhase === "start_countdown") return null;
-    if (quizPhase === "answers") return QUIZ_COUNTDOWN;
-    // Tema / domanda / % hold: bed coerente con la tematica.
+    // Tema / domanda / risposte / % hold: stessa tematica fino al gong e oltre.
     return quizBedSrcForCategory(category);
   }
   return LOBBY;
@@ -105,7 +104,6 @@ export function casaAutoBedLabel(
   if (beat === "presenti") return "Estrazione";
   if (beat === "quiz") {
     if (quizPhase === "start_countdown") return "Pausa — countdown";
-    if (quizPhase === "answers") return "Countdown risposte";
     if (quizPhase === "results") return "Reveal % · hold";
     const cat = normalizeQuizThemeCategory(category);
     if (cat && CATEGORY_THEME_LABELS[cat]) {
