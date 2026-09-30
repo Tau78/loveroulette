@@ -25,8 +25,12 @@ export const PROJECTOR_LOBBY_LOGO_FULL_CLASS =
 export const PROJECTOR_HEADER_CLASS =
   "relative z-10 flex shrink-0 items-center justify-end gap-3 px-10 py-5";
 
-/** Quiz — header domanda */
-export const PROJECTOR_QUIZ_HEADER_HEIGHT = "h-[152px]";
+/**
+ * Quiz — header domanda.
+ * Deve ospitare fino a 3 righe a scala tipografica alta (default 1.8):
+ * con h-[152px] le domande lunghe venivano clipate a metà frase.
+ */
+export const PROJECTOR_QUIZ_HEADER_HEIGHT = "h-[248px]";
 
 /** Quiz — contenuto centrale padding */
 export const PROJECTOR_QUIZ_MAIN_PAD = "px-4 py-3";

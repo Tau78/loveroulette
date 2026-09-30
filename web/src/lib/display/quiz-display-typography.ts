@@ -37,12 +37,16 @@ export const QUIZ_DISPLAY_UPPERCASE = "uppercase";
 export const QUIZ_DISPLAY_SANS =
   "font-sans font-semibold uppercase tracking-wide leading-tight";
 
-/** Domanda in header (1–3 righe). Design 36px × scala. */
+/**
+ * Domanda in header (1–3 righe).
+ * Fluid clamp: riempie lo spazio senza uscire dall’header (vedi `.lr-dt-question`).
+ */
 export const QUIZ_QUESTION_TEXT_CLASS = cn(
   QUIZ_DISPLAY_SANS,
   "font-bold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]",
-  "lr-dt-36",
+  "lr-dt-question",
   "line-clamp-3",
+  "break-words",
 );
 
 /** Opzione risposta — riempie la riga del grid (max 2 righe). */

@@ -136,7 +136,7 @@ function QuestionHeaderPanel({
     <motion.div
       key={motionKey ?? body}
       className={cn(
-        "flex h-full min-h-0 flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-8 py-3 backdrop-blur-md shadow-[0_12px_48px_rgba(0,0,0,0.5)]",
+        "flex h-full min-h-0 w-full flex-col justify-center rounded-2xl border border-white/15 bg-black/55 px-6 py-3 backdrop-blur-md shadow-[0_12px_48px_rgba(0,0,0,0.5)] md:px-8",
         compact && "border-white/10 bg-black/45 py-2",
       )}
       initial={
@@ -152,13 +152,19 @@ function QuestionHeaderPanel({
     >
       <p
         className={cn(
-          "mb-2 uppercase tracking-[0.22em] text-primary/90",
+          "mb-1.5 shrink-0 uppercase tracking-[0.22em] text-primary/90",
           compact ? "text-xs" : "text-sm",
         )}
       >
         {progressLabel ?? "Quiz"}
       </p>
-      <p className={cn(QUIZ_QUESTION_TEXT_CLASS, compact && "text-white/90")}>
+      <p
+        className={cn(
+          QUIZ_QUESTION_TEXT_CLASS,
+          "min-h-0",
+          compact && "text-white/90",
+        )}
+      >
         {body}
       </p>
     </motion.div>

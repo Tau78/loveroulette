@@ -20,6 +20,19 @@
   font-size: calc(36px * var(--lr-display-type-scale, 1.8));
 }
 
+/**
+ * Domanda quiz in header — fluid: preferisce leggibilità a distanza,
+ * ma scende (vh/vw) così 2–3 righe restano dentro PROJECTOR_QUIZ_HEADER_HEIGHT.
+ */
+.lr-dt-question {
+  font-size: clamp(
+    1.625rem,
+    min(4.6vh, 3.2vw),
+    calc(36px * var(--lr-display-type-scale, 1.8))
+  );
+  line-height: 1.16;
+}
+
 .lr-dt-40 {
   font-size: calc(40px * var(--lr-display-type-scale, 1.8));
 }
