@@ -59,6 +59,22 @@ describe("special-trial state", () => {
     expect(mergeSpecialTrialState(prev, incoming)?.status).toBe("setup");
   });
 
+  it("null incoming clears the trial (post-AVANTI / poll after close)", () => {
+    const prev = {
+      status: "results" as const,
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      durationSec: 60,
+      challengeId: "dance" as const,
+      mode: "scegli" as const,
+      participants: [{ id: "a", nickname: "Ada" }],
+      phaseStartedAt: null,
+      votes: {},
+      ballots: {},
+    };
+    expect(mergeSpecialTrialState(prev, null)).toBeNull();
+    expect(mergeSpecialTrialState(null, null)).toBeNull();
+  });
+
   it("running timer expires", () => {
     const started = new Date(Date.now() - 61_000).toISOString();
     const trial = {
