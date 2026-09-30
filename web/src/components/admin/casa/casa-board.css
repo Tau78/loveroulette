@@ -763,12 +763,18 @@ html.casa-native-chrome .casa-board-shell {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 .casa-board-players-expand {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  overflow: auto;
-  flex: 0 1 auto;
+  /* Contenuto cresce; scroll sul contenitore .casa-board-expand-players (due dita). */
+  overflow: visible;
+  flex: 0 0 auto;
 }
 
 .casa-board-player-sheet {
@@ -2185,10 +2191,27 @@ body.casa-board-resizing iframe {
 
 .casa-board-expand-body {
   min-height: 0;
+  flex: 1 1 auto;
   overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+.casa-board-rail-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+}
+
+.casa-board-rail-panel[hidden] {
+  display: none !important;
 }
 
 .casa-board-proj-expand {

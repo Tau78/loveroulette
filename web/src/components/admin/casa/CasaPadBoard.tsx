@@ -680,19 +680,27 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     };
   }, []);
 
-  // Chat demo da «10 coppie test» → riquadro Messaggi.
+  const applyDemoChatMessages = useCallback(
+    (messages: { id: string; who: string; text: string }[]) => {
+      if (!messages.length) return;
+      setMsgs(messages.map((m) => ({ id: m.id, who: m.who, text: m.text })));
+    },
+    [],
+  );
+
+  // Chat demo da «10 coppie test» → riquadro Messaggi (evento + callback diretto).
   useEffect(() => {
     function onDemoChat(ev: Event) {
       const detail = (ev as CustomEvent<CasaSimDemoChatDetail>).detail;
       const messages = detail?.messages;
       if (!messages?.length) return;
-      setMsgs(messages.map((m) => ({ id: m.id, who: m.who, text: m.text })));
+      applyDemoChatMessages(messages);
     }
     window.addEventListener(CASA_SIM_DEMO_CHAT_EVENT, onDemoChat);
     return () => {
       window.removeEventListener(CASA_SIM_DEMO_CHAT_EVENT, onDemoChat);
     };
-  }, []);
+  }, [applyDemoChatMessages]);
 
   // Roster live → riquadro Giocatori (stesso fetch di CasaPad / tab Lista).
   useEffect(() => {
@@ -1605,9 +1613,16 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     }
   }
 
-  function pickPlayer(player: BoardPlayer) {
+  /** Card Giocatori: tap faccia → solo a schermo (non apre il riquadro). */
+  function sendPlayerFromCard(player: BoardPlayer) {
     setPickedId(player.id);
-    openExpand("players");
+    void sendPlayerToScreen(player, "card");
+  }
+
+  /** Riquadro espanso: seleziona, mostra dettagli e manda card a schermo. */
+  function pickPlayerInExpand(player: BoardPlayer) {
+    setPickedId(player.id);
+    setScreenField("card");
     void sendPlayerToScreen(player, "card");
   }
 
@@ -2560,7 +2575,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     data-g={g.gender}
                     data-on={pickedId === g.id ? "1" : undefined}
                     title={`${g.nick} a schermo`}
-                    onClick={() => pickPlayer(g)}
+                    onClick={() => sendPlayerFromCard(g)}
                   >
                     <span
                       style={
@@ -2592,7 +2607,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 className="casa-board-empty casa-board-empty-tight casa-board-empty-btn"
                 onClick={() => openExpand("players")}
               >
-                +{guests.length - PLAYER_SLOTS} · tap per tutti ({guests.length})
+                +{guests.length - PLAYER_SLOTS} · tap titolo per tutti (
+                {guests.length})
               </button>
             ) : null}
           </article>
@@ -2610,7 +2626,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             <BoardCardHead title="Messaggi" onExpand={() => openExpand("msg")} />
             <div className="casa-board-msgs">
               {msgs.length === 0 ? (
-                <p className="casa-board-empty">Nessun messaggio · tap titolo per aprire</p>
+                <p className="casa-board-empty">
+                  Nessun messaggio · «10 coppie test» in Lista li riempie
+                </p>
               ) : (
                 msgs.slice(0, 4).map((m) => (
                   <div key={m.id} className="casa-board-msg">
@@ -3318,13 +3336,19 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 onTrackToScreen={sendVideoToScreen}
               />
             ) : null}
-            {rail === "giocatori" ? (
+            {/* Sempre montato: altrimenti «10 coppie test» non raggiunge Messaggi. */}
+            <div
+              className="casa-board-rail-panel"
+              hidden={rail !== "giocatori"}
+              aria-hidden={rail !== "giocatori"}
+            >
               <AdminPlayersManager
                 eventCode={eventCode}
                 eventTitle={eventTitle}
                 pinRequired={pinRequired}
+                onDemoChat={applyDemoChatMessages}
               />
-            ) : null}
+            </div>
             {rail === "setup" ? (
               <CasaPrep
                 prep={prep}
@@ -3373,7 +3397,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             </header>
             <div className="casa-board-expand-body">
               {expand === "players" ? (
-                <div className="casa-board-expand-players">
+                <div className="casa-board-expand-players" data-scroll="y">
                   {guests.length === 0 ? (
                     <p className="casa-board-empty">
                       I nick arrivano dal QR sul telefono. Usa <b>Lista</b> sulla
@@ -3381,8 +3405,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     </p>
                   ) : (
                     <p className="casa-board-empty">
-                      Tap un giocatore: nome e foto a schermo. Poi scegli un
-                      dato da mandare.
+                      Tap un giocatore: dettagli + nome/foto a schermo. Poi
+                      scegli un altro dato. Scorri con due dita.
                     </p>
                   )}
                   <div className="casa-board-players casa-board-players-expand">
@@ -3403,8 +3427,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                             className="casa-board-avatar"
                             data-g={g.gender}
                             data-on={pickedId === g.id ? "1" : undefined}
-                            title={`${g.nick} a schermo`}
-                            onClick={() => pickPlayer(g)}
+                            title={`${g.nick} · dettagli e schermo`}
+                            onClick={() => pickPlayerInExpand(g)}
                           >
                             <span
                               style={
@@ -3475,7 +3499,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               {expand === "msg" ? (
                 <div className="casa-board-msgs">
                   {msgs.length === 0 ? (
-                    <p className="casa-board-empty">Nessun messaggio in coda.</p>
+                    <p className="casa-board-empty">
+                      Nessun messaggio. Apri Lista → «10 coppie test» per la
+                      demo. La chat live dai telefoni non è ancora attiva.
+                    </p>
                   ) : (
                     msgs.map((m) => (
                       <div key={m.id} className="casa-board-msg">
