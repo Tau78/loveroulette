@@ -29,7 +29,13 @@ import {
   postResetEvent,
   postSpecialTrialAction,
 } from "@/lib/admin/animator-api";
-import { stageLetter } from "@/lib/player/identity";
+import {
+  boardPlayerFromRow,
+  playerDetailDisplayCommand,
+  playerScreenDetails,
+  type BoardPlayer,
+  type PlayerScreenField,
+} from "@/lib/admin/board-player-screen";
 import {
   applyAudioSink,
   canPickCasaLocalAudioOutput,
@@ -124,13 +130,7 @@ import { STACCO_KICKER } from "@/lib/display/stacco";
 import "@/components/admin/casa/casa.css";
 import "@/components/admin/casa/casa-board.css";
 
-type Guest = {
-  id: string;
-  nick: string;
-  gender: "M" | "F" | "N";
-  photo?: string;
-  score: number;
-};
+type Guest = BoardPlayer;
 
 /**
  * Riquadri apribili (stile /serata): overlay dentro il contenitore rigido.
@@ -534,6 +534,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }, []);
   /** Roster locale in plancia; la lista API è nella tab Giocatori. */
   const [guests, setGuests] = useState<Guest[]>([]);
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const [screenField, setScreenField] = useState<PlayerScreenField | null>(
+    null,
+  );
   const [help, setHelp] = useState(false);
   const [externalScreenOn, setExternalScreenOn] = useState(false);
   const projectorWinRef = useRef<Window | null>(null);
@@ -699,12 +703,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         const res = await fetchParticipants(eventCode, live.pin);
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as {
-          participants?: {
-            id: string;
-            nickname: string;
-            gender: "male" | "female" | "nonbinary";
-            photo_url?: string | null;
-          }[];
+          participants?: Parameters<typeof boardPlayerFromRow>[0][];
         };
         const rows = data.participants ?? [];
         if (cancelled) return;
@@ -712,15 +711,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           setGuests([]);
           return;
         }
-        setGuests(
-          rows.map((p) => ({
-            id: p.id,
-            nick: p.nickname,
-            gender: stageLetter(p.gender),
-            photo: p.photo_url?.trim() || undefined,
-            score: 0,
-          })),
-        );
+        setGuests(rows.map(boardPlayerFromRow));
       } catch {
         /* keep last roster */
       }
@@ -1569,6 +1560,51 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   function openExpand(panel: Exclude<ExpandPanel, null>) {
     setRail("plancia");
     setExpand(panel);
+  }
+
+  const picked = guests.find((g) => g.id === pickedId) ?? null;
+
+  async function sendPlayerToScreen(
+    player: BoardPlayer,
+    field: PlayerScreenField = "card",
+  ) {
+    if (live.controlsDisabled || !live.pinReady) return;
+    const command = playerDetailDisplayCommand(player, field);
+    setScreenField(field);
+    try {
+      const response = await postDisplayCommand(
+        eventCode,
+        command,
+        live.pin,
+      );
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        const message = payload?.error ?? "Invio al proiettore non riuscito.";
+        if (response.status === 401 || isInvalidAnimatorPinError(message)) {
+          live.openPinModal();
+        }
+        setCmdError(message);
+        return;
+      }
+      const detail = playerScreenDetails(player).find((d) => d.field === field);
+      const hint =
+        field === "card" || field === "photo" || field === "nick"
+          ? `${player.nick} a schermo`
+          : `${player.nick} · ${detail?.label ?? field}`;
+      flashBoardToast(hint);
+    } catch (err) {
+      setCmdError(
+        err instanceof Error ? err.message : "Invio al proiettore non riuscito.",
+      );
+    }
+  }
+
+  function pickPlayer(player: BoardPlayer) {
+    setPickedId(player.id);
+    openExpand("players");
+    void sendPlayerToScreen(player, "card");
   }
 
   function resizeCols(edge: 0 | 1, deltaPx: number, containerSize: number) {
@@ -2489,7 +2525,15 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   );
                 }
                 return (
-                  <div key={g.id} className="casa-board-avatar" data-g={g.gender}>
+                  <button
+                    key={g.id}
+                    type="button"
+                    className="casa-board-avatar"
+                    data-g={g.gender}
+                    data-on={pickedId === g.id ? "1" : undefined}
+                    title={`${g.nick} a schermo`}
+                    onClick={() => pickPlayer(g)}
+                  >
                     <span
                       style={
                         g.photo
@@ -2505,7 +2549,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                       {g.nick.slice(0, 1).toUpperCase()}
                     </span>
                     <em>{g.nick}</em>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -2515,9 +2559,13 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 {onlineHint ? ` · ${onlineHint} in sala` : ""}
               </p>
             ) : guests.length > PLAYER_SLOTS ? (
-              <p className="casa-board-empty casa-board-empty-tight">
+              <button
+                type="button"
+                className="casa-board-empty casa-board-empty-tight casa-board-empty-btn"
+                onClick={() => openExpand("players")}
+              >
                 +{guests.length - PLAYER_SLOTS} · tap per tutti ({guests.length})
-              </p>
+              </button>
             ) : null}
           </article>
 
@@ -3262,6 +3310,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             className="casa-board-expand-panel"
             data-preview={expand === "preview" ? "1" : undefined}
             data-pad={expand === "pad" ? "1" : undefined}
+            data-players={expand === "players" ? "1" : undefined}
           >
             <header className="casa-board-expand-h">
               <strong>{EXPAND_TITLE[expand]}</strong>
@@ -3276,10 +3325,17 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             <div className="casa-board-expand-body">
               {expand === "players" ? (
                 <div className="casa-board-expand-players">
-                  <p className="casa-board-empty">
-                    I nick arrivano dal QR sul telefono. Usa <b>Lista</b> sulla
-                    card o la tab Giocatori per la gestione completa.
-                  </p>
+                  {guests.length === 0 ? (
+                    <p className="casa-board-empty">
+                      I nick arrivano dal QR sul telefono. Usa <b>Lista</b> sulla
+                      card o la tab Giocatori per la gestione completa.
+                    </p>
+                  ) : (
+                    <p className="casa-board-empty">
+                      Tap un giocatore: nome e foto a schermo. Poi scegli un
+                      dato da mandare.
+                    </p>
+                  )}
                   <div className="casa-board-players casa-board-players-expand">
                     {guests.length === 0
                       ? Array.from({ length: PLAYER_SLOTS }, (_, i) => (
@@ -3292,10 +3348,14 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                           </div>
                         ))
                       : guests.map((g) => (
-                          <div
+                          <button
                             key={g.id}
+                            type="button"
                             className="casa-board-avatar"
                             data-g={g.gender}
+                            data-on={pickedId === g.id ? "1" : undefined}
+                            title={`${g.nick} a schermo`}
+                            onClick={() => pickPlayer(g)}
                           >
                             <span
                               style={
@@ -3312,9 +3372,44 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                               {g.nick.slice(0, 1).toUpperCase()}
                             </span>
                             <em>{g.nick}</em>
-                          </div>
+                          </button>
                         ))}
                   </div>
+                  {picked ? (
+                    <div className="casa-board-player-sheet">
+                      <p className="casa-board-player-sheet-kicker">
+                        {picked.nick}
+                        <span> · tap un dato</span>
+                      </p>
+                      <div className="casa-board-player-fields">
+                        {playerScreenDetails(picked).map((d) => (
+                          <button
+                            key={d.field}
+                            type="button"
+                            className="casa-board-player-field"
+                            data-on={
+                              screenField === d.field &&
+                              pickedId === picked.id
+                                ? "1"
+                                : undefined
+                            }
+                            disabled={live.controlsDisabled}
+                            onClick={() =>
+                              void sendPlayerToScreen(picked, d.field)
+                            }
+                          >
+                            <span>{d.label}</span>
+                            <strong>{d.value}</strong>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : guests.length > 0 ? (
+                    <p className="casa-board-empty">
+                      Nessuno selezionato. Tap una faccia per mandarla a
+                      schermo.
+                    </p>
+                  ) : null}
                   <button
                     type="button"
                     className="casa-board-chip-btn casa-board-chip-btn-wide"
