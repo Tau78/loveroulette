@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import {
   createParticipant,
+  deleteAllParticipants,
   deleteParticipant,
   fetchParticipants,
   isInvalidAnimatorPinError,
@@ -116,6 +117,8 @@ export function AdminPlayersManager({
   const [pendingSimulate, setPendingSimulate] = useState<
     "couples" | "matching" | null
   >(null);
+  const [pendingDeleteAll, setPendingDeleteAll] = useState(false);
+  const [deleteAllBusy, setDeleteAllBusy] = useState(false);
   const [simulateBusy, setSimulateBusy] = useState(false);
   const [simulateMode, setSimulateMode] = useState<"couples" | "matching" | null>(
     null,
@@ -322,6 +325,40 @@ export function AdminPlayersManager({
     }
   }
 
+  async function handleDeleteAll() {
+    if (disabled || deleteAllBusy) return;
+    setDeleteAllBusy(true);
+    setError(null);
+    setSimulateSuccess(null);
+    try {
+      const res = await deleteAllParticipants(eventCode, pin);
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+        deleted?: number;
+      } | null;
+      if (!res.ok) {
+        const message = data?.error ?? "Eliminazione non riuscita.";
+        if (res.status === 401 || isInvalidAnimatorPinError(message)) {
+          handleInvalidPin("PIN non valido.");
+        }
+        throw new Error(message);
+      }
+      setPendingDeleteAll(false);
+      setEditingId(null);
+      setShowAdd(false);
+      dispatchSimDemoChat([]);
+      onDemoChat?.([]);
+      setSimulateSuccess(
+        `Eliminati ${data?.deleted ?? 0} giocatori. Sala vuota.`,
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore di rete.");
+    } finally {
+      setDeleteAllBusy(false);
+    }
+  }
+
   async function runSimulateCouples(goToMatching: boolean) {
     if (disabled || simulateBusy) return;
 
@@ -354,7 +391,7 @@ export function AdminPlayersManager({
       setSimulateSuccess(
         goToMatching
           ? `Matching pronto — ${data?.pairCount ?? 0} coppie calcolate (${data?.answersInserted ?? 0} risposte). Torna alla dashboard per l'estrazione.`
-          : `10 coppie pronte — ${data?.answersInserted ?? 0} risposte su ${data?.questionCount ?? "?"} domande.`,
+          : `10 coppie test rigenerate — ${data?.answersInserted ?? 0} risposte su ${data?.questionCount ?? "?"} domande.`,
       );
       const rows = await load();
       const nicks = rows
@@ -458,6 +495,27 @@ export function AdminPlayersManager({
       />
 
       <AdminConfirmDialog
+        open={pendingDeleteAll}
+        title="Elimina tutto"
+        description={
+          participants.length > 0
+            ? `Rimuovere tutti i ${participants.length} giocatori dall'evento (risposte e coppie incluse)? L'azione non è reversibile.`
+            : "Non ci sono giocatori da eliminare."
+        }
+        confirmLabel="Elimina tutto"
+        variant="destructive"
+        busy={deleteAllBusy}
+        onCancel={() => setPendingDeleteAll(false)}
+        onConfirm={() => {
+          if (participants.length === 0) {
+            setPendingDeleteAll(false);
+            return;
+          }
+          void handleDeleteAll();
+        }}
+      />
+
+      <AdminConfirmDialog
         open={pendingSimulate !== null}
         title={
           pendingSimulate === "matching"
@@ -466,8 +524,8 @@ export function AdminPlayersManager({
         }
         description={
           pendingSimulate === "matching"
-            ? "Creare 10 coppie test, compilare il quiz e passare subito al matching? I bot precedenti verranno sostituiti."
-            : "Creare 20 giocatori test (nomi, foto, U/D/NB, cerco uomo/donna/entrambi) con risposte quiz già compilate? I bot precedenti verranno sostituiti."
+            ? "Rigenerare 10 coppie test (elimina i bot attuali), compilare il quiz e passare subito al matching?"
+            : "Rigenerare 10 coppie test: elimina i bot attuali e crea 20 giocatori nuovi (nomi, foto, U/D/NB, cerco uomo/donna/entrambi) con risposte quiz già compilate."
         }
         confirmLabel="Procedi"
         variant="warning"
@@ -534,7 +592,7 @@ export function AdminPlayersManager({
               size="sm"
               variant="outline"
               className="h-8 text-xs"
-              disabled={disabled || simulateBusy}
+              disabled={disabled || simulateBusy || deleteAllBusy}
               onClick={() => setPendingSimulate("couples")}
             >
               <Users className="size-3.5" />
@@ -546,7 +604,7 @@ export function AdminPlayersManager({
               size="sm"
               variant="outline"
               className="h-8 text-xs border-primary/35 text-primary"
-              disabled={disabled || simulateBusy}
+              disabled={disabled || simulateBusy || deleteAllBusy}
               onClick={() => setPendingSimulate("matching")}
             >
               <FastForward className="size-3.5" />
@@ -556,8 +614,27 @@ export function AdminPlayersManager({
             </AdminButton>
             <AdminButton
               size="sm"
+              variant="outline"
+              className="h-8 text-xs border-destructive/40 text-destructive hover:bg-destructive/10"
+              disabled={
+                disabled ||
+                simulateBusy ||
+                deleteAllBusy ||
+                participants.length === 0
+              }
+              onClick={() => {
+                setShowAdd(false);
+                setPendingDeletePlayer(null);
+                setPendingDeleteAll(true);
+              }}
+            >
+              <Trash2 className="size-3.5" />
+              {deleteAllBusy ? "Elimino…" : "Elimina tutto"}
+            </AdminButton>
+            <AdminButton
+              size="sm"
               className="h-8 text-xs"
-              disabled={disabled}
+              disabled={disabled || deleteAllBusy}
               onClick={() => {
                 setShowAdd((v) => !v);
                 setPendingDeletePlayer(null);
@@ -953,15 +1030,21 @@ export function AdminPlayersManager({
           </section>
 
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            <strong>10 coppie test</strong> crea 20 giocatori con nomi, foto,
-            mix U/D/NB e cerco uomo/donna/entrambi, li segna online, compila le
-            risposte del quiz e riempie il riquadro Messaggi con chat demo.
+            <strong>10 coppie test</strong> elimina i bot attuali e ne crea 20
+            nuovi (nomi, foto, mix U/D/NB e cerco uomo/donna/entrambi), li
+            segna online, compila le risposte del quiz e riempie Messaggi con
+            chat demo.
             <strong className="font-semibold text-foreground/80">
               {" "}
               → matching
             </strong>{" "}
-            fa lo stesso e passa subito alla fase matching (100 coppie
-            calcolate) — torna alla dashboard per l&apos;estrazione.
+            fa lo stesso e passa subito alla fase matching — torna alla
+            dashboard per l&apos;estrazione.
+            <strong className="font-semibold text-destructive/90">
+              {" "}
+              Elimina tutto
+            </strong>{" "}
+            svuota la sala (tutti i giocatori, risposte e coppie).
             <br />
             <strong>Test terminale</strong> apre la vista giocatore in una nuova
             finestra con lo stesso profilo (utile per simulare più dispositivi).
