@@ -32,6 +32,7 @@ import {
 import {
   boardPlayerFromRow,
   playerDetailDisplayCommand,
+  playerPresentiDisplayCommand,
   playerScreenDetails,
   type BoardPlayer,
   type PlayerScreenField,
@@ -599,6 +600,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const [bedIndex, setBedIndex] = useState(0);
   const [bedRepeat, setBedRepeat] = useState<CasaRepeatMode>("all");
   const [bedPlaying, setBedPlaying] = useState(false);
+  /** Dopo Play / AVANTI colonna: abilita gong (niente gong stale all’apertura). */
+  const [audioArmed, setAudioArmed] = useState(false);
   const [masterVol, setMasterVol] = useState(100);
   const [audioRoute, setAudioRoute] = useState<CasaAudioRoute>(() =>
     typeof window === "undefined"
@@ -774,11 +777,15 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         live.applyQuizUpdate(quiz, runtime);
       },
     });
-  // Gong sullo «0» del countdown risposte (stesso path di AdminAudioPanel).
+  // Gong sullo «0» del countdown — solo dopo Play (niente gong a caso in apertura).
   useQuizGongAtCountdownEnd({
     quizState: live.quizState,
     enabled:
-      liveQuizActive && !live.controlsDisabled && !mute.fx && masterVol > 0,
+      audioArmed &&
+      liveQuizActive &&
+      !live.controlsDisabled &&
+      !mute.fx &&
+      masterVol > 0,
   });
   const { currentQuestion: liveQuestion } = useCurrentQuizQuestion(
     eventCode,
@@ -797,20 +804,22 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
 
   // Dopo gong + gap: riparte la colonna (bed tematica sotto le %).
   useEffect(() => {
-    if (!liveQuizActive || liveQuizPhase !== "results") return;
+    if (!audioArmed || !liveQuizActive || liveQuizPhase !== "results") return;
     return whenQuizGongCleared(() => {
       setBedPlaying(true);
     });
-  }, [liveQuizActive, liveQuizPhase]);
+  }, [audioArmed, liveQuizActive, liveQuizPhase]);
 
   useEffect(() => {
     if (!liveQuizActive || liveQuizPhase !== "results") {
       if (liveQuizPhase !== "results") resetCasaResultsRevealHit();
       return;
     }
+    if (!audioArmed) return;
     const cue = `${live.quizState?.currentIndex ?? 0}:${live.quizState?.phaseStartedAt ?? "results"}`;
     playCasaResultsRevealHit({ cueKey: cue });
   }, [
+    audioArmed,
     live.quizState?.currentIndex,
     live.quizState?.phaseStartedAt,
     liveQuizActive,
@@ -1085,6 +1094,14 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             await postDisplayCommand(eventCode, { type: "clear" }, live.pin);
             return;
           }
+          if (beat === "presenti" && onStage) {
+            await postDisplayCommand(
+              eventCode,
+              playerPresentiDisplayCommand(onStage),
+              live.pin,
+            );
+            return;
+          }
           if (beat === "stacco") {
             await postDisplayCommand(
               eventCode,
@@ -1127,6 +1144,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     eventCode,
     live.pin,
     live.pinReady,
+    onStage,
     slides,
   ]);
 
@@ -1295,6 +1313,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         setGameOwnsAv(true);
         clearMediaOnScreen();
         setActiveDisplayCue(null);
+        setAudioArmed(true);
         setBedPlaying(true);
       }
 
@@ -1315,6 +1334,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       if (step.beat !== "casa" && step.beat !== "sigla") {
         setGameOwnsAv(true);
         clearMediaOnScreen();
+        setAudioArmed(true);
         setBedPlaying(true);
       }
 
@@ -1540,6 +1560,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       el.pause();
       return;
     }
+
+    setAudioArmed(true);
 
     if (remoteAudio) {
       setBedPlaying(true);

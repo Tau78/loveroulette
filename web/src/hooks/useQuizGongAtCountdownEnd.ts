@@ -35,12 +35,16 @@ export function useQuizGongAtCountdownEnd({
     const cueKey = `${quizState.currentIndex}:${quizState.phaseStartedAt}`;
     if (playedRef.current === cueKey) return;
 
-    let previousRemaining = resolveSyncedQuizClock(quizState).remaining;
     const initial = resolveSyncedQuizClock(quizState);
 
-    if (initial.displayPhase === "answers") {
-      void preloadQuizGongSound();
+    // Join / apertura in ritardo: già a 0 o fuori answers → niente gong stale.
+    if (initial.displayPhase !== "answers" || initial.remaining <= 0) {
+      playedRef.current = cueKey;
+      return;
     }
+
+    let previousRemaining = initial.remaining;
+    void preloadQuizGongSound();
 
     const interval = window.setInterval(() => {
       const current = quizStateRef.current;

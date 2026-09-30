@@ -98,6 +98,26 @@ export function playerCardDisplayCommand(
   };
 }
 
+/** Beat «presenti» / apertura: nick + sesso (+ cerca) sul proiettore. */
+export function playerPresentiDisplayCommand(player: {
+  nick: string;
+  gender: StageGender;
+  photo?: string;
+  seeking?: LoveRouletteSeeking | null;
+}): Record<string, string> {
+  const sex = stageSexLabel(player.gender);
+  const seek = player.seeking
+    ? `Cerco ${seekingChoiceLabel(player.seeking)}`
+    : "";
+  return {
+    type: "slide",
+    title: player.nick.toUpperCase(),
+    kicker: player.gender,
+    body: [sex, seek].filter(Boolean).join(" · "),
+    imageUrl: playerScreenPhoto(player),
+  };
+}
+
 export function playerDetailDisplayCommand(
   player: BoardPlayer,
   field: PlayerScreenField,

@@ -4,6 +4,7 @@ import {
   playerCardDisplayCommand,
   playerDetailDisplayCommand,
   playerFullName,
+  playerPresentiDisplayCommand,
   playerScreenDetails,
   playerScreenPhoto,
   type BoardPlayer,
@@ -28,6 +29,16 @@ describe("board player → schermo", () => {
       title: "SARA",
       kicker: "F",
       body: "Lei",
+      imageUrl: "https://cdn.example/sara.jpg",
+    });
+  });
+
+  it("builds the presenti slide with seeking for the projector", () => {
+    expect(playerPresentiDisplayCommand(sara)).toEqual({
+      type: "slide",
+      title: "SARA",
+      kicker: "F",
+      body: "Lei · Cerco Uomini",
       imageUrl: "https://cdn.example/sara.jpg",
     });
   });

@@ -34,6 +34,7 @@ import { WidgetPreflight } from "@/components/admin/casa/widgets/WidgetPreflight
 import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
 import { useCasaLiveSession } from "@/components/admin/casa/casa-live-session-context";
 import { JoinQrCode } from "@/components/display/JoinQrCode";
+import { playerPresentiDisplayCommand } from "@/lib/admin/board-player-screen";
 import {
   explicitSeeking,
   seekingChoiceLabel,
@@ -1126,27 +1127,9 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
             return;
           }
           if (beat === "presenti" && onStage) {
-            const sex = stageSexLabel(onStage.gender);
-            const seek = onStage.seeking
-              ? `Cerco ${seekingChoiceLabel(onStage.seeking)}`
-              : "";
-            const photo =
-              onStage.photo &&
-              !onStage.photo.startsWith("blob:") &&
-              !onStage.photo.startsWith("file:")
-                ? onStage.photo
-                : onStage.gender === "F"
-                  ? "/grafiche/avatar-f.png"
-                  : "/grafiche/avatar-m.png";
             await postDisplayCommand(
               eventCode,
-              {
-                type: "slide",
-                title: onStage.nick.toUpperCase(),
-                body: [sex, seek].filter(Boolean).join(" · "),
-                kicker: onStage.gender,
-                imageUrl: photo,
-              },
+              playerPresentiDisplayCommand(onStage),
               live.pin,
             );
             return;
