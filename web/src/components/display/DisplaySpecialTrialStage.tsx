@@ -182,18 +182,30 @@ export function DisplaySpecialTrialStage({
       ) : null}
 
       {trial.status === "running" ? (
-        <div className="mt-12 text-center" aria-live="polite">
+        <div className="mt-10 flex flex-col items-center gap-4" aria-live="polite">
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-white/55">
-            Tempo · {formatSpecialTrialClock(trial.durationSec)} totali
+            Countdown · vota dal telefono
           </p>
-          <p
-            className="mt-3 font-display text-[clamp(3.5rem,min(14vw,20vh),10rem)] font-bold tabular-nums text-white"
+          <div
+            className="relative flex size-[min(42vh,22rem)] items-center justify-center rounded-full border-4 border-primary/50 bg-black/70 shadow-[0_0_48px_rgba(233,30,140,0.35)]"
             style={{
-              textShadow:
-                "0 0 32px rgba(233,30,140,0.55), 0 4px 16px rgba(0,0,0,1)",
+              backgroundImage: `conic-gradient(#e91e8c ${(remaining / Math.max(1, trial.durationSec)) * 360}deg, rgba(255,255,255,0.12) 0)`,
             }}
           >
-            {formatSpecialTrialClock(remaining)}
+            <div className="absolute inset-[10px] flex items-center justify-center rounded-full bg-black/90">
+              <p
+                className="font-display text-[clamp(3rem,min(12vw,18vh),8rem)] font-bold tabular-nums text-white"
+                style={{
+                  textShadow:
+                    "0 0 32px rgba(233,30,140,0.55), 0 4px 16px rgba(0,0,0,1)",
+                }}
+              >
+                {formatSpecialTrialClock(remaining)}
+              </p>
+            </div>
+          </div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/40">
+            Totale {formatSpecialTrialClock(trial.durationSec)}
           </p>
         </div>
       ) : null}
