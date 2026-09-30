@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { LoveRouletteQuestion } from "@/lib/musicpro/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import { orderOptionsForQuizDisplay } from "@/lib/musicpro/quiz-option-shuffle";
@@ -12,10 +12,16 @@ export function useQuizQuestions(
   questions: LoveRouletteQuestion[];
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 } {
   const [questions, setQuestions] = useState<LoveRouletteQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadEpoch, setReloadEpoch] = useState(0);
+
+  const refetch = useCallback(() => {
+    setReloadEpoch((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -56,9 +62,9 @@ export function useQuizQuestions(
     return () => {
       cancelled = true;
     };
-  }, [enabled, eventSlug]);
+  }, [enabled, eventSlug, reloadEpoch]);
 
-  return { questions, loading, error };
+  return { questions, loading, error, refetch };
 }
 
 /** Domanda con opzioni mischiate per la serata (A–D ≠ sortOrder editor). */

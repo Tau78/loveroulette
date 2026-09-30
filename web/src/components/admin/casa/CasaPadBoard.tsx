@@ -103,7 +103,10 @@ import {
 import { whenQuizGongCleared } from "@/lib/audio/quiz-gong-results-gate";
 import { AVANTI_CROSSFADE_MS } from "@/lib/audio/types";
 import { getMediaVolume, resumeMediaAudio, setMediaVolume } from "@/lib/audio/media-element-gain";
-import { pickSameCategoryReplacementId } from "@/lib/musicpro/quiz-state";
+import {
+  applyLineupReplacement,
+  pickLineupReplacement,
+} from "@/lib/musicpro/quiz-state";
 import { WidgetConductor } from "@/components/admin/casa/widgets/WidgetConductor";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { useQuizGongAtCountdownEnd } from "@/hooks/useQuizGongAtCountdownEnd";
@@ -817,10 +820,20 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     liveQuizPhase,
   ]);
 
-  const { questions: cueQuestions, loading: cueLoading } = useQuizQuestions(
+  const {
+    questions: cueQuestions,
+    loading: cueLoading,
+    refetch: refetchCueQuestions,
+  } = useQuizQuestions(
     eventCode,
     Boolean(live.event) || Boolean(live.quizState),
   );
+
+  // Dopo start quiz (materialize pool→event) gli id cambiano: ricarica la banca.
+  useEffect(() => {
+    if (!liveQuizActive) return;
+    refetchCueQuestions();
+  }, [liveQuizActive, refetchCueQuestions]);
   const plannedCount = Math.max(
     1,
     live.event?.quizSetup.questionCount ?? (cueQuestions.length || 1),
@@ -1772,30 +1785,39 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         });
         if (!result.ok) {
           setCmdError(result.error);
+          flashBoardToast(result.error);
           if (result.invalidPin) live.openPinModal();
           return;
         }
+        refetchCueQuestions();
         flashBoardToast("Domanda cambiata");
         return;
       }
-      const ids = lineupIds ?? [];
-      const replacement = pickSameCategoryReplacementId(
+      const ids =
+        cueLineup.length > 0 ? [...cueLineup] : (lineupIds ?? []);
+      const replacement = pickLineupReplacement(
         cueQuestions,
         ids,
         nextCueIndex,
       );
       if (!replacement) {
-        setCmdError("Nessuna altra domanda disponibile in questa categoria.");
+        const msg = "Nessuna altra domanda disponibile da mettere al posto.";
+        setCmdError(msg);
+        flashBoardToast(msg);
         return;
       }
-      setLineupIds(
-        ids.map((id, i) => (i === nextCueIndex ? replacement : id)),
+      const nextIds = applyLineupReplacement(ids, nextCueIndex, replacement);
+      setLineupIds(nextIds);
+      flashBoardToast(
+        replacement.kind === "swap"
+          ? `Domanda scambiata con Q${replacement.withIndex + 1}`
+          : "Domanda cambiata",
       );
-      flashBoardToast("Domanda cambiata");
     } catch (err) {
-      setCmdError(
-        err instanceof Error ? err.message : "Cambio domanda non riuscito.",
-      );
+      const msg =
+        err instanceof Error ? err.message : "Cambio domanda non riuscito.";
+      setCmdError(msg);
+      flashBoardToast(msg);
     } finally {
       setCmdBusy(false);
     }
