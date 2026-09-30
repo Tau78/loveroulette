@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { computePreviewPairs } from "@/lib/musicpro/matching";
+import { RANKING_MAX_COUPLES } from "@/lib/musicpro/quiz-display";
 import { getLoveRouletteEvent } from "@/lib/musicpro/resolve-event";
 import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
 
@@ -30,12 +31,14 @@ export async function GET(
 
     const preview = await computePreviewPairs(supabase, event.id, {
       questionIds: answeredIds,
-      limit: 8,
+      limit: RANKING_MAX_COUPLES,
     });
 
     return NextResponse.json({
       ...preview,
       temporary: true,
+      rankingPage: liveQuiz?.rankingPage ?? 0,
+      rankingCouplePages: liveQuiz?.rankingCouplePages ?? 1,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Ranking unavailable";

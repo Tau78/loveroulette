@@ -3,6 +3,7 @@ import { DEFAULT_QUIZ_TIMING } from "./quiz-display";
 import {
   nextQuizDisplayPhase,
   phaseAutoAdvancesOnTick,
+  rankingCouplePageCount,
   resolveSyncedQuizClock,
   shouldShowIntermediateRanking,
   shouldShowPairingRanking,
@@ -32,6 +33,17 @@ describe("shouldShowPairingRanking", () => {
   it("still computes last-N (legacy helper)", () => {
     expect(shouldShowPairingRanking(0, 10, 5)).toBe(true);
     expect(shouldShowPairingRanking(5, 10, 5)).toBe(false);
+  });
+});
+
+describe("rankingCouplePageCount", () => {
+  it("pages of 5 couples (min 1)", () => {
+    expect(rankingCouplePageCount(0)).toBe(1);
+    expect(rankingCouplePageCount(3)).toBe(1);
+    expect(rankingCouplePageCount(5)).toBe(1);
+    expect(rankingCouplePageCount(6)).toBe(2);
+    expect(rankingCouplePageCount(15)).toBe(3);
+    expect(rankingCouplePageCount(40)).toBe(3);
   });
 });
 

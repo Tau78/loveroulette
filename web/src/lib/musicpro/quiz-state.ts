@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logAvantiBinary } from "@/lib/admin/avanti-binary-log";
 import type { EventState } from "@/lib/types";
-import { computeAndPersistPairs } from "./matching";
+import { computeAndPersistPairs, computePreviewPairs } from "./matching";
 import {
   getQuestionsForEvent,
   materializePoolQuestionsForEvent,
@@ -10,6 +10,8 @@ import {
   DEFAULT_HIDE_RANKING_LAST_N,
   DEFAULT_QUIZ_TIMING,
   DEFAULT_RANKING_EVERY_N,
+  RANKING_MAX_COUPLES,
+  rankingCouplePageCount,
   type QuizDisplayPhase,
   type QuizMancheTheme,
   type QuizTimingConfig,
@@ -59,6 +61,13 @@ export interface QuizSessionState {
    * Acceso dalla plancia mid-serata.
    */
   skipResults?: boolean;
+  /**
+   * Classifica intermedia: 0 = slide «CLASSIFICA PROVVISORIA»,
+   * 1..N = pagine da 5 coppie (senza %).
+   */
+  rankingPage?: number;
+  /** Quante pagine coppie dopo il titolo (min 1). */
+  rankingCouplePages?: number;
 }
 
 function nowIso(): string {
@@ -273,6 +282,17 @@ export function getQuizSessionState(
   const gongCueKey =
     typeof record.gongCueKey === "string" ? record.gongCueKey : undefined;
 
+  const rankingPage =
+    typeof record.rankingPage === "number" &&
+    Number.isFinite(record.rankingPage)
+      ? Math.max(0, Math.min(20, Math.round(record.rankingPage)))
+      : 0;
+  const rankingCouplePages =
+    typeof record.rankingCouplePages === "number" &&
+    Number.isFinite(record.rankingCouplePages)
+      ? Math.max(1, Math.min(20, Math.round(record.rankingCouplePages)))
+      : 1;
+
   return {
     questionIds: questionIds.map(String),
     currentIndex,
@@ -289,6 +309,8 @@ export function getQuizSessionState(
     hideRankingLastN: normalizeHideRankingLastN(record.hideRankingLastN),
     rankingEveryN: normalizeRankingEveryN(record.rankingEveryN),
     skipResults: record.skipResults === true,
+    rankingPage,
+    rankingCouplePages,
   };
 }
 
@@ -374,7 +396,12 @@ async function writeQuizState(
 function freshPhase(
   current: QuizSessionState,
   displayPhase: QuizDisplayPhase,
-  extras?: Pick<QuizSessionState, "gongCueKey">,
+  extras?: Partial<
+    Pick<
+      QuizSessionState,
+      "gongCueKey" | "rankingPage" | "rankingCouplePages"
+    >
+  >,
 ): QuizSessionState {
   const at = nowIso();
   const { gongCueKey: _prevCue, ...rest } = current;
@@ -386,6 +413,18 @@ function freshPhase(
     autoplaySeconds: current.timing.questionSeconds,
     ...extras,
   };
+}
+
+async function resolveRankingCouplePages(
+  supabase: SupabaseClient,
+  eventId: string,
+  quiz: QuizSessionState,
+): Promise<number> {
+  const preview = await computePreviewPairs(supabase, eventId, {
+    questionIds: quiz.questionIds.slice(0, quiz.currentIndex + 1),
+    limit: RANKING_MAX_COUPLES,
+  });
+  return rankingCouplePageCount(preview.pairs.length);
 }
 
 export async function startQuizSession(
@@ -581,6 +620,48 @@ export async function tickQuizPhase(
   for (let step = 0; step < maxSteps; step++) {
     const fromPhase = current.displayPhase;
     const fromIndex = current.currentIndex;
+
+    // Classifica intermedia: titolo (page 0) → pagine da 5 coppie → poi advance.
+    if (fromPhase === "next_question") {
+      const page = current.rankingPage ?? 0;
+      const couplePages = Math.max(1, current.rankingCouplePages ?? 1);
+      if (page < couplePages) {
+        const nextPage = page + 1;
+        logAvantiBinary(
+          "advance",
+          `ranking page ${page}→${nextPage} (couples)`,
+          {
+            eventId,
+            from: fromPhase,
+            to: "next_question",
+            index: fromIndex,
+            total: current.total,
+            force,
+          },
+        );
+        current = freshPhase(
+          {
+            ...current,
+            rankingPage: nextPage,
+            rankingCouplePages: couplePages,
+          },
+          "next_question",
+        );
+        await writeQuizState(supabase, eventId, current);
+        if (
+          force ||
+          !isPhaseExpired(
+            current.displayPhase,
+            current.phaseStartedAt,
+            current.timing,
+          )
+        ) {
+          return { quiz: current, runtimeState: "quiz" };
+        }
+        continue;
+      }
+    }
+
     const next = nextDisplayPhase(current);
 
     if (fromPhase === "results" && next === "next_question") {
@@ -647,6 +728,8 @@ export async function tickQuizPhase(
         {
           ...current,
           currentIndex: newIndex,
+          rankingPage: 0,
+          rankingCouplePages: 1,
         },
         resolvePhaseAfterQuestionAdvance(
           current.questionIds,
@@ -663,11 +746,35 @@ export async function tickQuizPhase(
           ? `${current.currentIndex}:${current.phaseStartedAt}`
           : undefined;
 
-      current = freshPhase(
-        current,
-        next,
-        gongCueKey ? { gongCueKey } : undefined,
-      );
+      let rankingExtras:
+        | Pick<QuizSessionState, "rankingPage" | "rankingCouplePages">
+        | undefined;
+      if (next === "next_question" && fromPhase !== "next_question") {
+        const couplePages = await resolveRankingCouplePages(
+          supabase,
+          eventId,
+          current,
+        );
+        rankingExtras = {
+          rankingPage: 0,
+          rankingCouplePages: couplePages,
+        };
+        logAvantiBinary("info", "ranking hold ready", {
+          eventId,
+          from: fromPhase,
+          to: next,
+          index: fromIndex,
+          total: current.total,
+          force,
+        });
+      } else if (next !== "next_question") {
+        rankingExtras = { rankingPage: 0, rankingCouplePages: 1 };
+      }
+
+      current = freshPhase(current, next, {
+        ...(gongCueKey ? { gongCueKey } : {}),
+        ...rankingExtras,
+      });
       await writeQuizState(supabase, eventId, current);
     }
 
@@ -1009,7 +1116,20 @@ export async function setQuizDisplayPhase(
   displayPhase: QuizDisplayPhase,
 ): Promise<QuizSessionState> {
   const current = await loadCurrentQuiz(supabase, eventId);
-  const quiz = freshPhase(current, displayPhase);
+  let rankingExtras:
+    | Pick<QuizSessionState, "rankingPage" | "rankingCouplePages">
+    | undefined;
+  if (displayPhase === "next_question") {
+    const couplePages = await resolveRankingCouplePages(
+      supabase,
+      eventId,
+      current,
+    );
+    rankingExtras = { rankingPage: 0, rankingCouplePages: couplePages };
+  } else {
+    rankingExtras = { rankingPage: 0, rankingCouplePages: 1 };
+  }
+  const quiz = freshPhase(current, displayPhase, rankingExtras);
   await writeQuizState(supabase, eventId, quiz);
   return quiz;
 }
