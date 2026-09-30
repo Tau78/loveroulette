@@ -41,9 +41,16 @@ describe("board player → schermo", () => {
     expect(playerFullName(sara)).toBe("Sara Rossi");
     expect(playerDetailDisplayCommand(sara, "seeking")).toEqual({
       type: "slide",
-      kicker: "Sara",
-      title: "UOMINI",
-      body: "Cerca",
+      kicker: "Cerca",
+      title: "SARA · UOMINI",
+      body: "Sara",
+      imageUrl: "https://cdn.example/sara.jpg",
+    });
+    expect(playerDetailDisplayCommand(sara, "name")).toEqual({
+      type: "slide",
+      kicker: "Nome",
+      title: "SARA · SARA ROSSI",
+      body: "Sara",
       imageUrl: "https://cdn.example/sara.jpg",
     });
   });

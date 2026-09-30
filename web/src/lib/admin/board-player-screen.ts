@@ -107,12 +107,18 @@ export function playerDetailDisplayCommand(
   }
 
   const detail = playerScreenDetails(player).find((d) => d.field === field);
-  const title = (detail?.value || player.nick).toUpperCase();
+  const value = (detail?.value || player.nick).trim();
+  const owner = player.nick.trim();
+  const title = (
+    value.toLowerCase() === owner.toLowerCase()
+      ? owner
+      : `${owner} · ${value}`
+  ).toUpperCase();
   return {
     type: "slide",
-    kicker: player.nick,
+    kicker: detail?.label || owner,
     title,
-    body: detail?.label ?? "",
+    body: owner,
     imageUrl: playerScreenPhoto(player),
   };
 }
