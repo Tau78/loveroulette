@@ -58,11 +58,12 @@ import {
   playCasaResultsRevealHit,
   resetCasaResultsRevealHit,
 } from "@/lib/admin/casa-results-reveal";
-import { getMediaVolume, setMediaVolume } from "@/lib/audio/media-element-gain";
+import { getMediaVolume, resumeMediaAudio, setMediaVolume } from "@/lib/audio/media-element-gain";
 import { CROSSFADE_MS } from "@/lib/audio/types";
 import { pickSameCategoryReplacementId } from "@/lib/musicpro/quiz-state";
 import { WidgetConductor } from "@/components/admin/casa/widgets/WidgetConductor";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
+import { useQuizGongAtCountdownEnd } from "@/hooks/useQuizGongAtCountdownEnd";
 import { useCurrentQuizQuestion, useQuizQuestions, questionWithShuffledOptions } from "@/hooks/useQuizQuestions";
 import {
   DEFAULT_GONG_ATMOSPHERE,
@@ -626,6 +627,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         live.applyQuizUpdate(quiz, runtime);
       },
     });
+  // Gong sullo «0» del countdown risposte (stesso path di AdminAudioPanel).
+  useQuizGongAtCountdownEnd({
+    quizState: live.quizState,
+    enabled:
+      liveQuizActive && !live.controlsDisabled && !mute.fx && masterVol > 0,
+  });
   const { currentQuestion: liveQuestion } = useCurrentQuizQuestion(
     eventCode,
     live.quizState,
@@ -1188,6 +1195,54 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     const el = bedAudio.current;
     if (!el || !Number.isFinite(el.duration) || el.duration <= 0) return;
     el.currentTime = Math.max(0, Math.min(el.duration, ratio * el.duration));
+  }
+
+  /**
+   * Play/Pausa colonna — `el.play()` nel gesto utente (Safari/iOS).
+   * Senza playlist locale usa la bed auto (lobby su beat casa).
+   */
+  async function toggleBedPlayback() {
+    const el = bedAudio.current;
+    if (!el) return;
+
+    if (bedPlaying) {
+      setBedPlaying(false);
+      el.pause();
+      return;
+    }
+
+    const bed =
+      activeBed ??
+      resolveCasaBed(
+        beat,
+        null,
+        0,
+        liveQuizActive ? liveQuizPhase : null,
+      );
+    if (!bed?.url) {
+      setCmdError("Nessuna colonna audio (lobby) disponibile.");
+      return;
+    }
+
+    const abs = new URL(bed.url, window.location.origin).href;
+    if (el.src !== abs) {
+      el.src = bed.url;
+      setBedSeek({ current: 0, duration: 0 });
+    }
+    el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
+    const targetVol = Math.min(1, Math.max(0, effVol("bed")));
+    setMediaVolume(el, targetVol);
+    setBedPlaying(true);
+    try {
+      await resumeMediaAudio(el);
+      await el.play();
+      flashBoardToast(
+        `${casaAutoBedLabel(beat, liveQuizActive ? liveQuizPhase : null)} in play`,
+      );
+    } catch {
+      setBedPlaying(false);
+      setCmdError("Play bloccato dal browser — ritocca Play");
+    }
   }
 
   const hasPlaylist = bedList.length > 0;
@@ -1783,7 +1838,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   return (
     <div className="casa-board-shell" data-casa-board-shell="">
     <div className="casa-board" data-casa-board="">
-      <audio ref={bedAudio} hidden />
+      <audio ref={bedAudio} hidden preload="auto" />
       <input
         ref={bedDirInput}
         type="file"
@@ -2507,7 +2562,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 <MediaIco
                   label={bedPlaying ? "Pausa" : "Play"}
                   on={bedPlaying}
-                  onClick={() => setBedPlaying((v) => !v)}
+                  onClick={() => {
+                    void toggleBedPlayback();
+                  }}
                 >
                   {bedPlaying ? <IcoPause /> : <IcoPlay />}
                 </MediaIco>
@@ -2650,7 +2707,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         <span className="casa-board-foot-meta">
           {siglaBundledOk === false ? (
             <span className="casa-board-foot-warn" title="Asset installazione">
-              Sigla assente · metti web/public/grafiche/video/sigla.mp4
+              Sigla video assente · fallback audio/logo · metti
+              web/public/grafiche/video/sigla.mp4
             </span>
           ) : null}
           {gongAtmo.enabled ? "Gong on" : "Gong off"} · ufficiale /board

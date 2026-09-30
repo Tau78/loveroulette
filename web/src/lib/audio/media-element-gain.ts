@@ -111,3 +111,14 @@ export function setMediaVolume(el: HTMLMediaElement, volume: number): void {
 export function getMediaVolume(el: HTMLMediaElement): number {
   return mediaGain(el).getVolume();
 }
+
+/** Riprende AudioContext (serve gesto utente su Safari / WKWebView). */
+export function resumeMediaAudio(el: HTMLMediaElement): Promise<void> {
+  const handle = mediaGain(el);
+  handle.setVolume(handle.getVolume());
+  const entry = wired.get(el);
+  if (entry?.ctx && entry.ctx.state === "suspended") {
+    return entry.ctx.resume().catch(() => undefined);
+  }
+  return Promise.resolve();
+}

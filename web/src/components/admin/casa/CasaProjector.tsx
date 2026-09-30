@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
+import { DisplaySiglaAudioStage } from "@/components/display/DisplaySiglaAudioStage";
 import { DisplayThemeSlide } from "@/components/display/DisplayThemeSlide";
 import { DisplayPlayerPresentSwitch } from "@/components/display/DisplayPlayerPresent";
 import { DisplayStaccoStage } from "@/components/display/DisplayStaccoStage";
@@ -32,6 +33,7 @@ import {
 } from "@/lib/admin/casa-slides";
 import {
   probeSiglaMissing,
+  resolveSiglaAudioSrc,
   shouldMountSiglaVideo,
 } from "@/lib/admin/casa-sigla";
 import { categoryThemeLabel, type QuizDisplayPhase } from "@/lib/musicpro/quiz-display";
@@ -147,10 +149,13 @@ export function CasaProjector({
   }, []);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const siglaAudioRef = useRef<HTMLAudioElement>(null);
+  const [siglaAudioSrc, setSiglaAudioSrc] = useState<string | null>(null);
   const slide = beat in slides ? slides[beat as CasaSlideId] : undefined;
   const lobby = beat === "casa" || help;
   const siglaFullscreen = beat === "sigla" && (sigla === "on" || sigla === "hold");
   const mountSigla = siglaFullscreen && shouldMountSiglaVideo(siglaSrc, siglaMissing);
+  const useSiglaAudioFallback = siglaFullscreen && !mountSigla;
   const mediaVideoOn = Boolean(mediaOnScreen && isVideoMedia(mediaOnScreen));
   const theme = categoryThemeLabel(quizQuestion?.category ?? FALLBACK_QUIZ.category);
   const previewQuizPhase: QuizDisplayPhase | null =
@@ -172,10 +177,30 @@ export function CasaProjector({
   }, [siglaSrc, onSiglaAvailability]);
 
   useEffect(() => {
+    if (!useSiglaAudioFallback) {
+      setSiglaAudioSrc(null);
+      return;
+    }
+    let cancelled = false;
+    void resolveSiglaAudioSrc().then((src) => {
+      if (!cancelled) setSiglaAudioSrc(src);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [useSiglaAudioFallback]);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video || !mountSigla) return;
     setMediaVolume(video, Math.min(1, Math.max(0, siglaVolume)));
   }, [siglaVolume, mountSigla, siglaSrc]);
+
+  useEffect(() => {
+    const audio = siglaAudioRef.current;
+    if (!audio || !useSiglaAudioFallback || !siglaAudioSrc) return;
+    setMediaVolume(audio, Math.min(1, Math.max(0, siglaVolume)));
+  }, [siglaVolume, useSiglaAudioFallback, siglaAudioSrc]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -194,6 +219,21 @@ export function CasaProjector({
   }, [beat, sigla, siglaSrc, mountSigla]);
 
   useEffect(() => {
+    const audio = siglaAudioRef.current;
+    if (!audio || !useSiglaAudioFallback || !siglaAudioSrc || beat !== "sigla") {
+      return;
+    }
+    if (sigla === "on") {
+      void audio.play().catch(() => {
+        /* gesto utente già avvenuto su AVANTI; se fallisce resta lo stage visuale */
+      });
+    }
+    if (sigla === "hold") {
+      audio.pause();
+    }
+  }, [beat, sigla, useSiglaAudioFallback, siglaAudioSrc]);
+
+  useEffect(() => {
     if (!mountSigla) return;
     const video = videoRef.current;
     return () => {
@@ -203,6 +243,17 @@ export function CasaProjector({
       video.load();
     };
   }, [mountSigla, siglaSrc]);
+
+  useEffect(() => {
+    if (!useSiglaAudioFallback) return;
+    const audio = siglaAudioRef.current;
+    return () => {
+      if (!audio) return;
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    };
+  }, [useSiglaAudioFallback, siglaAudioSrc]);
 
   return (
     <div
@@ -222,7 +273,11 @@ export function CasaProjector({
           logoScale={lobby ? "full" : "compact"}
           quizPhase={previewQuizPhase}
           hideBackgroundRoulette={
-            siglaFullscreen || beat === "stacco" || beat === "quiz" || mediaVideoOn
+            siglaFullscreen ||
+            useSiglaAudioFallback ||
+            beat === "stacco" ||
+            beat === "quiz" ||
+            mediaVideoOn
           }
           /* Preview: no ambient mp4. The loop + CSS zoom jetsams iOS WKWebView. */
           suspendVideo
@@ -246,16 +301,20 @@ export function CasaProjector({
           <div className="casa-proj-center">
             <DisplaySiglaWarn />
           </div>
-        ) : siglaFullscreen && (!mountSigla || siglaMissing) ? (
-          /* Hold pubblico: niente istruzioni admin sul proiettore. */
-          <div className="casa-proj-center">
-            <DisplayPhaseHero
-              kicker="Love Roulette"
-              headline="SI PARTE"
-              subline="La serata sta per iniziare"
-              uppercase
-            />
-          </div>
+        ) : useSiglaAudioFallback ? (
+          <>
+            <DisplaySiglaAudioStage />
+            {siglaAudioSrc ? (
+              // eslint-disable-next-line jsx-a11y/media-has-caption
+              <audio
+                key={siglaAudioSrc}
+                ref={siglaAudioRef}
+                src={siglaAudioSrc}
+                preload="auto"
+                onEnded={onSiglaEnded}
+              />
+            ) : null}
+          </>
         ) : mountSigla ? (
           <video
             key={siglaSrc}

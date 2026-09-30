@@ -65,6 +65,15 @@ export const DEFAULT_SLIDES: Record<CasaSlideId, CasaSlide> = {
 
 export const SIGLA_SRC = "/grafiche/video/sigla.mp4";
 
+/**
+ * Audio fallback quando manca `sigla.mp4`.
+ * Prova nell’ordine: audio dedicato, poi mp3 accanto al video.
+ */
+export const SIGLA_AUDIO_CANDIDATES = [
+  "/grafiche/audio/sigla.mp3",
+  "/grafiche/video/sigla.mp3",
+] as const;
+
 const storageKey = (eventCode: string) =>
   `lr_casa_slides_${eventCode.toUpperCase()}`;
 

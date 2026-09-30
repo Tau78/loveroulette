@@ -1,4 +1,6 @@
-/** Playback helpers for the Casa sigla (intro video). */
+/** Playback helpers for the Casa sigla (intro video + audio fallback). */
+
+import { SIGLA_AUDIO_CANDIDATES } from "@/lib/admin/casa-slides";
 
 /**
  * True when we should mount a `<video>` for the sigla.
@@ -46,4 +48,15 @@ export async function probeSiglaMissing(src: string): Promise<boolean> {
   } catch {
     return true;
   }
+}
+
+/** First reachable sigla audio path, or null if none. */
+export async function resolveSiglaAudioSrc(
+  candidates: readonly string[] = SIGLA_AUDIO_CANDIDATES,
+): Promise<string | null> {
+  for (const src of candidates) {
+    const missing = await probeSiglaMissing(src);
+    if (!missing) return src;
+  }
+  return null;
 }

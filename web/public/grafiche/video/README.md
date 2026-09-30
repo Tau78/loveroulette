@@ -20,15 +20,27 @@ web/public/grafiche/video/cues/tra-5-minuti.mp4
 
 La sigla **non** si carica dalla plancia in serata: è un file dell’app.
 
-1. Esporta MP4 H.264, 16:9 (ideale 1920×1080).
-2. Copialo qui come:
+Path ufficiale:
 
 ```
 web/public/grafiche/video/sigla.mp4
 ```
 
-3. Commit / deploy / rebuild desktop — stesso path su Vercel e su Tauri (`public`).
+**Provvisoria attuale (2026-09-30):** «Sigla provvisoria love roulette» (H.264+AAC, ~18 s).  
+Su TestFlight / Vercel arriva solo dopo deploy (VAI): URL `https://loveroulette.vercel.app/grafiche/video/sigla.mp4`.
 
-Se manca, il proiettore mostra solo un hold brand («Si parte»), **senza** messaggi tecnici. La plancia admin può avvisare in footer.
+### Fallback senza video
 
-Override locale (blob) da Setup resta solo emergenza sviluppo; in produzione usa il file bundled.
+Se `sigla.mp4` manca, su «Parte ora» la plancia:
+
+- mostra **logo a tutto campo** + roulette/glow animati
+- riproduce l’audio in (primo trovato):
+
+```
+web/public/grafiche/audio/sigla.mp3
+web/public/grafiche/video/sigla.mp3
+```
+
+(Audio estratto dalla stessa sigla provvisoria.)
+
+A fine audio → hold (come fine video). Se manca anche l’audio, resta lo stage visuale silenzioso.
