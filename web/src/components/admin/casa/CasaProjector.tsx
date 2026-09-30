@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { DisplayStageBackground } from "@/components/display/DisplayStageBackground";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
 import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
@@ -23,7 +23,8 @@ import {
   quizAnswerEnterX,
   quizAnswersRevealMs,
 } from "@/lib/display/quiz-reveal-motion";
-import { setMediaVolume } from "@/lib/audio/media-element-gain";
+import { getMediaVolume, setMediaVolume } from "@/lib/audio/media-element-gain";
+import { AVANTI_CROSSFADE_MS } from "@/lib/audio/types";
 import { projectorPreviewScale } from "@/lib/display/embed";
 import {
   DEFAULT_SLIDES,
@@ -150,7 +151,9 @@ export function CasaProjector({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const siglaAudioRef = useRef<HTMLAudioElement>(null);
+  const siglaFadeRaf = useRef<number | null>(null);
   const [siglaAudioSrc, setSiglaAudioSrc] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
   const slide = beat in slides ? slides[beat as CasaSlideId] : undefined;
   const lobby = beat === "casa" || help;
   const siglaFullscreen = beat === "sigla" && (sigla === "on" || sigla === "hold");
@@ -162,6 +165,18 @@ export function CasaProjector({
     beat === "quiz"
       ? quizPhase ?? (quizGate === "tema" ? "theme_intro" : "question")
       : null;
+  const stageKey = help
+    ? "help"
+    : beat === "sigla"
+      ? `sigla:${sigla}:${mountSigla ? "v" : useSiglaAudioFallback ? "a" : "i"}`
+      : beat === "quiz"
+        ? "quiz"
+          : beat === "presenti"
+          ? `presenti:${onStage?.nick ?? ""}`
+          : beat === "stacco"
+            ? "stacco"
+            : beat;
+  const fadeSec = (reduceMotion ? 0 : AVANTI_CROSSFADE_MS) / 1000;
 
   useEffect(() => {
     let cancelled = false;
@@ -191,15 +206,27 @@ export function CasaProjector({
   }, [useSiglaAudioFallback]);
 
   useEffect(() => {
+    return () => {
+      if (siglaFadeRaf.current != null) {
+        cancelAnimationFrame(siglaFadeRaf.current);
+        siglaFadeRaf.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!video || !mountSigla) return;
+    if (siglaFadeRaf.current != null) return;
     setMediaVolume(video, Math.min(1, Math.max(0, siglaVolume)));
   }, [siglaVolume, mountSigla, siglaSrc]);
 
   useEffect(() => {
     const audio = siglaAudioRef.current;
     if (!audio || !useSiglaAudioFallback || !siglaAudioSrc) return;
-    setMediaVolume(audio, Math.min(1, Math.max(0, siglaVolume)));
+    if (siglaFadeRaf.current == null) {
+      setMediaVolume(audio, Math.min(1, Math.max(0, siglaVolume)));
+    }
   }, [siglaVolume, useSiglaAudioFallback, siglaAudioSrc]);
 
   useEffect(() => {
@@ -207,8 +234,31 @@ export function CasaProjector({
     if (!video || !mountSigla || beat !== "sigla") return;
 
     if (sigla === "on") {
-      void video.play().catch(() => {
-        // Autoplay / decode failure must NOT advance the show — flag missing UI.
+      const target = Math.min(1, Math.max(0, siglaVolume));
+      const ms = reduceMotion ? 0 : AVANTI_CROSSFADE_MS;
+      setMediaVolume(video, 0);
+      void video.play().then(() => {
+        if (siglaFadeRaf.current != null) {
+          cancelAnimationFrame(siglaFadeRaf.current);
+          siglaFadeRaf.current = null;
+        }
+        if (ms <= 0) {
+          setMediaVolume(video, target);
+          return;
+        }
+        const t0 = performance.now();
+        const tick = (now: number) => {
+          const t = Math.min(1, (now - t0) / ms);
+          setMediaVolume(video, target * t);
+          if (t < 1) {
+            siglaFadeRaf.current = requestAnimationFrame(tick);
+            return;
+          }
+          siglaFadeRaf.current = null;
+          setMediaVolume(video, target);
+        };
+        siglaFadeRaf.current = requestAnimationFrame(tick);
+      }).catch(() => {
         setSiglaMissing(true);
       });
     }
@@ -216,7 +266,7 @@ export function CasaProjector({
       // Pause only — seeking an ended video kills WKWebView's decoder.
       video.pause();
     }
-  }, [beat, sigla, siglaSrc, mountSigla]);
+  }, [beat, sigla, siglaSrc, mountSigla, siglaVolume, reduceMotion]);
 
   useEffect(() => {
     const audio = siglaAudioRef.current;
@@ -224,36 +274,121 @@ export function CasaProjector({
       return;
     }
     if (sigla === "on") {
-      void audio.play().catch(() => {
+      const target = Math.min(1, Math.max(0, siglaVolume));
+      const ms = reduceMotion ? 0 : AVANTI_CROSSFADE_MS;
+      setMediaVolume(audio, 0);
+      void audio.play().then(() => {
+        if (siglaFadeRaf.current != null) {
+          cancelAnimationFrame(siglaFadeRaf.current);
+          siglaFadeRaf.current = null;
+        }
+        if (ms <= 0) {
+          setMediaVolume(audio, target);
+          return;
+        }
+        const t0 = performance.now();
+        const tick = (now: number) => {
+          const t = Math.min(1, (now - t0) / ms);
+          setMediaVolume(audio, target * t);
+          if (t < 1) {
+            siglaFadeRaf.current = requestAnimationFrame(tick);
+            return;
+          }
+          siglaFadeRaf.current = null;
+          setMediaVolume(audio, target);
+        };
+        siglaFadeRaf.current = requestAnimationFrame(tick);
+      }).catch(() => {
         /* gesto utente già avvenuto su AVANTI; se fallisce resta lo stage visuale */
       });
     }
     if (sigla === "hold") {
       audio.pause();
     }
-  }, [beat, sigla, useSiglaAudioFallback, siglaAudioSrc]);
+  }, [
+    beat,
+    sigla,
+    useSiglaAudioFallback,
+    siglaAudioSrc,
+    siglaVolume,
+    reduceMotion,
+  ]);
 
   useEffect(() => {
     if (!mountSigla) return;
     const video = videoRef.current;
     return () => {
+      if (siglaFadeRaf.current != null) {
+        cancelAnimationFrame(siglaFadeRaf.current);
+        siglaFadeRaf.current = null;
+      }
       if (!video) return;
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
+      const ms = reduceMotion ? 0 : AVANTI_CROSSFADE_MS;
+      const tearDown = () => {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      };
+      if (ms <= 0 || video.ended) {
+        // Frame finale resta in opacity fade (AnimatePresence); smonta dopo.
+        if (ms <= 0) {
+          tearDown();
+          return;
+        }
+        const timer = window.setTimeout(tearDown, ms);
+        return () => window.clearTimeout(timer);
+      }
+      const startVol = getMediaVolume(video);
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - t0) / ms);
+        setMediaVolume(video, startVol * (1 - t));
+        if (t < 1) {
+          siglaFadeRaf.current = requestAnimationFrame(tick);
+          return;
+        }
+        siglaFadeRaf.current = null;
+        tearDown();
+      };
+      siglaFadeRaf.current = requestAnimationFrame(tick);
     };
-  }, [mountSigla, siglaSrc]);
+  }, [mountSigla, siglaSrc, reduceMotion]);
 
   useEffect(() => {
     if (!useSiglaAudioFallback) return;
     const audio = siglaAudioRef.current;
     return () => {
       if (!audio) return;
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
+      const ms = reduceMotion ? 0 : AVANTI_CROSSFADE_MS;
+      const tearDown = () => {
+        audio.pause();
+        audio.removeAttribute("src");
+        audio.load();
+      };
+      if (ms <= 0 || audio.ended) {
+        if (ms <= 0) {
+          tearDown();
+          return;
+        }
+        const timer = window.setTimeout(tearDown, ms);
+        return () => window.clearTimeout(timer);
+      }
+      const startVol = getMediaVolume(audio);
+      const t0 = performance.now();
+      let raf = 0;
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - t0) / ms);
+        setMediaVolume(audio, startVol * (1 - t));
+        if (t < 1) {
+          raf = requestAnimationFrame(tick);
+          return;
+        }
+        tearDown();
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
     };
-  }, [useSiglaAudioFallback, siglaAudioSrc]);
+  }, [useSiglaAudioFallback, siglaAudioSrc, reduceMotion]);
 
   return (
     <div
@@ -283,82 +418,93 @@ export function CasaProjector({
           suspendVideo
         />
 
-        {help ? (
-          <div className="casa-proj-help">
-            <div className="casa-proj-plate">
-              <p className="casa-proj-kicker">Come si entra</p>
-              <p className="casa-proj-title">WI‑FI + QR</p>
-              <p className="casa-proj-line">Rete della sala · password all’ingresso</p>
-              <JoinQrCode url={joinUrl} showUrl={false} size={280} />
-            </div>
-          </div>
-        ) : beat === "casa" ? (
-          <div className="casa-proj-lobby">
-            <p className="casa-proj-line">Scansiona il QR e preparati al gioco</p>
-            <JoinQrCode url={joinUrl} showUrl={false} size={240} />
-          </div>
-        ) : beat === "sigla" && sigla === "warn" ? (
-          <div className="casa-proj-center">
-            <DisplaySiglaWarn />
-          </div>
-        ) : useSiglaAudioFallback ? (
-          <>
-            <DisplaySiglaAudioStage />
-            {siglaAudioSrc ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              <audio
-                key={siglaAudioSrc}
-                ref={siglaAudioRef}
-                src={siglaAudioSrc}
-                preload="auto"
+        <AnimatePresence mode="sync" initial={false}>
+          <motion.div
+            key={stageKey}
+            className="casa-proj-crossfade"
+            initial={reduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reduceMotion ? undefined : { opacity: 0 }}
+            transition={{ duration: fadeSec, ease: "easeInOut" }}
+          >
+            {help ? (
+              <div className="casa-proj-help">
+                <div className="casa-proj-plate">
+                  <p className="casa-proj-kicker">Come si entra</p>
+                  <p className="casa-proj-title">WI‑FI + QR</p>
+                  <p className="casa-proj-line">Rete della sala · password all’ingresso</p>
+                  <JoinQrCode url={joinUrl} showUrl={false} size={280} />
+                </div>
+              </div>
+            ) : beat === "casa" ? (
+              <div className="casa-proj-lobby">
+                <p className="casa-proj-line">Scansiona il QR e preparati al gioco</p>
+                <JoinQrCode url={joinUrl} showUrl={false} size={240} />
+              </div>
+            ) : beat === "sigla" && sigla === "warn" ? (
+              <div className="casa-proj-center">
+                <DisplaySiglaWarn />
+              </div>
+            ) : useSiglaAudioFallback ? (
+              <>
+                <DisplaySiglaAudioStage />
+                {siglaAudioSrc ? (
+                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                  <audio
+                    key={siglaAudioSrc}
+                    ref={siglaAudioRef}
+                    src={siglaAudioSrc}
+                    preload="auto"
+                    onEnded={onSiglaEnded}
+                  />
+                ) : null}
+              </>
+            ) : mountSigla ? (
+              <video
+                key={siglaSrc}
+                ref={videoRef}
+                className="casa-proj-sigla"
+                src={siglaSrc}
+                playsInline
+                preload="metadata"
                 onEnded={onSiglaEnded}
+                onError={() => {
+                  setSiglaMissing(true);
+                  onSiglaAvailability?.(false);
+                }}
               />
+            ) : beat === "presenti" && onStage ? (
+              <div className="casa-proj-center">
+                <DisplayPlayerPresentSwitch
+                  nick={onStage.nick}
+                  gender={onStage.gender}
+                  photo={onStage.photo}
+                />
+              </div>
+            ) : beat === "stacco" && count != null ? (
+              <DisplayStaccoStage value={count} />
+            ) : beat === "quiz" ? (
+              <QuizPreview
+                gate={quizGate}
+                phase={quizPhase}
+                remaining={quizRemaining}
+                secondsTotal={quizSecondsTotal}
+                question={quizQuestion}
+                showPct={showPct}
+                theme={theme}
+              />
+            ) : slide ? (
+              <div className="casa-proj-center">
+                <DisplayPhaseHero
+                  kicker={slide.kicker}
+                  headline={slide.headline}
+                  subline={slide.sub}
+                  uppercase
+                />
+              </div>
             ) : null}
-          </>
-        ) : mountSigla ? (
-          <video
-            key={siglaSrc}
-            ref={videoRef}
-            className="casa-proj-sigla"
-            src={siglaSrc}
-            playsInline
-            preload="metadata"
-            onEnded={onSiglaEnded}
-            onError={() => {
-              setSiglaMissing(true);
-              onSiglaAvailability?.(false);
-            }}
-          />
-        ) : beat === "presenti" && onStage ? (
-          <div className="casa-proj-center">
-            <DisplayPlayerPresentSwitch
-              nick={onStage.nick}
-              gender={onStage.gender}
-              photo={onStage.photo}
-            />
-          </div>
-        ) : beat === "stacco" && count != null ? (
-          <DisplayStaccoStage value={count} />
-        ) : beat === "quiz" ? (
-          <QuizPreview
-            gate={quizGate}
-            phase={quizPhase}
-            remaining={quizRemaining}
-            secondsTotal={quizSecondsTotal}
-            question={quizQuestion}
-            showPct={showPct}
-            theme={theme}
-          />
-        ) : slide ? (
-          <div className="casa-proj-center">
-            <DisplayPhaseHero
-              kicker={slide.kicker}
-              headline={slide.headline}
-              subline={slide.sub}
-              uppercase
-            />
-          </div>
-        ) : null}
+          </motion.div>
+        </AnimatePresence>
 
         {mediaOnScreen ? (
           <div className="casa-proj-media" data-casa-media-on="">

@@ -58,8 +58,9 @@ import {
   playCasaResultsRevealHit,
   resetCasaResultsRevealHit,
 } from "@/lib/admin/casa-results-reveal";
+import { whenQuizGongCleared } from "@/lib/audio/quiz-gong-results-gate";
+import { AVANTI_CROSSFADE_MS } from "@/lib/audio/types";
 import { getMediaVolume, resumeMediaAudio, setMediaVolume } from "@/lib/audio/media-element-gain";
-import { CROSSFADE_MS } from "@/lib/audio/types";
 import { pickSameCategoryReplacementId } from "@/lib/musicpro/quiz-state";
 import { WidgetConductor } from "@/components/admin/casa/widgets/WidgetConductor";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
@@ -78,7 +79,12 @@ import {
   type CasaRepeatMode,
   type CasaVideoState,
 } from "@/lib/admin/casa-media";
-import { SIGLA_SRC } from "@/lib/admin/casa-slides";
+import {
+  DEFAULT_SLIDES,
+  loadSlides,
+  SIGLA_SRC,
+  type CasaSlideId,
+} from "@/lib/admin/casa-slides";
 import { SIGLA_WARN_SLIDE } from "@/lib/display/sigla-warn";
 import { STACCO_KICKER } from "@/lib/display/stacco";
 import "@/components/admin/casa/casa.css";
@@ -487,6 +493,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const [quizGate, setQuizGate] = useState<"tema" | "play">("tema");
   const [goBusy, setGoBusy] = useState(false);
   const [goError, setGoError] = useState<string | null>(null);
+  const [slides, setSlides] = useState(DEFAULT_SLIDES);
   const [siglaBundledOk, setSiglaBundledOk] = useState<boolean | null>(null);
   const onSiglaAvailability = useCallback((ok: boolean) => {
     setSiglaBundledOk(ok);
@@ -592,12 +599,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     };
   }, []);
 
-  useEffect(() => {
-    const status = live.specialTrial?.status;
-    if (status === "setup" || status === "running" || status === "closing") {
-      setRail("prove");
-    }
-  }, [live.specialTrial?.status]);
+  const specialTrialPanelOpen =
+    live.specialTrial != null &&
+    (live.specialTrial.status === "booked" ||
+      live.specialTrial.status === "setup" ||
+      live.specialTrial.status === "running" ||
+      live.specialTrial.status === "closing");
 
   const venue = prep.venueName || live.event?.title || live.event?.venueName || eventCode;
   const onStage = guests[roll];
@@ -638,6 +645,23 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     live.quizState,
     live.runtimeState,
   );
+
+  // Bianco (STOP): silenzia il bed countdown sotto al gong.
+  useEffect(() => {
+    if (!liveQuizActive || liveQuizPhase !== "answers") return;
+    if (liveQuizRemaining == null || liveQuizRemaining > 0) return;
+    fadeOutBed(() => setBedPlaying(false));
+    // fadeOutBed is stable enough for lock edge; intentionally omit from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveQuizActive, liveQuizPhase, liveQuizRemaining]);
+
+  // Dopo gong + gap: riparte la colonna (bed tematica sotto le %).
+  useEffect(() => {
+    if (!liveQuizActive || liveQuizPhase !== "results") return;
+    return whenQuizGongCleared(() => {
+      setBedPlaying(true);
+    });
+  }, [liveQuizActive, liveQuizPhase]);
 
   useEffect(() => {
     if (!liveQuizActive || liveQuizPhase !== "results") {
@@ -730,14 +754,25 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         gameOwnsAv || beat === "sigla" ? null : bedFolder ? bedList : null,
         bedIndex,
         liveQuizActive ? liveQuizPhase : null,
+        liveQuizActive ? liveQuestion?.category ?? null : null,
       ),
-    [beat, bedFolder, bedList, bedIndex, gameOwnsAv, liveQuizActive, liveQuizPhase],
+    [
+      beat,
+      bedFolder,
+      bedList,
+      bedIndex,
+      gameOwnsAv,
+      liveQuizActive,
+      liveQuizPhase,
+      liveQuestion?.category,
+    ],
   );
 
   useEffect(() => {
     setPrep(loadPrep(eventCode));
     setClockPrefs(loadClock(eventCode));
     setLayout(loadBoardLayout());
+    setSlides(loadSlides(eventCode));
     prefetchCasaPadHits();
   }, [eventCode]);
 
@@ -839,6 +874,14 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
 
   useEffect(() => {
     if (!live.pinReady) return;
+    const slideIds: CasaSlideId[] = [
+      "pres",
+      "regole",
+      "finale",
+      "premio",
+      "sponsor",
+      "stasera",
+    ];
     let cancelled = false;
     const timer = window.setTimeout(() => {
       void (async () => {
@@ -866,6 +909,20 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               },
               live.pin,
             );
+            return;
+          }
+          if (slideIds.includes(beat as CasaSlideId)) {
+            const slide = slides[beat as CasaSlideId];
+            await postDisplayCommand(
+              eventCode,
+              {
+                type: "slide",
+                kicker: slide.kicker,
+                title: slide.headline,
+                body: slide.sub || "",
+              },
+              live.pin,
+            );
           }
         } catch {
           /* display non bloccante */
@@ -876,7 +933,16 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [beat, sigla, help, count, eventCode, live.pin, live.pinReady]);
+  }, [
+    beat,
+    sigla,
+    help,
+    count,
+    eventCode,
+    live.pin,
+    live.pinReady,
+    slides,
+  ]);
 
   useEffect(() => {
     const el = bedAudio.current;
@@ -898,23 +964,59 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     const abs = new URL(activeBed.url, window.location.origin).href;
     const shouldPlay = bedPlaying && !(gameOwnsAv && beat === "sigla");
     const targetVol = Math.min(1, Math.max(0, effVol("bed")));
+    const fadeMs = AVANTI_CROSSFADE_MS;
     el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
 
+    const cancelFade = () => {
+      if (bedFadeRaf.current != null) {
+        cancelAnimationFrame(bedFadeRaf.current);
+        bedFadeRaf.current = null;
+      }
+    };
+
+    const fadeTo = (toVol: number, ms: number, onDone?: () => void) => {
+      cancelFade();
+      const startVol = getMediaVolume(el);
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - t0) / ms);
+        setMediaVolume(el, startVol + (toVol - startVol) * t);
+        if (t < 1) {
+          bedFadeRaf.current = requestAnimationFrame(tick);
+          return;
+        }
+        bedFadeRaf.current = null;
+        setMediaVolume(el, toVol);
+        onDone?.();
+      };
+      bedFadeRaf.current = requestAnimationFrame(tick);
+    };
+
     if (el.src === abs) {
-      setMediaVolume(el, targetVol);
+      el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
       if (shouldPlay) {
-        void el.play().catch(() => setBedPlaying(false));
+        const wasPaused = el.paused;
+        void el.play().then(() => {
+          if (wasPaused || getMediaVolume(el) < targetVol * 0.85) {
+            setMediaVolume(el, 0);
+            fadeTo(targetVol, fadeMs);
+          } else {
+            setMediaVolume(el, targetVol);
+          }
+        }).catch(() => setBedPlaying(false));
+      } else if (!el.paused) {
+        fadeTo(0, fadeMs, () => {
+          el.pause();
+          setMediaVolume(el, targetVol);
+        });
       } else {
-        el.pause();
+        setMediaVolume(el, targetVol);
       }
       return;
     }
 
-    // Crossover veloce su cambio bed (lobby/quiz/estrazione…).
-    if (bedFadeRaf.current != null) {
-      cancelAnimationFrame(bedFadeRaf.current);
-      bedFadeRaf.current = null;
-    }
+    // Crossover morbido su cambio bed (AVANTI / fasi quiz / playlist).
+    cancelFade();
 
     const swapIn = () => {
       el.src = activeBed.url;
@@ -927,36 +1029,15 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         return;
       }
       void el.play().then(() => {
-        const t0 = performance.now();
-        const tick = (now: number) => {
-          const t = Math.min(1, (now - t0) / CROSSFADE_MS);
-          setMediaVolume(el, targetVol * t);
-          if (t < 1) {
-            bedFadeRaf.current = requestAnimationFrame(tick);
-            return;
-          }
-          bedFadeRaf.current = null;
-          setMediaVolume(el, targetVol);
-        };
-        bedFadeRaf.current = requestAnimationFrame(tick);
+        fadeTo(targetVol, fadeMs);
       }).catch(() => setBedPlaying(false));
     };
 
     if (!el.paused && el.currentSrc) {
-      const startVol = getMediaVolume(el);
-      const t0 = performance.now();
-      const tickOut = (now: number) => {
-        const t = Math.min(1, (now - t0) / CROSSFADE_MS);
-        setMediaVolume(el, startVol * (1 - t));
-        if (t < 1) {
-          bedFadeRaf.current = requestAnimationFrame(tickOut);
-          return;
-        }
-        bedFadeRaf.current = null;
+      fadeTo(0, fadeMs, () => {
         el.pause();
         swapIn();
-      };
-      bedFadeRaf.current = requestAnimationFrame(tickOut);
+      });
       return;
     }
 
@@ -1021,18 +1102,24 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         fadeOutBed(() => setBedPlaying(false));
       }
 
-      // Sigla (warn → on): colonna zitta, parte video+audio sigla sul proiettore
+      // Sigla (warn → on): fade colonna, parte video+audio sigla sul proiettore
       if (beat === "sigla" && sigla === "warn" && step.sigla === "on") {
         setGameOwnsAv(true);
-        setBedPlaying(false);
         clearMediaOnScreen();
+        fadeOutBed(() => setBedPlaying(false));
       }
 
-      // Fuori sigla: il gioco tiene override A/V (colonna auto, no media regia)
+      // Fuori sigla → BENVENUTI + lobby (crossfade A/V via AnimatePresence + bed fade)
+      if (beat === "sigla" && step.beat === "pres") {
+        leaveSiglaToWelcome("avanti");
+        return;
+      }
+
+      // Altri passi apertura: colonna auto, no media regia
       if (step.beat !== "casa" && step.beat !== "sigla") {
         setGameOwnsAv(true);
         clearMediaOnScreen();
-        if (!bedPlaying) setBedPlaying(true);
+        setBedPlaying(true);
       }
 
       setBeat(step.beat);
@@ -1218,6 +1305,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         null,
         0,
         liveQuizActive ? liveQuizPhase : null,
+        liveQuizActive ? liveQuestion?.category ?? null : null,
       );
     if (!bed?.url) {
       setCmdError("Nessuna colonna audio (lobby) disponibile.");
@@ -1327,8 +1415,25 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     setGameOwnsAv(false);
   }
 
+  function leaveSiglaToWelcome(reason: "avanti" | "sigla_ended") {
+    if (beat !== "sigla") return;
+    if (sigla !== "on" && sigla !== "hold") return;
+
+    console.info(
+      `[avanti-binary] sigla/${sigla}→pres/idle reason=${reason}`,
+    );
+    setGameOwnsAv(true);
+    clearMediaOnScreen();
+    setBedPlaying(true);
+    setBeat("pres");
+    setSigla("idle");
+    if (rail === "setup") setRail("plancia");
+    setExpand(null);
+  }
+
   function holdSiglaFrame() {
-    setSigla((s) => (s === "on" ? "hold" : s));
+    // Fine video/audio sigla: stesso passo di AVANTI → BENVENUTI + lobby.
+    leaveSiglaToWelcome("sigla_ended");
   }
 
   function fadeOutBed(done: () => void) {
@@ -1343,7 +1448,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     }
     const startVol = getMediaVolume(el);
     const t0 = performance.now();
-    const dur = CROSSFADE_MS;
+    const dur = AVANTI_CROSSFADE_MS;
     const tick = (now: number) => {
       const t = Math.min(1, (now - t0) / dur);
       setMediaVolume(el, startVol * (1 - t));
@@ -1631,21 +1736,18 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   async function toggleSpecialTrialBook() {
     if (!liveQuizActive || cmdBusy || live.controlsDisabled) return;
     const trial = live.specialTrial;
-    if (
-      trial &&
-      trial.status !== "booked" &&
-      (trial.status === "setup" ||
-        trial.status === "running" ||
-        trial.status === "closing")
-    ) {
-      openRail("prove");
+    // In corso: pannello nel riquadro — niente tab, niente unbook da qui.
+    if (trial?.status === "running" || trial?.status === "closing") {
       return;
     }
 
     setCmdBusy(true);
     setCmdError(null);
     try {
-      const action = trial?.status === "booked" ? "unbook" : "book";
+      const action =
+        trial?.status === "booked" || trial?.status === "setup"
+          ? "unbook"
+          : "book";
       const res = await postSpecialTrialAction(
         eventCode,
         { action },
@@ -1665,7 +1767,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         data?.specialTrial ?? null,
         data?.quiz ?? undefined,
       );
-      if (action === "book") openRail("prove");
+      if (action === "book") {
+        flashBoardToast("Prova speciale — controlli nel riquadro");
+      }
     } catch (err) {
       setCmdError(
         err instanceof Error ? err.message : "Prova speciale non riuscita.",
@@ -2256,6 +2360,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 help={help}
                 count={count}
                 onStage={onStage}
+                slides={slides}
                 siglaSrc={SIGLA_SRC}
                 siglaVolume={effVol("sigla")}
                 quizGate={projectorQuizGate}
@@ -2294,14 +2399,34 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           <article
             className="casa-board-card casa-board-card-cmds"
             style={{ flex: `${layout.center[1]} 1 0` }}
+            data-prove={specialTrialPanelOpen ? "1" : undefined}
           >
             <header className="casa-board-card-h">
-              <span>Prossima domanda</span>
+              <span>
+                {specialTrialPanelOpen ? "Prova speciale" : "Prossima domanda"}
+              </span>
               <span className="casa-board-cue-h-meta">
-                {cueLineup.length > 0 &&
+                {!specialTrialPanelOpen &&
+                cueLineup.length > 0 &&
                 nextCueIndex >= 0 &&
                 nextCueIndex < cueLineup.length ? (
                   <em className="casa-board-cue-num">Q{nextCueIndex + 1}</em>
+                ) : null}
+                {specialTrialPanelOpen &&
+                live.specialTrial &&
+                (live.specialTrial.status === "booked" ||
+                  live.specialTrial.status === "setup") ? (
+                  <button
+                    type="button"
+                    className="casa-board-mini"
+                    disabled={cmdBusy || live.controlsDisabled}
+                    title="Annulla prova speciale"
+                    onClick={() => {
+                      void toggleSpecialTrialBook();
+                    }}
+                  >
+                    Annulla
+                  </button>
                 ) : null}
                 <span
                   className="casa-board-busy-led"
@@ -2311,6 +2436,20 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 />
               </span>
             </header>
+            {specialTrialPanelOpen ? (
+              <BoardSpecialTrialPanel
+                eventCode={eventCode}
+                pin={live.pin}
+                trial={live.specialTrial}
+                disabled={live.controlsDisabled}
+                compact
+                onInvalidPin={() => live.openPinModal()}
+                onUpdate={({ specialTrial, quiz }) => {
+                  live.applySpecialTrialUpdate(specialTrial, quiz);
+                }}
+              />
+            ) : (
+              <>
             <div className="casa-board-cue-live" aria-live="polite">
               {cueLoading && !nextCueQuestion && cueLineup.length === 0 ? (
                 <p className="casa-board-empty">Caricamento…</p>
@@ -2507,6 +2646,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             {cmdError ? (
               <p className="casa-board-audio-err">{cmdError}</p>
             ) : null}
+              </>
+            )}
           </article>
         </section>
 
@@ -3086,6 +3227,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                     help={help}
                     count={count}
                     onStage={onStage}
+                    slides={slides}
                     siglaSrc={SIGLA_SRC}
                     siglaVolume={effVol("sigla")}
                     quizGate={projectorQuizGate}

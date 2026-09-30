@@ -21,7 +21,73 @@
         "A": "dark_fuchsia/loops/LR_02_Quiz_Tension_A.mp3",
         "B": "dark_fuchsia/loops/LR_02_Quiz_Tension_B.mp3"
       },
-      "notes": "Prompt 1 (2026-06-19): A «The Final Question (2)», B «The Final Question (3)». Primary A — cambia in manifest se preferisci B. Tema + lettura domanda."
+      "notes": "Legacy generico. Preferisci LR_02_Quiz_{Lifestyle|Romantic|…} per tematica."
+    },
+    "LR_02_Quiz_Lifestyle": {
+      "phase": "quiz",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_02_Quiz_Lifestyle_A.mp3",
+        "B": "dark_fuchsia/loops/LR_02_Quiz_Lifestyle_B.mp3"
+      },
+      "notes": "Tema Lifestyle — The Final Question (2)/(3)."
+    },
+    "LR_02_Quiz_Romantic": {
+      "phase": "quiz",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_02_Quiz_Romantic_A.mp3",
+        "B": "dark_fuchsia/loops/LR_02_Quiz_Romantic_B.mp3"
+      },
+      "notes": "Tema Romanticismo — Silent Tension Cue / Final Question (3)."
+    },
+    "LR_02_Quiz_Adventure": {
+      "phase": "quiz",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_02_Quiz_Adventure_A.mp3",
+        "B": "dark_fuchsia/loops/LR_02_Quiz_Adventure_B.mp3"
+      },
+      "notes": "Tema Avventura — The Final Question (1)."
+    },
+    "LR_02_Quiz_Values": {
+      "phase": "quiz",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_02_Quiz_Values_A.mp3",
+        "B": "dark_fuchsia/loops/LR_02_Quiz_Values_B.mp3"
+      },
+      "notes": "Tema Valori — The Final Question (long)."
+    },
+    "LR_02_Quiz_Fun": {
+      "phase": "quiz",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_02_Quiz_Fun_A.mp3",
+        "B": "dark_fuchsia/loops/LR_02_Quiz_Fun_B.mp3"
+      },
+      "notes": "Tema Divertimento — The Final Question (4)/(5)."
+    },
+    "LR_02_Quiz_Intimacy": {
+      "phase": "quiz",
+      "loop": true,
+      "primary": "A",
+      "alternate": "B",
+      "files": {
+        "A": "dark_fuchsia/loops/LR_02_Quiz_Intimacy_A.mp3",
+        "B": "dark_fuchsia/loops/LR_02_Quiz_Intimacy_B.mp3"
+      },
+      "notes": "Tema Intimità — Silent Tension Cue (1)."
     },
     "LR_03_Quiz_Countdown": {
       "phase": "quiz",

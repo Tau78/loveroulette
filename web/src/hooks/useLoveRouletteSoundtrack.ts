@@ -10,6 +10,7 @@ import {
   probeMissingManifestFiles,
 } from "@/lib/audio/manifest-files";
 import { QUIZ_RESULTS_REVEAL_ID } from "@/lib/audio/quiz-theme-tracks";
+import { whenQuizGongCleared } from "@/lib/audio/quiz-gong-results-gate";
 import { trackIdForPhase, audioUrl } from "@/lib/audio/phase-tracks";
 import {
   EXTRACTION_BED_ID,
@@ -644,11 +645,13 @@ export function useLoveRouletteSoundtrack({
       return;
     }
 
-    // Hit LR_25 una volta per ingresso %, poi resta il bed lungo (mystery hold).
+    // Hit LR_25 dopo gong sul bianco + gap (non sopra al gong).
     const cue = `results:${quizDisplayPhase}`;
     if (resultsRevealCueRef.current === cue) return;
     resultsRevealCueRef.current = cue;
-    void playStinger(QUIZ_RESULTS_REVEAL_ID, cue);
+    return whenQuizGongCleared(() => {
+      void playStinger(QUIZ_RESULTS_REVEAL_ID, cue);
+    });
   }, [
     enabled,
     manifest,

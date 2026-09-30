@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   QUIZ_FOOTER_BRAND_HEART_CLASS,
   QUIZ_FOOTER_BRAND_LOGO_CLASS,
+  QUIZ_FOOTER_BRAND_SLOT_CLASS,
   QUIZ_FOOTER_COUNTDOWN_DIGIT_CLASS,
   QUIZ_FOOTER_COUNTDOWN_RING_RADIUS,
   QUIZ_FOOTER_COUNTDOWN_SLOT_CLASS,
@@ -225,7 +226,7 @@ export function DisplayQuizFooter({
         <FooterMaskShape />
 
         <div className="relative z-10 flex h-full items-end justify-between">
-          <div className="relative z-20 flex shrink-0 items-end pb-2">
+          <div className={QUIZ_FOOTER_BRAND_SLOT_CLASS}>
             <DisplayQuizHeart
               variant="inline"
               progress={heartProgress}
@@ -246,7 +247,7 @@ export function DisplayQuizFooter({
             )}
           </div>
 
-          <div className="relative z-20 flex shrink-0 items-end pb-2">
+          <div className={QUIZ_FOOTER_BRAND_SLOT_CLASS}>
             <Image
               src={LOGO_SRC}
               alt=""

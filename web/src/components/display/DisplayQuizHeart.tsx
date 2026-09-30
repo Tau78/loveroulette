@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DISPLAY_FLOATING_HEART_CLASS } from "@/lib/display/display-brand-metrics";
+import { DISPLAY_BRAND_CORNER_POSITION, DISPLAY_FLOATING_HEART_CLASS } from "@/lib/display/display-brand-metrics";
 import { heartColorAtProgress } from "@/lib/display/evening-heart-progress";
 
 interface DisplayQuizHeartProps {
@@ -29,8 +29,7 @@ export function DisplayQuizHeart({
     <motion.div
       className={cn(
         "pointer-events-none",
-        variant === "floating" &&
-          "absolute bottom-4 left-4 z-[8] md:bottom-6 md:left-6",
+        variant === "floating" && DISPLAY_BRAND_CORNER_POSITION.heart,
         variant === "inline" && "relative",
         className,
       )}
@@ -51,6 +50,11 @@ export function DisplayQuizHeart({
               repeat: Infinity,
               ease: "easeInOut",
             }
+      }
+      style={
+        variant === "floating" || variant === "inline"
+          ? { transformOrigin: "50% 100%" }
+          : undefined
       }
     >
       <Heart

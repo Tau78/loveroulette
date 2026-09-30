@@ -18,13 +18,13 @@ export const QUIZ_THEME_CATEGORIES: readonly QuizThemeCategory[] = [
   "intimacy",
 ];
 
-const DEFAULT_QUIZ_BED = "LR_02_Quiz_Tension";
+const DEFAULT_QUIZ_BED = "LR_02_Quiz_Lifestyle";
 
 /** Bed countdown risposte — parte quando appaiono A–D (fase `answers`). */
 export const QUIZ_ANSWERS_COUNTDOWN_BED_ID = "LR_03_Quiz_Countdown";
 
 /**
- * Hit one-shot all’ingresso % (non loop — ~10 s, altrimenti riparte in loop fastidioso).
+ * Hit one-shot all’ingresso % (dopo gong + gap).
  * Dopo l’hit resta il bed lungo (`quizResultsHoldTrackId`).
  */
 export const QUIZ_RESULTS_REVEAL_ID = "LR_25_Quiz_Results_Reveal";
@@ -33,16 +33,16 @@ export const QUIZ_RESULTS_REVEAL_ID = "LR_25_Quiz_Results_Reveal";
 export const QUIZ_RESULTS_BED_ID = QUIZ_RESULTS_REVEAL_ID;
 
 /**
- * Bed per manche/tema — oggi fallback su LR_02 finché non esporti loop SUNO dedicati.
- * Aggiorna il path quando aggiungi `LR_02_Quiz_{Category}_*.mp3` al manifest.
+ * Bed per manche/tema — un loop coerente con l’argomento della slide.
+ * Fallback legacy `LR_02_Quiz_Tension` resta in manifest per compat.
  */
 export const QUIZ_THEME_BED_TRACK: Record<QuizThemeCategory, string> = {
-  lifestyle: DEFAULT_QUIZ_BED,
-  romantic: DEFAULT_QUIZ_BED,
-  adventure: DEFAULT_QUIZ_BED,
-  values: DEFAULT_QUIZ_BED,
-  fun: DEFAULT_QUIZ_BED,
-  intimacy: DEFAULT_QUIZ_BED,
+  lifestyle: "LR_02_Quiz_Lifestyle",
+  romantic: "LR_02_Quiz_Romantic",
+  adventure: "LR_02_Quiz_Adventure",
+  values: "LR_02_Quiz_Values",
+  fun: "LR_02_Quiz_Fun",
+  intimacy: "LR_02_Quiz_Intimacy",
 };
 
 export function normalizeQuizThemeCategory(
@@ -61,6 +61,14 @@ export function quizBedTrackForCategory(
   return DEFAULT_QUIZ_BED;
 }
 
+/** Path pubblico del bed primario per la plancia (senza manifest). */
+export function quizBedSrcForCategory(
+  category: string | null | undefined,
+): string {
+  const trackId = quizBedTrackForCategory(category);
+  return `/audio/dark_fuchsia/loops/${trackId}_A.mp3`;
+}
+
 /** Bed lungo sotto le barre % (dopo l’hit LR_25). */
 export function quizResultsHoldTrackId(
   category: string | null | undefined,
@@ -70,14 +78,18 @@ export function quizResultsHoldTrackId(
 
 /**
  * Track quiz per fase (bed continuo):
- * - tema / lettura domanda → misteriosa (LR_02)
+ * - countdown avvio → silenzio (file countdown one-shot a parte)
+ * - tema / lettura domanda → bed della tematica
  * - risposte + countdown → LR_03 countdown
- * - % risultati → hold misteriosa; l’hit LR_25 è one-shot a parte
+ * - % risultati → hold tematica; l’hit LR_25 è one-shot a parte (dopo gong)
  */
 export function trackIdForQuizPhase(
   quizPhase: QuizDisplayPhase | null | undefined,
   category: string | null | undefined,
 ): string | null {
+  if (quizPhase === "start_countdown") {
+    return null;
+  }
   if (quizPhase === "answers") {
     return QUIZ_ANSWERS_COUNTDOWN_BED_ID;
   }

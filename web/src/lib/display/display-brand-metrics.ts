@@ -1,8 +1,16 @@
 /**
  * Cuore e logo Love Roulette sul proiettore (1920×1080).
+ * Stessa baseline bassa (bottom) a sx e dx — niente offset diversi.
  * Durante il quiz sono nel footer unificato (DisplayQuizFooter).
  */
-export const DISPLAY_FLOATING_HEART_CLASS = "size-[120px]";
+
+/** Inset dal bordo basso del canvas — identico per cuore e logo. */
+export const DISPLAY_BRAND_BOTTOM_INSET_CLASS = "bottom-6";
+
+/** Altezza visuale condivisa (cuore e wordmark sulla stessa riga). */
+export const DISPLAY_BRAND_MARK_HEIGHT_PX = 72;
+
+export const DISPLAY_FLOATING_HEART_CLASS = "size-[72px]";
 
 export const DISPLAY_BRAND_CORNER_POSITION = {
   heart: "absolute bottom-6 left-6 z-[8]",

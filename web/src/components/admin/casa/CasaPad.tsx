@@ -897,8 +897,17 @@ export function CasaPad({ eventCode }: { eventCode: string }) {
         bedFolder ? bedList : null,
         bedIndex,
         liveQuizActive ? liveQuizPhase : null,
+        liveQuizActive ? liveQuestion?.category ?? null : null,
       ),
-    [beat, bedFolder, bedList, bedIndex, liveQuizActive, liveQuizPhase],
+    [
+      beat,
+      bedFolder,
+      bedList,
+      bedIndex,
+      liveQuizActive,
+      liveQuizPhase,
+      liveQuestion?.category,
+    ],
   );
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();

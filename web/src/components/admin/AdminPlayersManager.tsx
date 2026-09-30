@@ -446,7 +446,7 @@ export function AdminPlayersManager({
         description={
           pendingSimulate === "matching"
             ? "Creare 10 coppie test, compilare il quiz e passare subito al matching? I bot precedenti verranno sostituiti."
-            : "Creare 10 coppie di test (Bot U01–U10 / Bot D01–D10) con risposte quiz già compilate? I bot precedenti verranno sostituiti."
+            : "Creare 20 giocatori test (nomi, foto, U/D/NB, cerco uomo/donna/entrambi) con risposte quiz già compilate? I bot precedenti verranno sostituiti."
         }
         confirmLabel="Procedi"
         variant="warning"
@@ -932,8 +932,9 @@ export function AdminPlayersManager({
           </section>
 
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            <strong>10 coppie test</strong> crea 20 giocatori bot, li segna online
-            e compila le risposte del quiz.
+            <strong>10 coppie test</strong> crea 20 giocatori con nomi, foto,
+            mix U/D/NB e cerco uomo/donna/entrambi, li segna online e compila le
+            risposte del quiz.
             <strong className="font-semibold text-foreground/80">
               {" "}
               → matching

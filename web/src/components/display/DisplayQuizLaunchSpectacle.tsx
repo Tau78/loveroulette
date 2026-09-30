@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { playCountdownWhoosh } from "@/lib/audio/countdown-whoosh";
+import { playCountdownAudio, stopCountdownAudio } from "@/lib/audio/countdown-whoosh";
 import { cn } from "@/lib/utils";
 import {
   DISPLAY_COUNTDOWN_DIGIT_CLASS,
@@ -32,15 +32,20 @@ export function DisplayQuizLaunchSpectacle({
 }: DisplayQuizLaunchSpectacleProps) {
   const reduceMotion = useReducedMotion();
   const completedRef = useRef(false);
+  const audioStartedRef = useRef(false);
   const [stage, setStage] = useState<"countdown" | "reveal">(
     remaining > 0 ? "countdown" : "reveal",
   );
   const displayValue = remaining > 0 ? remaining : null;
 
   useEffect(() => {
-    if (displayValue != null && displayValue > 0) {
-      playCountdownWhoosh();
+    if (displayValue == null || displayValue <= 0) {
+      audioStartedRef.current = false;
+      return;
     }
+    if (audioStartedRef.current) return;
+    audioStartedRef.current = true;
+    playCountdownAudio({ cueKey: `launch:${displayValue}` });
   }, [displayValue]);
 
   useEffect(() => {
@@ -48,6 +53,7 @@ export function DisplayQuizLaunchSpectacle({
       setStage("countdown");
       return;
     }
+    stopCountdownAudio();
     setStage("reveal");
   }, [remaining]);
 

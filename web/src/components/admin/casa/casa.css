@@ -1113,6 +1113,12 @@ html.casa-native-chrome .casa {
   background: #000;
 }
 
+.casa-proj-crossfade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
 .casa-proj-count {
   position: absolute;
   inset: 0;

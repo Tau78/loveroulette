@@ -20,6 +20,8 @@ export interface SoundtrackManifest {
 
 /** Crossfade snappy tra bed/sigle/sottofondi (lobby↔quiz↔estrazione…). */
 export const CROSSFADE_MS = 180;
+/** Crossfade morbido su AVANTI (plancia: bed + sigla + slide). */
+export const AVANTI_CROSSFADE_MS = 900;
 export const DEFAULT_VOLUME = 0.72;
 export const STINGER_VOLUME = 0.88;
 export const BED_DUCK_VOLUME = 0.32;

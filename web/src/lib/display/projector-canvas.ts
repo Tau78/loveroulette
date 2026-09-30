@@ -14,12 +14,12 @@ export const PROJECTOR_EXTRACTION_WHEEL_PX = 520;
 export const PROJECTOR_ROULETTE_CLASS =
   "h-auto w-[880px] max-h-[842px] object-contain";
 
-/** Logo fuori quiz — angolo basso-destra */
+/** Logo fuori quiz — angolo basso-destra (stessa baseline del cuore: h 72). */
 export const PROJECTOR_LOBBY_LOGO_CLASS =
-  "h-auto w-[120px] object-contain drop-shadow-[0_8px_32px_rgba(233,30,140,0.55)]";
+  "h-[72px] w-auto object-contain object-bottom drop-shadow-[0_8px_32px_rgba(233,30,140,0.55)]";
 
 export const PROJECTOR_LOBBY_LOGO_FULL_CLASS =
-  "h-auto w-[320px] object-contain drop-shadow-[0_8px_32px_rgba(233,30,140,0.55)]";
+  "h-auto w-[320px] max-h-[140px] object-contain object-bottom drop-shadow-[0_8px_32px_rgba(233,30,140,0.55)]";
 
 /** Header proiettore (badge fase) */
 export const PROJECTOR_HEADER_CLASS =

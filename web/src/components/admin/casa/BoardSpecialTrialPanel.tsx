@@ -17,6 +17,8 @@ interface BoardSpecialTrialPanelProps {
   pin: string | null;
   trial: SpecialTrialState | null;
   disabled?: boolean;
+  /** Pannello nel riquadro comandi plancia (densità alta). */
+  compact?: boolean;
   onUpdate: (payload: {
     specialTrial: SpecialTrialState | null;
     quiz?: import("@/lib/musicpro/quiz-state").QuizSessionState | null;
@@ -29,6 +31,7 @@ export function BoardSpecialTrialPanel({
   pin,
   trial,
   disabled = false,
+  compact = false,
   onUpdate,
   onInvalidPin,
 }: BoardSpecialTrialPanelProps) {
@@ -96,10 +99,12 @@ export function BoardSpecialTrialPanel({
 
   if (!trial || trial.status === "booked") {
     return (
-      <div className="casa-board-prove">
+      <div
+        className={cn("casa-board-prove", compact && "casa-board-prove-compact")}
+      >
         <p className="casa-board-prove-hint">
           {trial?.status === "booked"
-            ? "Prenotata — parte al prossimo respiro del quiz (dopo % e classifica)."
+            ? "Prenotata — parte al prossimo respiro del quiz (dopo % e classifica). Tipo e giocatori si scelgono qui quando parte."
             : "Attiva «Prova speciale» dalla plancia per prenotare."}
         </p>
       </div>
@@ -107,8 +112,9 @@ export function BoardSpecialTrialPanel({
   }
 
   return (
-    <div className="casa-board-prove">
-      <label className="casa-board-prove-row">
+    <div
+      className={cn("casa-board-prove", compact && "casa-board-prove-compact")}
+    >      <label className="casa-board-prove-row">
         <span>DURATA</span>
         <input
           type="number"

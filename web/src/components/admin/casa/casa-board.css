@@ -882,6 +882,35 @@ body.casa-board-resizing iframe {
   min-height: 0;
 }
 
+.casa-board-card-cmds[data-prove="1"] {
+  gap: 6px;
+}
+
+.casa-board-card-cmds[data-prove="1"] > .casa-board-prove {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.casa-board-prove-compact {
+  gap: 0.45rem;
+}
+
+.casa-board-prove-compact .casa-board-prove-hint,
+.casa-board-prove-compact .casa-board-prove-label {
+  font-size: clamp(10px, 1.15vh, 11px);
+}
+
+.casa-board-prove-compact .casa-board-prove-type,
+.casa-board-prove-compact .casa-board-prove-via {
+  padding: 0.4rem 0.35rem;
+  font-size: clamp(10px, 1.2vh, 11px);
+}
+
+.casa-board-prove-compact .casa-board-prove-players {
+  max-height: min(28vh, 10rem);
+}
+
 .casa-board-cue-num {
   font-style: normal;
   font-size: clamp(10px, 1.2vh, 12px);
@@ -1589,6 +1618,8 @@ body.casa-board-resizing iframe {
   padding: 0;
 }
 
+/* Live quiz: SessionGate (.casa-w-live) + transport devono riempire il card. */
+.casa-board-go-host .casa-w-live,
 .casa-board-go-host .casa-conductor-local,
 .casa-board-go-host .casa-w-live-transport {
   width: 100%;
@@ -1600,15 +1631,17 @@ body.casa-board-resizing iframe {
   align-items: stretch;
   gap: 4px;
   flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .casa-board-go-host .casa-go,
 .casa-board-go-host .casa-conductor-local .casa-go,
+.casa-board-go-host .casa-w-live .casa-go,
 .casa-board-go-host .casa-w-live-transport .casa-go {
   display: grid;
   place-items: center;
   width: 100%;
-  height: auto;
+  height: 100%;
   min-height: 0;
   flex: 1 1 auto;
   margin: 0;
@@ -1626,6 +1659,7 @@ body.casa-board-resizing iframe {
 }
 
 .casa-board-go-host .casa-go:disabled,
+.casa-board-go-host .casa-w-live .casa-go[aria-disabled="true"],
 .casa-board-go-host .casa-w-live-transport .casa-go[aria-disabled="true"] {
   opacity: 0.45;
   cursor: not-allowed;

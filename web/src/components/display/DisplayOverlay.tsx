@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { DisplayOverlay as DisplayOverlayData } from "@/lib/musicpro/display-overlay";
 import {
   DisplayPhaseHero,
@@ -11,6 +12,7 @@ import { DisplaySiglaWarn } from "@/components/display/DisplaySiglaWarn";
 import { DisplayStaccoStage } from "@/components/display/DisplayStaccoStage";
 import { isSiglaWarnSlide } from "@/lib/display/sigla-warn";
 import { isStaccoSlide } from "@/lib/display/stacco";
+import { AVANTI_CROSSFADE_MS } from "@/lib/audio/types";
 import { JoinQrCode } from "./JoinQrCode";
 import type { StageGender } from "@/lib/player/identity";
 
@@ -33,8 +35,21 @@ function playerGenderFromOverlay(
   return null;
 }
 
+function overlayKey(overlay: DisplayOverlayData): string {
+  return [
+    overlay.type,
+    overlay.title ?? "",
+    overlay.kicker ?? "",
+    overlay.body ?? "",
+    overlay.imageUrl ?? "",
+    overlay.updatedAt ?? "",
+  ].join("|");
+}
+
 export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
   const [visible, setVisible] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const fadeSec = (reduceMotion ? 0 : AVANTI_CROSSFADE_MS) / 1000;
 
   useEffect(() => {
     if (!overlay || overlay.type === "clear") {
@@ -62,13 +77,43 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
     }
   }, [overlay]);
 
-  if (!visible || !overlay || overlay.type === "clear") {
-    return null;
-  }
+  const show = Boolean(visible && overlay && overlay.type !== "clear");
+  const staccoTick =
+    show && overlay?.type === "slide" && isStaccoSlide(overlay);
+  const activeFadeSec = staccoTick ? (reduceMotion ? 0 : 0.12) : fadeSec;
 
+  return (
+    <AnimatePresence mode="sync">
+      {show && overlay ? (
+        <motion.div
+          key={
+            staccoTick
+              ? `stacco:${overlay.title ?? ""}`
+              : overlayKey(overlay)
+          }
+          className="fixed inset-0 z-50"
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={reduceMotion ? undefined : { opacity: 0 }}
+          transition={{ duration: activeFadeSec, ease: "easeInOut" }}
+        >
+          <OverlayBody overlay={overlay} joinUrl={joinUrl} />
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+function OverlayBody({
+  overlay,
+  joinUrl,
+}: {
+  overlay: DisplayOverlayData;
+  joinUrl: string;
+}) {
   if (overlay.type === "show_qr") {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-8 animate-fade-in">
+      <div className="flex h-full flex-col items-center justify-center p-8">
         <JoinQrCode url={joinUrl} size={320} />
         <p className="mt-8 text-xl md:text-2xl text-white/75">
           Scansiona per unirti al gioco
@@ -81,7 +126,7 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
     const gender = playerGenderFromOverlay(overlay);
     if (gender && overlay.title) {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-10">
+        <div className="flex h-full items-center justify-center p-10">
           <DisplayPlayerPresentSwitch
             nick={overlay.title}
             gender={gender}
@@ -93,7 +138,7 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
 
     if (isStaccoSlide(overlay) && overlay.title) {
       return (
-        <div className="fixed inset-0 z-50">
+        <div className="h-full">
           <DisplayStaccoStage value={Number(overlay.title)} />
         </div>
       );
@@ -101,14 +146,14 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
 
     if (isSiglaWarnSlide(overlay)) {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-10 animate-fade-in">
+        <div className="flex h-full items-center justify-center p-10">
           <DisplaySiglaWarn />
         </div>
       );
     }
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-10 animate-fade-in">
+      <div className="flex h-full items-center justify-center p-10">
         <DisplayPhaseHero
           kicker={overlay.kicker}
           headline={overlay.title ?? ""}
@@ -119,7 +164,5 @@ export function DisplayOverlay({ overlay, joinUrl }: DisplayOverlayProps) {
     );
   }
 
-  return (
-    <DisplayRevealSplash title={overlay.title} body={overlay.body} />
-  );
+  return <DisplayRevealSplash title={overlay.title} body={overlay.body} />;
 }

@@ -2,6 +2,11 @@ import {
   duckSoundtrackBed,
   restoreSoundtrackBed,
 } from "@/lib/audio/bed-duck";
+import {
+  markQuizGongEnded,
+  markQuizGongStarted,
+  QUIZ_GONG_POST_GAP_MS,
+} from "@/lib/audio/quiz-gong-results-gate";
 import { audioUrl } from "@/lib/audio/phase-tracks";
 import { STINGER_IDS } from "@/lib/audio/stingers";
 import type { SoundtrackManifest } from "@/lib/audio/types";
@@ -218,12 +223,17 @@ export async function playQuizGongSound(
 ): Promise<void> {
   if (shouldSkipGongDedup(options.dedupKey)) return;
 
+  markQuizGongStarted();
   duckSoundtrackBed();
 
   const userOnEnded = options.onEnded;
   const onEnded = () => {
-    restoreSoundtrackBed();
-    userOnEnded?.();
+    // Coda gong → piccolo silenzio → poi bed / hit % (gate + restore).
+    markQuizGongEnded();
+    window.setTimeout(() => {
+      restoreSoundtrackBed();
+      userOnEnded?.();
+    }, QUIZ_GONG_POST_GAP_MS);
   };
 
   const played = await playQuizGongFromManifest({ ...options, onEnded });
