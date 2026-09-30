@@ -111,6 +111,7 @@ import {
 import { whenQuizGongCleared } from "@/lib/audio/quiz-gong-results-gate";
 import { AVANTI_CROSSFADE_MS } from "@/lib/audio/types";
 import { getMediaVolume, resumeMediaAudio, setMediaVolume } from "@/lib/audio/media-element-gain";
+import { buildBalancedQuizLineup } from "@/lib/musicpro/quiz-lineup";
 import {
   applyLineupReplacement,
   pickLineupReplacement,
@@ -878,15 +879,27 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     live.event?.quizSetup.questionCount ?? (cueQuestions.length || 1),
   );
   const [lineupIds, setLineupIds] = useState<string[] | null>(null);
+  const lineupCountRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (live.quizState?.questionIds?.length) {
       setLineupIds(live.quizState.questionIds);
+      lineupCountRef.current = live.quizState.questionIds.length;
       return;
     }
-    if (lineupIds != null || cueQuestions.length === 0) return;
-    const limit = Math.min(plannedCount, cueQuestions.length);
-    setLineupIds(cueQuestions.slice(0, limit).map((q) => q.id));
+    if (cueQuestions.length === 0) return;
+
+    const countChanged = lineupCountRef.current !== plannedCount;
+    // Prima build, o cambio N domande. «Cambia domanda» manuale resta finché non cambia N.
+    if (lineupIds != null && !countChanged) return;
+
+    setLineupIds(
+      buildBalancedQuizLineup(
+        cueQuestions.map((q) => ({ id: q.id, category: q.category })),
+        plannedCount,
+      ),
+    );
+    lineupCountRef.current = plannedCount;
   }, [cueQuestions, live.quizState?.questionIds, lineupIds, plannedCount]);
 
   const nextCueIndex = boardCueQuestionIndex({

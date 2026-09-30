@@ -22,6 +22,7 @@ import {
   phaseAutoAdvancesOnTick,
   resolvePhaseAfterQuestionAdvance,
 } from "./quiz-display";
+import { buildBalancedQuizLineup } from "./quiz-lineup";
 import type { LoveRouletteQuestionSource } from "./types";
 import { updateSessionRuntimeState } from "./session";
 import {
@@ -496,12 +497,15 @@ export async function startQuizSession(
     }
     questionIds = unique;
   } else {
-    questionIds = quizQuestions.map((q) => q.id);
-  }
-
-  if (options.questionCount !== undefined && !options.questionIds?.length) {
-    const limit = Math.max(1, Math.min(questionIds.length, options.questionCount));
-    questionIds = questionIds.slice(0, limit);
+    // N domande variate su tutti gli argomenti (non il prefisso del banco).
+    const count =
+      options.questionCount !== undefined
+        ? Math.max(1, Math.min(quizQuestions.length, options.questionCount))
+        : quizQuestions.length;
+    questionIds = buildBalancedQuizLineup(
+      quizQuestions.map((q) => ({ id: q.id, category: q.category })),
+      count,
+    );
   }
 
   await persistQuizSetupMetadata(supabase, eventId, {
