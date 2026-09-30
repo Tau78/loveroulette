@@ -12,6 +12,9 @@ describe("quiz-theme-tracks", () => {
     expect(quizBedTrackForCategory("adventure")).toBe("LR_02_Quiz_Adventure");
     expect(quizBedTrackForCategory("values")).toBe("LR_02_Quiz_Values");
     expect(quizBedTrackForCategory("intimacy")).toBe("LR_02_Quiz_Intimacy");
+    expect(quizBedTrackForCategory("libri")).toBe("LR_02_Quiz_Values");
+    expect(quizBedTrackForCategory("cinema")).toBe("LR_02_Quiz_Fun");
+    expect(quizBedTrackForCategory("musica")).toBe("LR_02_Quiz_Romantic");
   });
 
   it("uses theme bed on theme_intro and question", () => {

@@ -42,6 +42,9 @@
 | `values` | Famiglia, carriera, priorità | 1.1 |
 | `fun` | Ironia, situazioni buffe | 0.8 |
 | `intimacy` | Vicinanza emotiva (non esplicita) | 1.2 |
+| `libri` | Titoli famosi: leggeri, classici, un filo piccante | 1.0 |
+| `cinema` | Generi, film, star, coppie, gossip | 1.0 |
+| `musica` | Band, cantanti, concerti, frasi di canzoni | 1.0 |
 
 ---
 
