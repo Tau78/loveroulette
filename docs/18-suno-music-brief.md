@@ -18,6 +18,7 @@ Questo documento definisce la **colonna sonora ufficiale** di Love Roulette per 
 |------------|-------|-----------------|------|-----------|-------------|------|
 | `LR_01_Lobby_Ambient` | LOBBY | 3:00–4:00 (loop) | Warm anticipation, social buzz | 90–105 | 20:30 briefing → `start_quiz`; sotto chat e QR badge | **Yes** |
 | `LR_22_PreSigla_Fanfare` | PRE-SIGLA (`sigla/warn`) | 1:30–2:30 (loop) | Fremito, fanfare, “prendi posto” | 118–128 | Slide *Stiamo per iniziare · prendi posto* → prima di «Parte ora» (video sigla) | **Yes** |
+| `LR_23_Opening_Theme_Sigla` | SIGLA (video) | 0:28–0:40 (one-shot) | Game-show TV theme, gancio immediato | 122–128 | Audio del `sigla.mp4` su «Parte ora» — montato nel video bundled | **No** |
 | `LR_02_Quiz_Tension` | QUIZ | 2:30–3:30 (loop) | Focused curiosity, light suspense | 100–118 | Tema + lettura domanda (`theme_intro`, `question`) | **Yes** |
 | `LR_03_Quiz_Countdown` | QUIZ | 1:00–2:00 (loop) | Pulse da timer, urgenza game show | 112–128 | Fase `answers` — opzioni A–D + countdown | **Yes** |
 | `LR_25_Quiz_Results_Reveal` | QUIZ | ~0:10 (one-shot) | Satisfying stats reveal hit | 105–115 | Ingresso fase `results` — poi bed lungo (LR_02 hold), **non loopare** | **No** |
@@ -41,7 +42,7 @@ Questo documento definisce la **colonna sonora ufficiale** di Love Roulette per 
 | `LR_20_Phase_Transition` | SLIDES / TRANSITIONS | 0:06–0:10 (whoosh) | Phase banner, ceremonial handoff | 90–105 | `ac_phase_announce`, cambio stato dashboard | **No** |
 | `LR_21_Closed_Outro` | CLOSED | 1:30–2:00 (fade) | Warm goodbye, afterglow | 80–95 | `close_event`, ringraziamenti animatore | **No** (fade out) |
 
-**Totale tracce: 23** (incl. `LR_22` pre-sigla + `LR_25` sotto-fase quiz)
+**Totale tracce: 24** (incl. `LR_22` pre-sigla + `LR_23` tema video sigla + `LR_25` sotto-fase quiz)
 
 ---
 
@@ -205,6 +206,91 @@ Instrumental only, no vocals. High-energy pre-show club bed, 126 BPM French-hous
 
 [End]
 ```
+
+---
+
+### `LR_23_Opening_Theme_Sigla`
+
+**When**: video bundled `web/public/grafiche/video/sigla.mp4` — tap **Parte ora**. Audio della sigla (non loop): montare nel MP4 in CapCut; proiettore riproduce video+audio insieme.
+
+**SUNO**: Custom → **Song** · **Instrumental = ON** · Styles + Lyrics. Chiedere ~45–60 s in Styles, **tagliare a 28–40 s** in post (fine secca prima del parlato animatore).
+
+**Status (2026-09-27):** prompt archiviati · direzione **game show TV** · file audio **non ancora in repo**.
+
+**Prompt 1 (consigliato)** — gancio nei primi 4 s, brass + groove da dating show
+
+**Styles**
+```
+Instrumental only, no vocals. Official opening theme for Love Roulette Italian live dating game show. Primetime TV game-show energy mixed with modern nu-disco, 124 BPM. Catchy brass fanfare hook in the first 4 seconds, funky bass, sparkling claps, disco strings, fuchsia neon synth stabs #E91E8C, dark club base #0D0D12. Glamorous casino-meets-nightclub romance — exciting, sexy-but-classy, confident host walk-on vibe. Broadcast polished for venue PA and projector, big but not festival EDM, no cheesy circus horns, no comedy wah-wah, no lyrics. One-shot theme song feel ending on a strong held hit then silence
+```
+
+**Lyrics**
+```
+[Instrumental]
+
+[Cold open — 4 seconds: bright brass hook + kick, instant recognition motif]
+
+[Verse groove — funky bass and claps, neon synth answer to brass]
+
+[Lift — disco strings enter, energy climbs, game-show spotlight feel]
+
+[Chorus hook — full brass + synth motif repeat, memorable Love Roulette identity]
+
+[Final hit — triumphant chord, sparkle decay, hard stop into silence]
+
+[End]
+```
+
+**Prompt 2** — più orchestrale / Affari Tuoi × The Voice energy (senza copiare)
+
+**Styles**
+```
+Instrumental only, no vocals. Theatrical Italian primetime dating game-show opening theme, 122 BPM. Live brass section fanfare, timpani hits, electronic dance kick under orchestra, shimmering harp-to-synth sparkle, romantic tension then release. Love lottery roulette drama on stage, magenta accent hits, dark glamorous TV lighting. Catchy 8-bar motif suitable as brand sting, polished broadcast mix, no vocals, no comedy sound effects, ends clean for host microphone
+```
+
+**Lyrics**
+```
+[Instrumental]
+
+[Fanfare open — brass and timpani announce the show]
+
+[Groove under — kick and bass join, playful dating-show strut]
+
+[Hook — 8-bar melody motif on brass/synth, brand identity]
+
+[Build — strings swell, percussion fills, spotlight climax]
+
+[Button end — final hit, short sparkle, silence]
+
+[End]
+```
+
+**Prompt 3** — più punchy / younger TV (meno orchestra)
+
+**Styles**
+```
+Instrumental only, no vocals. High-energy modern game-show theme for a singles nightclub show, 126 BPM French-house and TV promo hybrid. Sidechain pump, filtered disco stabs as fanfare, hot pink lead synth hook in bar 1, tight drums, warm sub. Love Roulette brand entrance — fast, catchy, dancefloor-ready but still TV title sequence. Dark fuchsia club palette, no vocals, no big festival drop, ends on punchy hit then silence for MC
+```
+
+**Lyrics**
+```
+[Instrumental]
+
+[Hook first — synth-brass motif cold open, immediate earworm]
+
+[Drive — full groove, claps, neon stabs]
+
+[Hook return — same motif bigger, crowd-ready]
+
+[Final punch — hard hit, short tail, silence]
+
+[End]
+```
+
+**Post Suno → video**
+1. Esporta WAV (o MP3 320) del take scelto.
+2. CapCut: timeline audio → clip Flow sopra → logo «LOVE ROULETTE» ultimi 3–4 s → export `sigla.mp4` 1920×1080 H.264.
+3. Copia in `web/public/grafiche/video/sigla.mp4` (vedi README lì).
 
 ---
 
@@ -930,6 +1016,7 @@ Ordine di produzione SUNO se tempo limitato. **4 tracce obbligatorie** per prima
 | **P0 — Must ship** | `LR_02_Quiz_Tension` | 15 min domande; evita silenzio awkward |
 | **P0 — Must ship** | `LR_06_Extraction_Drumroll` + `LR_07_Extraction_Reveal` | Cuore spettacolo roulette; contano come **1 deliverable operativo** (coppia spin+ding) |
 | **P0 — Must ship** | `LR_15_Winner_Anthem` + `LR_16_Winner_Stinger` | Chiusura emotiva + premio; contano come **1 deliverable operativo** |
+| **P1 — Strongly recommended** | `LR_23_Opening_Theme_Sigla` | Audio del video sigla bundled — prima impressione show |
 | **P1 — Strongly recommended** | `LR_05_Extraction_Underscore` | Copre 20 min estrazione tra reveal |
 | **P1** | `LR_03_Quiz_Anticipation` | Ultime domande + transizione matching |
 | **P1** | `LR_13_Voting_Countdown` + `LR_14_Voting_Suspense` | Finali interattivi |
@@ -955,6 +1042,7 @@ Ordine di produzione SUNO se tempo limitato. **4 tracce obbligatorie** per prima
 |----------------|----------------|---------------------------|
 | LOBBY (`casa`) | LR_01 | LR_17, LR_19 |
 | PRE-SIGLA (`sigla/warn`) | LR_22 | — (poi video sigla su «Parte ora») |
+| SIGLA (video «Parte ora») | LR_23 (dentro `sigla.mp4`) | — |
 | QUIZ | LR_02 → LR_03 (ultime 5) | LR_17, LR_18, LR_19 |
 | MATCHING | LR_04 (once) | LR_20 |
 | EXTRACTION | LR_05 + LR_06/07 per AVANTI | LR_20 |
@@ -982,3 +1070,4 @@ Storico prompt creati in chat (copy-paste) + esito take quando arriva.
 | Data | Track | Prompt | Esito |
 |------|-------|--------|-------|
 | 2026-09-27 | `LR_22_PreSigla_Fanfare` | P1 (consigliato), P2, P3 archiviati in §2 | in attesa generazione Mauro |
+| 2026-09-27 | `LR_23_Opening_Theme_Sigla` | P1 game-show (consigliato), P2 orchestrale, P3 punchy — direzione Mauro «più game show» | in attesa generazione Mauro |
