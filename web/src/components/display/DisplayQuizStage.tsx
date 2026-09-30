@@ -8,6 +8,7 @@ import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import type { QuestionResults } from "@/lib/musicpro/quiz-results";
 import type { PreviewPairRow } from "@/lib/musicpro/matching";
 import {
+  RANKING_COUPLES_PER_PAGE,
   resolveThemeForQuizIndex,
   type QuizDisplayPhase,
 } from "@/lib/musicpro/quiz-display";
@@ -280,13 +281,13 @@ function AnswerOptions({
   );
 }
 
-function NextQuestionCenter({ progressLabel }: { progressLabel: string | null }) {
+function RankingTitleCenter({ progressLabel }: { progressLabel: string | null }) {
   return (
     <div className="flex h-full min-h-0 items-center justify-center">
       <DisplayPhaseHero
         kicker={progressLabel ?? "Quiz"}
-        headline="Prossima domanda"
-        subline="Preparatevi"
+        headline="Classifica provvisoria"
+        subline="Possibili accoppiamenti — AVANTI"
         pulse
         uppercase
       />
@@ -322,18 +323,26 @@ function AnswersStopOverlay() {
 function PairingRanking({
   pairs,
   questionCount,
+  page,
+  pageCount,
 }: {
   pairs: PreviewPairRow[];
   questionCount: number;
+  /** 1-based couple page (dopo il titolo). */
+  page: number;
+  pageCount: number;
 }) {
   return (
     <div className="flex h-full min-h-0 w-full flex-col gap-3">
       <div className="flex shrink-0 items-baseline justify-between gap-3 px-1">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-          Classifica temporanea
+          Possibili accoppiamenti
         </p>
         <p className="text-xs tabular-nums text-white/50">
-          {questionCount} {questionCount === 1 ? "domanda" : "domande"}
+          {page}/{pageCount}
+          {questionCount > 0
+            ? ` · ${questionCount} ${questionCount === 1 ? "domanda" : "domande"}`
+            : ""}
         </p>
       </div>
       {pairs.length === 0 ? (
@@ -346,22 +355,22 @@ function PairingRanking({
           />
         </div>
       ) : (
-        <ol className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+        <ol className="flex min-h-0 flex-1 flex-col justify-center gap-2 overflow-hidden">
           {pairs.map((pair) => (
             <li
               key={`${pair.rank}-${pair.maleNickname}-${pair.femaleNickname}`}
-              className="flex min-h-0 items-center justify-between gap-3 rounded-xl border border-white/15 bg-black/55 px-4 py-1.5 backdrop-blur-sm"
+              className="flex min-h-0 items-center gap-4 rounded-2xl border border-white/15 bg-black/55 px-5 py-3 backdrop-blur-sm"
             >
-              <span className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-primary/55 bg-primary/15 font-mono text-base font-bold text-primary">
-                  {pair.rank}
-                </span>
-                <span className={cn(QUIZ_RESULT_LABEL_CLASS, "min-w-0 flex-1")}>
-                  {pair.maleNickname} · {pair.femaleNickname}
-                </span>
+              <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/55 bg-primary/15 font-mono text-xl font-bold text-primary">
+                {pair.rank}
               </span>
-              <span className={QUIZ_RESULT_PERCENT_CLASS}>
-                {Math.round(pair.score)}%
+              <span
+                className={cn(
+                  QUIZ_RESULT_LABEL_CLASS,
+                  "min-w-0 flex-1 text-[clamp(1.1rem,min(2.4vh,2.2vw),2rem)]",
+                )}
+              >
+                {pair.maleNickname} · {pair.femaleNickname}
               </span>
             </li>
           ))}
@@ -586,7 +595,13 @@ export function DisplayQuizStage({
     return () => {
       cancelled = true;
     };
-  }, [eventSlug, phase, quizState.currentIndex]);
+  }, [
+    eventSlug,
+    phase,
+    quizState.currentIndex,
+    quizState.rankingPage,
+    quizState.rankingCouplePages,
+  ]);
 
   const theme = resolveThemeForQuizIndex(
     quizState.questionIds,
@@ -689,23 +704,42 @@ export function DisplayQuizStage({
   }
 
   if (phase === "next_question") {
+    const rankingPage = quizState.rankingPage ?? 0;
+    const couplePages = Math.max(1, quizState.rankingCouplePages ?? 1);
+    const showTitle = rankingPage <= 0;
+    const couplePage = Math.max(1, rankingPage);
+    const pagePairs = ranking
+      ? ranking.pairs.slice(
+          (couplePage - 1) * RANKING_COUPLES_PER_PAGE,
+          couplePage * RANKING_COUPLES_PER_PAGE,
+        )
+      : [];
+
     return (
       <DisplayQuizGameLayout
-        centerKey={`ranking-${quizState.currentIndex}`}
+        centerKey={`ranking-${quizState.currentIndex}-p${rankingPage}`}
         header={
           <ThemeHeaderPanel
             progressLabel={progressLabel}
-            subtitle="Classifica di accoppiamento temporaneo"
+            subtitle={
+              showTitle
+                ? "Classifica provvisoria"
+                : "Possibili accoppiamenti"
+            }
           />
         }
         center={
-          ranking ? (
+          showTitle ? (
+            <RankingTitleCenter progressLabel={progressLabel} />
+          ) : ranking ? (
             <PairingRanking
-              pairs={ranking.pairs}
+              pairs={pagePairs}
               questionCount={ranking.questionCount}
+              page={couplePage}
+              pageCount={couplePages}
             />
           ) : (
-            <NextQuestionCenter progressLabel={progressLabel} />
+            <RankingTitleCenter progressLabel={progressLabel} />
           )
         }
         footerCountdown={null}
