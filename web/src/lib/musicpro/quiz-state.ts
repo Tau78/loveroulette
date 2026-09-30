@@ -281,6 +281,46 @@ export function getQuizSessionState(
   };
 }
 
+/**
+ * Merge a write onto the DB snapshot just re-read in writeQuizState.
+ * Conserva Autoplay / Al Buio contro tick stale; non fa rollback di fase
+ * se setAutoplay arriva dopo un advance.
+ */
+export function mergeQuizWriteWithExisting(
+  existing: QuizSessionState | null,
+  quiz: QuizSessionState,
+): QuizSessionState {
+  if (!existing) return quiz;
+
+  const phaseMoved =
+    existing.currentIndex !== quiz.currentIndex ||
+    existing.displayPhase !== quiz.displayPhase ||
+    existing.phaseStartedAt !== quiz.phaseStartedAt;
+  if (!phaseMoved) return quiz;
+
+  const existingStarted = Date.parse(existing.phaseStartedAt);
+  const quizStarted = Date.parse(quiz.phaseStartedAt);
+  const quizPhaseIsStale =
+    !Number.isNaN(existingStarted) &&
+    !Number.isNaN(quizStarted) &&
+    quizStarted < existingStarted;
+
+  if (quizPhaseIsStale) {
+    return {
+      ...existing,
+      autoplayEnabled: quiz.autoplayEnabled,
+      skipResults: quiz.skipResults === true,
+      updatedAt: quiz.updatedAt,
+    };
+  }
+
+  return {
+    ...quiz,
+    autoplayEnabled: existing.autoplayEnabled,
+    skipResults: existing.skipResults === true,
+  };
+}
+
 async function writeQuizState(
   supabase: SupabaseClient,
   eventId: string,
@@ -300,7 +340,10 @@ async function writeQuizState(
   const nextMetadata = { ...metadata };
 
   if (quiz) {
-    nextMetadata.love_roulette_quiz = quiz;
+    const existing = getQuizSessionState(metadata);
+    const toWrite = mergeQuizWriteWithExisting(existing, quiz);
+    nextMetadata.love_roulette_quiz = toWrite;
+    quiz = toWrite;
   } else {
     delete nextMetadata.love_roulette_quiz;
   }

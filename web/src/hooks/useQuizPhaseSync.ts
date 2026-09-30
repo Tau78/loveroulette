@@ -40,7 +40,7 @@ function clocksEqual(a: SyncedQuizClock, b: SyncedQuizClock): boolean {
 }
 
 function quizSyncKey(quiz: QuizSessionState): string {
-  return `${quiz.updatedAt}:${quiz.currentIndex}:${quiz.displayPhase}:${quiz.phaseStartedAt}:${quiz.timing.questionSeconds}`;
+  return `${quiz.updatedAt}:${quiz.currentIndex}:${quiz.displayPhase}:${quiz.phaseStartedAt}:${quiz.timing.questionSeconds}:${quiz.autoplayEnabled ? "1" : "0"}`;
 }
 
 export function useQuizPhaseSync({
