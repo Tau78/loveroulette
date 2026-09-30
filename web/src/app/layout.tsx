@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: "Love Roulette",
   description: "Gioco interattivo live per single in sala",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Love Roulette",
+  },
 };
 
 export const viewport: Viewport = {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Maximize } from "lucide-react";
+import { Maximize, Share } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -29,9 +29,21 @@ export function PlayerMobileShell({
   });
 
   const [promptVisible, setPromptVisible] = useState(false);
+  const [standalone, setStandalone] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!fullscreenPrompt || !supported || isFullscreen) {
+    const navigatorWithStandalone = navigator as Navigator & {
+      standalone?: boolean;
+    };
+    setStandalone(
+      window.matchMedia("(display-mode: standalone)").matches ||
+        navigatorWithStandalone.standalone === true,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (standalone === null) return;
+    if (!fullscreenPrompt || standalone || isFullscreen) {
       setPromptVisible(false);
       return;
     }
@@ -40,11 +52,11 @@ export function PlayerMobileShell({
     } catch {
       setPromptVisible(true);
     }
-  }, [fullscreenPrompt, isFullscreen, supported]);
+  }, [fullscreenPrompt, isFullscreen, standalone]);
 
   const handleEnter = useCallback(async () => {
-    await enter();
-    setPromptVisible(false);
+    const entered = await enter();
+    if (entered) setPromptVisible(false);
   }, [enter]);
 
   const handleDismiss = useCallback(() => {
@@ -84,35 +96,53 @@ export function PlayerMobileShell({
                   transition={{ duration: 1.6, repeat: Infinity }}
                   className="flex size-14 items-center justify-center rounded-full bg-primary/20 ring-2 ring-primary/50"
                 >
-                  <Maximize className="size-7 text-primary" />
+                  {supported ? (
+                    <Maximize className="size-7 text-primary" />
+                  ) : (
+                    <Share className="size-7 text-primary" />
+                  )}
                 </motion.div>
               </div>
               <h2 className="text-center font-display text-xl font-bold">
-                Schermo intero
+                {supported ? "Schermo intero" : "Apri a schermo intero"}
               </h2>
               <p className="mt-2 text-center text-sm text-muted-foreground">
-                Per un&apos;esperienza immersiva in sala, espandi il gioco a
-                tutto schermo.
+                {supported
+                  ? "Per un’esperienza immersiva in sala, espandi il gioco a tutto schermo."
+                  : "Su iPhone tocca Condividi, scegli “Aggiungi alla schermata Home”, poi apri Love Roulette dalla nuova icona."}
               </p>
               <div className="mt-5 flex flex-col gap-2">
-                <Button
-                  type="button"
-                  size="lg"
-                  className="w-full shadow-[0_0_24px_rgba(236,72,153,0.45)]"
-                  onClick={() => void handleEnter()}
-                >
-                  <Maximize className="size-4" />
-                  Vai a schermo intero
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-muted-foreground"
-                  onClick={handleDismiss}
-                >
-                  Continua così
-                </Button>
+                {supported ? (
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="w-full shadow-[0_0_24px_rgba(236,72,153,0.45)]"
+                    onClick={() => void handleEnter()}
+                  >
+                    <Maximize className="size-4" />
+                    Vai a schermo intero
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="w-full shadow-[0_0_24px_rgba(236,72,153,0.45)]"
+                    onClick={handleDismiss}
+                  >
+                    Ho capito
+                  </Button>
+                )}
+                {supported ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-muted-foreground"
+                    onClick={handleDismiss}
+                  >
+                    Continua così
+                  </Button>
+                ) : null}
               </div>
             </motion.div>
           </motion.div>

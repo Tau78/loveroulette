@@ -9,6 +9,13 @@ import type {
   LoveRouletteGender,
   LoveRouletteSeeking,
 } from "@/lib/player/identity";
+import {
+  invalidRegistrationContactFields,
+  type RegistrationContactField,
+} from "@/lib/player/registration-validation";
+import { cn } from "@/lib/utils";
+
+type RegistrationField = RegistrationContactField | "identity" | "consent";
 
 export default function RegisterPage() {
   const params = useParams();
@@ -24,30 +31,40 @@ export default function RegisterPage() {
   const [consent, setConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<RegistrationField[]>([]);
+
+  function clearFieldError(field: RegistrationField) {
+    setFieldErrors((current) =>
+      current.filter((candidate) => candidate !== field),
+    );
+    setFormError(null);
+  }
 
   function submitRegistration() {
-    if (!firstName.trim() || !lastName.trim()) {
-      setFormError("Nome e cognome sono obbligatori.");
-      return;
-    }
-    if (phone.trim().length < 6) {
-      setFormError("Inserisci un telefono.");
-      return;
-    }
-    if (!email.trim() || !email.includes("@")) {
-      setFormError("Inserisci la tua email.");
+    const invalidContactFields = invalidRegistrationContactFields({
+      firstName,
+      lastName,
+      phone,
+      email,
+    });
+    if (invalidContactFields.length > 0) {
+      setFieldErrors(invalidContactFields);
+      setFormError("Controlla i campi evidenziati in rosso.");
       return;
     }
     if (!gender || !seeking || !ageBand) {
+      setFieldErrors(["identity"]);
       setFormError("Scegli chi sei, chi cerchi e la fascia d’età.");
       return;
     }
     if (!consent) {
+      setFieldErrors(["consent"]);
       setFormError("Devi accettare l'informativa privacy.");
       return;
     }
 
     setFormError(null);
+    setFieldErrors([]);
     setSubmitted(true);
   }
 
@@ -91,10 +108,48 @@ export default function RegisterPage() {
             submitRegistration();
           }}
         >
-          <Field label="Nome" value={firstName} onChange={setFirstName} required />
-          <Field label="Cognome" value={lastName} onChange={setLastName} required />
-          <Field label="Telefono" type="tel" value={phone} onChange={setPhone} required />
-          <Field label="Email" type="email" value={email} onChange={setEmail} required />
+          <Field
+            label="Nome"
+            value={firstName}
+            onChange={(value) => {
+              setFirstName(value);
+              clearFieldError("firstName");
+            }}
+            invalid={fieldErrors.includes("firstName")}
+            required
+          />
+          <Field
+            label="Cognome"
+            value={lastName}
+            onChange={(value) => {
+              setLastName(value);
+              clearFieldError("lastName");
+            }}
+            invalid={fieldErrors.includes("lastName")}
+            required
+          />
+          <Field
+            label="Telefono"
+            type="tel"
+            value={phone}
+            onChange={(value) => {
+              setPhone(value);
+              clearFieldError("phone");
+            }}
+            invalid={fieldErrors.includes("phone")}
+            required
+          />
+          <Field
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(value) => {
+              setEmail(value);
+              clearFieldError("email");
+            }}
+            invalid={fieldErrors.includes("email")}
+            required
+          />
           <Field
             label="Nick (facoltativo)"
             value={nickname}
@@ -106,18 +161,18 @@ export default function RegisterPage() {
             gender={gender}
             seeking={seeking}
             ageBand={ageBand}
-            invalid={Boolean(formError) && (!gender || !seeking || !ageBand)}
+            invalid={fieldErrors.includes("identity")}
             onGender={(value) => {
               setGender(value);
-              if (formError) setFormError(null);
+              clearFieldError("identity");
             }}
             onSeeking={(value) => {
               setSeeking(value);
-              if (formError) setFormError(null);
+              clearFieldError("identity");
             }}
             onAgeBand={(value) => {
               setAgeBand(value);
-              if (formError) setFormError(null);
+              clearFieldError("identity");
             }}
           />
 
@@ -125,7 +180,11 @@ export default function RegisterPage() {
             <input
               type="checkbox"
               checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
+              onChange={(e) => {
+                setConsent(e.target.checked);
+                clearFieldError("consent");
+              }}
+              aria-invalid={fieldErrors.includes("consent")}
               className="mt-1"
               required
             />
@@ -161,6 +220,7 @@ function Field({
   type = "text",
   required,
   placeholder,
+  invalid,
 }: {
   label: string;
   value: string;
@@ -168,6 +228,7 @@ function Field({
   type?: string;
   required?: boolean;
   placeholder?: string;
+  invalid?: boolean;
 }) {
   return (
     <div>
@@ -178,7 +239,11 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         required={required}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-muted/30 bg-surface px-4 py-3"
+        aria-invalid={invalid}
+        className={cn(
+          "w-full rounded-xl border border-muted/30 bg-surface px-4 py-3",
+          invalid && "border-destructive ring-1 ring-destructive/30",
+        )}
       />
     </div>
   );

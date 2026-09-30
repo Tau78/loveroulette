@@ -13,6 +13,18 @@ function getFullscreenElement(): Element | null {
   );
 }
 
+function canRequestFullscreen(element: HTMLElement | null): boolean {
+  if (!element) return false;
+  const webkitElement = element as HTMLElement & {
+    webkitRequestFullscreen?: () => Promise<void> | void;
+  };
+  return (
+    document.fullscreenEnabled !== false &&
+    (typeof element.requestFullscreen === "function" ||
+      typeof webkitElement.webkitRequestFullscreen === "function")
+  );
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
@@ -46,9 +58,7 @@ export function useFullscreen({
   }, []);
 
   useEffect(() => {
-    setSupported(
-      typeof document !== "undefined" && document.fullscreenEnabled !== false,
-    );
+    setSupported(canRequestFullscreen(containerRef.current));
     document.addEventListener("fullscreenchange", syncState);
     document.addEventListener("webkitfullscreenchange", syncState);
     return () => {
@@ -68,9 +78,9 @@ export function useFullscreen({
     [storageKey],
   );
 
-  const enter = useCallback(async () => {
+  const enter = useCallback(async (): Promise<boolean> => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || !canRequestFullscreen(el)) return false;
 
     try {
       if (el.requestFullscreen) {
@@ -82,8 +92,10 @@ export function useFullscreen({
         await webkitEl.webkitRequestFullscreen?.();
       }
       persistPreference(true);
+      return true;
     } catch {
       // gesture or policy may block fullscreen
+      return false;
     }
   }, [persistPreference]);
 

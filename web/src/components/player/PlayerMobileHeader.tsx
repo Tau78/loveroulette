@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import type { PlayerEventInfo } from "@/hooks/usePlayerEventInfo";
 import { formatPlayerEventDateTime } from "@/lib/player/format-event-datetime";
+import { playerEventLabel } from "@/lib/player/event-label";
 import { cn } from "@/lib/utils";
 
 const LOGO_SRC = "/grafiche/logo-transparent.png";
@@ -23,7 +24,7 @@ export function PlayerMobileHeader({
   className,
 }: PlayerMobileHeaderProps) {
   const nickLabel = nickname?.trim() || null;
-  const venueLabel = event?.venueName ?? event?.title ?? null;
+  const venueLabel = playerEventLabel(event?.venueName ?? event?.title);
   const dateTime =
     event?.eventDate != null
       ? formatPlayerEventDateTime(event.eventDate, event.eventTime)

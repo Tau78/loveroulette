@@ -69,8 +69,17 @@ import {
 } from "@/lib/player/identity";
 import { compressProfilePhoto } from "@/lib/player/profile-photo";
 import { storedProfileCanReconnect } from "@/lib/player/participant-storage";
+import {
+  invalidRegistrationContactFields,
+  type RegistrationContactField,
+} from "@/lib/player/registration-validation";
 
-type JoinField = "profile" | "photo" | "badge" | "identity";
+type JoinField =
+  | RegistrationContactField
+  | "nickname"
+  | "photo"
+  | "badge"
+  | "identity";
 
 type RestoreState = "pending" | "ready";
 
@@ -202,12 +211,21 @@ export default function PlayerPlayPage() {
   const [entryStep, setEntryStep] = useState<"welcome" | "form">("welcome");
   const [restoreState, setRestoreState] = useState<RestoreState>("pending");
   const [joinError, setJoinError] = useState<string | null>(null);
-  const [fieldError, setFieldError] = useState<JoinField | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<JoinField[]>([]);
   const [joining, setJoining] = useState(false);
   const [waveMode, setWaveMode] = useState<WaveMode>("idle");
   const [partnerNick, setPartnerNick] = useState<string | null>(null);
   const joinedRef = useRef(false);
   const lastRevealAtRef = useRef<string | null>(null);
+
+  const clearFieldError = useCallback((field: JoinField) => {
+    setFieldErrors((current) =>
+      current.includes(field)
+        ? current.filter((candidate) => candidate !== field)
+        : current,
+    );
+    setJoinError(null);
+  }, []);
 
   const {
     runtimeState,
@@ -354,16 +372,16 @@ export default function PlayerPlayPage() {
   const handleJoinFailure = useCallback(
     (status: number, data: JoinResponse) => {
       if (data.code === "NICKNAME_TAKEN") {
-        setFieldError("profile");
+        setFieldErrors(["nickname"]);
         setJoinError(data.error ?? "Questo nick è già in sala.");
       } else if (data.code === "BADGE_TAKEN") {
-        setFieldError("badge");
+        setFieldErrors(["badge"]);
         setJoinError(
           data.error ??
             "Questo badge è già usato da un altro giocatore. Lascia il campo vuoto se non hai una pettorina numerata.",
         );
       } else if (data.code === "BADGE_REQUIRED") {
-        setFieldError("badge");
+        setFieldErrors(["badge"]);
         setJoinError(data.error ?? "Inserisci il codice badge.");
       } else if (status === 400) {
         const payloadRejected =
@@ -566,29 +584,35 @@ export default function PlayerPlayPage() {
     const tel = phone.trim();
     const mail = email.trim();
 
-    if (!first || !last || tel.length < 6 || !mail.includes("@")) {
-      setFieldError("profile");
-      setJoinError("Nome, cognome, telefono ed email sono obbligatori.");
+    const invalidContactFields = invalidRegistrationContactFields({
+      firstName: first,
+      lastName: last,
+      phone: tel,
+      email: mail,
+    });
+    if (invalidContactFields.length > 0) {
+      setFieldErrors(invalidContactFields);
+      setJoinError("Controlla i campi evidenziati in rosso.");
       return;
     }
     if (!photoUrl) {
-      setFieldError("photo");
+      setFieldErrors(["photo"]);
       setJoinError("Aggiungi una foto.");
       return;
     }
     if (!gender || !seeking || !ageBand) {
-      setFieldError("identity");
+      setFieldErrors(["identity"]);
       setJoinError("Scegli chi sei, chi cerchi e la fascia d’età.");
       return;
     }
     if (badgeRequired && !badgeCode.trim()) {
-      setFieldError("badge");
+      setFieldErrors(["badge"]);
       setJoinError("Inserisci il codice badge sulla pettorina.");
       return;
     }
 
     setJoinError(null);
-    setFieldError(null);
+    setFieldErrors([]);
     setJoining(true);
 
     try {
@@ -778,16 +802,14 @@ export default function PlayerPlayPage() {
                       value={firstName}
                       onChange={(e) => {
                         setFirstName(e.target.value);
-                        if (fieldError === "profile") {
-                          setFieldError(null);
-                          setJoinError(null);
-                        }
+                        clearFieldError("firstName");
                       }}
                       autoComplete="given-name"
                       maxLength={40}
+                      aria-invalid={fieldErrors.includes("firstName")}
                       className={cn(
                         "h-11 bg-background/50",
-                        fieldError === "profile" &&
+                        fieldErrors.includes("firstName") &&
                           "border-destructive ring-destructive/30",
                       )}
                     />
@@ -799,16 +821,14 @@ export default function PlayerPlayPage() {
                       value={lastName}
                       onChange={(e) => {
                         setLastName(e.target.value);
-                        if (fieldError === "profile") {
-                          setFieldError(null);
-                          setJoinError(null);
-                        }
+                        clearFieldError("lastName");
                       }}
                       autoComplete="family-name"
                       maxLength={40}
+                      aria-invalid={fieldErrors.includes("lastName")}
                       className={cn(
                         "h-11 bg-background/50",
-                        fieldError === "profile" &&
+                        fieldErrors.includes("lastName") &&
                           "border-destructive ring-destructive/30",
                       )}
                     />
@@ -821,11 +841,19 @@ export default function PlayerPlayPage() {
                     <Input
                       id="phone"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        clearFieldError("phone");
+                      }}
                       inputMode="tel"
                       autoComplete="tel"
                       maxLength={24}
-                      className="h-11 bg-background/50"
+                      aria-invalid={fieldErrors.includes("phone")}
+                      className={cn(
+                        "h-11 bg-background/50",
+                        fieldErrors.includes("phone") &&
+                          "border-destructive ring-destructive/30",
+                      )}
                     />
                   </div>
                   <div className="space-y-2">
@@ -833,11 +861,19 @@ export default function PlayerPlayPage() {
                     <Input
                       id="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        clearFieldError("email");
+                      }}
                       inputMode="email"
                       autoComplete="email"
                       maxLength={80}
-                      className="h-11 bg-background/50"
+                      aria-invalid={fieldErrors.includes("email")}
+                      className={cn(
+                        "h-11 bg-background/50",
+                        fieldErrors.includes("email") &&
+                          "border-destructive ring-destructive/30",
+                      )}
                     />
                   </div>
                 </div>
@@ -861,7 +897,7 @@ export default function PlayerPlayPage() {
                       disabled={joining}
                       className={cn(
                         "h-11 bg-background/50",
-                        fieldError === "photo" &&
+                        fieldErrors.includes("photo") &&
                           "border-destructive ring-destructive/30",
                       )}
                       onChange={(e) => {
@@ -870,13 +906,10 @@ export default function PlayerPlayPage() {
                         void compressProfilePhoto(file)
                           .then((url) => {
                             setPhotoUrl(url);
-                            if (fieldError === "photo") {
-                              setFieldError(null);
-                              setJoinError(null);
-                            }
+                            clearFieldError("photo");
                           })
                           .catch(() => {
-                            setFieldError("photo");
+                            setFieldErrors(["photo"]);
                             setJoinError("Foto non valida.");
                           });
                       }}
@@ -889,11 +922,19 @@ export default function PlayerPlayPage() {
                   <Input
                     id="nickname"
                     value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
+                    onChange={(e) => {
+                      setNickname(e.target.value);
+                      clearFieldError("nickname");
+                    }}
                     placeholder="Facoltativo"
                     maxLength={24}
                     autoComplete="nickname"
-                    className="h-11 bg-background/50"
+                    aria-invalid={fieldErrors.includes("nickname")}
+                    className={cn(
+                      "h-11 bg-background/50",
+                      fieldErrors.includes("nickname") &&
+                        "border-destructive ring-destructive/30",
+                    )}
                   />
                 </div>
 
@@ -938,27 +979,18 @@ export default function PlayerPlayPage() {
                   seeking={seeking}
                   ageBand={ageBand}
                   disabled={joining}
-                  invalid={fieldError === "identity"}
+                  invalid={fieldErrors.includes("identity")}
                   onGender={(value) => {
                     setGender(value);
-                    if (fieldError === "identity") {
-                      setFieldError(null);
-                      setJoinError(null);
-                    }
+                    clearFieldError("identity");
                   }}
                   onSeeking={(value) => {
                     setSeeking(value);
-                    if (fieldError === "identity") {
-                      setFieldError(null);
-                      setJoinError(null);
-                    }
+                    clearFieldError("identity");
                   }}
                   onAgeBand={(value) => {
                     setAgeBand(value);
-                    if (fieldError === "identity") {
-                      setFieldError(null);
-                      setJoinError(null);
-                    }
+                    clearFieldError("identity");
                   }}
                 />
 
@@ -970,19 +1002,16 @@ export default function PlayerPlayPage() {
                       value={badgeCode}
                       onChange={(e) => {
                         setBadgeCode(e.target.value);
-                        if (fieldError === "badge") {
-                          setFieldError(null);
-                          setJoinError(null);
-                        }
+                        clearFieldError("badge");
                       }}
                       placeholder="Es. 12"
                       inputMode="numeric"
                       autoComplete="off"
                       required
-                      aria-invalid={fieldError === "badge"}
+                      aria-invalid={fieldErrors.includes("badge")}
                       className={cn(
                         "h-11 bg-background/50",
-                        fieldError === "badge" &&
+                        fieldErrors.includes("badge") &&
                           "border-destructive ring-destructive/30",
                       )}
                     />
