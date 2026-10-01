@@ -337,6 +337,17 @@ export async function deleteParticipant(
   );
 }
 
+/** Elimina tutti i giocatori dell’evento. */
+export async function deleteAllParticipants(
+  eventCode: string,
+  pin: string | null,
+): Promise<Response> {
+  return fetch(`/api/events/${encodeURIComponent(eventCode)}/participants`, {
+    method: "DELETE",
+    headers: animatorAuthHeaders(pin),
+  });
+}
+
 export async function postSimulatePlayers(
   eventCode: string,
   body: { coupleCount?: number; replace?: boolean; goToMatching?: boolean },

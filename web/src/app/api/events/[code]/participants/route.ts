@@ -6,6 +6,7 @@ import {
   loveRouletteSeekingSchema,
 } from "@/lib/player/identity";
 import {
+  clearAllParticipantsForEvent,
   createParticipantAdmin,
   listEventParticipants,
 } from "@/lib/musicpro/participant-admin";
@@ -142,6 +143,47 @@ export async function POST(
       );
     }
     const message = err instanceof Error ? err.message : "Create failed";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
+}
+
+/** Elimina tutti i giocatori dell’evento (PIN richiesto). */
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ code: string }> },
+) {
+  const { code } = await context.params;
+  const slug = normalizeEventSlug(code);
+
+  if (!isValidEventSlug(slug)) {
+    return NextResponse.json({ error: "Invalid event slug" }, { status: 400 });
+  }
+
+  const pin = request.headers.get("X-Animator-Pin");
+
+  try {
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const supabase = createServiceClient();
+    const event = await getLoveRouletteEvent(supabase, slug);
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    const { data: eventRow } = await supabase
+      .from("events")
+      .select("metadata")
+      .eq("id", event.id)
+      .maybeSingle();
+
+    const metadata = (eventRow?.metadata ?? {}) as Record<string, unknown>;
+    if (!(await authorize(metadata, pin))) {
+      return NextResponse.json({ error: "Invalid animator PIN" }, { status: 401 });
+    }
+
+    const result = await clearAllParticipantsForEvent(supabase, event.id);
+    return NextResponse.json({ ...result, eventSlug: slug });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Clear failed";
     return NextResponse.json({ error: message }, { status: 503 });
   }
 }

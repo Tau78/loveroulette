@@ -389,18 +389,11 @@ async function deleteSimBots(
 
   if (answersError) throw new Error(answersError.message);
 
+  // Tutte le coppie dell’evento: l’OR per-bot esplode (URL) e faceva fallire il replace.
   const { error: pairsError } = await supabase
     .from("love_roulette_pairs")
     .delete()
-    .eq("event_id", eventId)
-    .or(
-      botIds
-        .flatMap((id) => [
-          `participant_male_id.eq.${id}`,
-          `participant_female_id.eq.${id}`,
-        ])
-        .join(","),
-    );
+    .eq("event_id", eventId);
 
   if (pairsError) throw new Error(pairsError.message);
 
