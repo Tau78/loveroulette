@@ -29,7 +29,7 @@ import type { EventStats } from "@/lib/musicpro/session";
 import type { LoveRouletteEvent } from "@/lib/musicpro/types";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import { normalizeEventSlug } from "@/lib/musicpro/slug";
-import type { ExtractionMode } from "@/lib/types";
+import type { EventState, ExtractionMode } from "@/lib/types";
 
 interface SessionPayload {
   runtimeState: LoveRouletteEvent["runtimeState"];
@@ -92,6 +92,8 @@ export default function AdminDashboardPage() {
     lastReveal,
     syncStatus,
     applyQuizUpdate,
+    applyRuntimeState,
+    applyLastReveal,
     applyFinalsUpdate,
   } = useLoveRouletteSession({
     eventSlug: eventCode,
@@ -187,8 +189,8 @@ export default function AdminDashboardPage() {
   const controlsDisabled = !pinReady || loading || pinVerifying;
 
   const handleQuizChange = useCallback(
-    (quiz: QuizSessionState | null) => {
-      applyQuizUpdate(quiz);
+    (quiz: QuizSessionState | null, nextRuntimeState?: EventState) => {
+      applyQuizUpdate(quiz, nextRuntimeState);
     },
     [applyQuizUpdate],
   );
@@ -252,6 +254,8 @@ export default function AdminDashboardPage() {
         onExtractionModeChange={setExtractionMode}
         onInvalidPin={handleInvalidPin}
         onQuizChange={handleQuizChange}
+        onRuntimeStateChange={applyRuntimeState}
+        onLastRevealChange={applyLastReveal}
         onFinalsChange={handleFinalsChange}
         onRefreshProgress={refreshSessionStats}
         onStartQuiz={

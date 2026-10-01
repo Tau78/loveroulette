@@ -124,6 +124,51 @@ function RouletteWheel({ spinning }: { spinning: boolean }) {
   );
 }
 
+function RevealFace({
+  nick,
+  photoUrl,
+  side,
+}: {
+  nick: string;
+  photoUrl?: string;
+  side: "left" | "right";
+}) {
+  const reduceMotion = useReducedMotion();
+  const x = side === "left" ? -40 : 40;
+
+  return (
+    <motion.div
+      className="flex flex-col items-center gap-4 md:gap-5"
+      initial={reduceMotion ? false : { opacity: 0, x }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{
+        delay: side === "left" ? 0.15 : 0.38,
+        type: "spring",
+        stiffness: 180,
+        damping: 16,
+      }}
+    >
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={photoUrl}
+          alt=""
+          className="size-[min(28vh,180px)] rounded-full border-[5px] border-primary/85 object-cover shadow-[0_0_48px_rgba(233,30,140,0.45)]"
+        />
+      ) : null}
+      <p
+        className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-none"
+        style={{
+          fontFamily: "var(--font-display), serif",
+          textShadow: "0 4px 0 rgba(0,0,0,1), 0 0 40px rgba(233,30,140,0.9)",
+        }}
+      >
+        {nick}
+      </p>
+    </motion.div>
+  );
+}
+
 function CoupleReveal({
   reveal,
   showAffinity,
@@ -174,20 +219,12 @@ function CoupleReveal({
           Coppia rivelata
         </motion.p>
 
-        <div className="flex flex-col items-center gap-2 md:gap-4">
-          <motion.p
-            className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-none"
-            style={{
-              fontFamily: "var(--font-display), serif",
-              textShadow:
-                "0 4px 0 rgba(0,0,0,1), 0 0 40px rgba(233,30,140,0.9)",
-            }}
-            initial={reduceMotion ? false : { opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.15, type: "spring", stiffness: 180, damping: 16 }}
-          >
-            {reveal.maleNick}
-          </motion.p>
+        <div className="flex flex-col items-center gap-3 md:flex-row md:justify-center md:gap-8">
+          <RevealFace
+            nick={reveal.maleNick}
+            photoUrl={reveal.malePhotoUrl}
+            side="left"
+          />
 
           <motion.span
             className="font-display text-4xl md:text-6xl text-primary font-bold"
@@ -200,19 +237,11 @@ function CoupleReveal({
             &
           </motion.span>
 
-          <motion.p
-            className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-none"
-            style={{
-              fontFamily: "var(--font-display), serif",
-              textShadow:
-                "0 4px 0 rgba(0,0,0,1), 0 0 40px rgba(233,30,140,0.9)",
-            }}
-            initial={reduceMotion ? false : { opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.38, type: "spring", stiffness: 180, damping: 16 }}
-          >
-            {reveal.femaleNick}
-          </motion.p>
+          <RevealFace
+            nick={reveal.femaleNick}
+            photoUrl={reveal.femalePhotoUrl}
+            side="right"
+          />
         </div>
 
         {showAffinity && reveal.affinityScore > 0 ? (
@@ -233,12 +262,24 @@ function CoupleReveal({
   );
 }
 
+/** True se questa reveal deve fare lo spin (prima estrazione dopo idle, o nuova). */
+export function shouldSpinExtractionReveal(
+  previousUpdatedAt: string | null,
+  nextUpdatedAt: string,
+  sawIdleWithoutReveal: boolean,
+): boolean {
+  if (previousUpdatedAt === nextUpdatedAt) return false;
+  if (sawIdleWithoutReveal) return true;
+  return previousUpdatedAt !== null;
+}
+
 export function DisplayExtractionStage({
   lastReveal,
   showAffinity = false,
 }: DisplayExtractionStageProps) {
   const [stage, setStage] = useState<ExtractionStage>("idle");
   const prevUpdatedAtRef = useRef<string | null>(null);
+  const sawIdleWithoutRevealRef = useRef(false);
   const spinTimerRef = useRef<number | null>(null);
   const reduceMotion = useReducedMotion();
 
@@ -250,25 +291,25 @@ export function DisplayExtractionStage({
 
     if (!lastReveal) {
       prevUpdatedAtRef.current = null;
+      sawIdleWithoutRevealRef.current = true;
       setStage("idle");
       return;
     }
 
-    const previousUpdatedAt = prevUpdatedAtRef.current;
-
-    if (previousUpdatedAt === null) {
-      prevUpdatedAtRef.current = lastReveal.updatedAt;
-      setStage("revealed");
+    if (prevUpdatedAtRef.current === lastReveal.updatedAt) {
       return;
     }
 
-    if (previousUpdatedAt === lastReveal.updatedAt) {
-      return;
-    }
+    const spin = shouldSpinExtractionReveal(
+      prevUpdatedAtRef.current,
+      lastReveal.updatedAt,
+      sawIdleWithoutRevealRef.current,
+    );
 
     prevUpdatedAtRef.current = lastReveal.updatedAt;
+    sawIdleWithoutRevealRef.current = false;
 
-    if (reduceMotion) {
+    if (!spin || reduceMotion) {
       setStage("revealed");
       return;
     }

@@ -10,6 +10,7 @@ import {
   useCasaInvalidPinHandler,
 } from "@/components/admin/casa/widgets/casa-widget-live";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
+import type { EventState } from "@/lib/types";
 
 /**
  * Regia quiz live — riusa AdminQuizPanel (+ prep in lobby).
@@ -39,8 +40,8 @@ function WidgetQuizRegiaBody() {
   const [questionsRefreshKey, setQuestionsRefreshKey] = useState(0);
 
   const handleQuizChange = useCallback(
-    (quiz: QuizSessionState | null) => {
-      applyQuizUpdate(quiz);
+    (quiz: QuizSessionState | null, nextRuntimeState?: EventState) => {
+      applyQuizUpdate(quiz, nextRuntimeState);
     },
     [applyQuizUpdate],
   );
