@@ -12,6 +12,13 @@ const bodySchema = z
     body: z.string().trim().max(280).optional(),
     kicker: z.string().trim().max(80).optional(),
     imageUrl: z.string().trim().max(500).optional(),
+    /** ISO clock per countdown atomici (stacco). */
+    startedAt: z
+      .string()
+      .trim()
+      .max(40)
+      .refine((v) => !Number.isNaN(Date.parse(v)), "startedAt must be ISO")
+      .optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -118,6 +125,7 @@ export async function POST(
       ...(body.body !== undefined ? { body: body.body } : {}),
       ...(body.kicker !== undefined ? { kicker: body.kicker } : {}),
       ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
+      ...(body.startedAt !== undefined ? { startedAt: body.startedAt } : {}),
     });
 
     return NextResponse.json({ displayOverlay, eventSlug: event.slug });

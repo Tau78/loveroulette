@@ -181,7 +181,10 @@ function OverlayBody({
     if (isStaccoSlide(overlay) && overlay.title) {
       return (
         <div className="h-full bg-black">
-          <DisplayStaccoStage value={Number(overlay.title)} />
+          <DisplayStaccoStage
+            value={Number(overlay.title)}
+            startedAt={overlay.startedAt}
+          />
         </div>
       );
     }

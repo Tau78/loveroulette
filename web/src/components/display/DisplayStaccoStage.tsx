@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { playCountdownAudio, stopCountdownAudio } from "@/lib/audio/countdown-whoosh";
-import { STACCO_CANVAS_SRC } from "@/lib/display/stacco";
+import { STACCO_CANVAS_SRC, resolveStaccoValue } from "@/lib/display/stacco";
 import { cn } from "@/lib/utils";
 
 const EASE_ZOOM = [0.16, 1, 0.3, 1] as const;
@@ -30,14 +30,41 @@ const SHARDS = [
 ] as const;
 
 type DisplayStaccoStageProps = {
-  value: number;
+  /** Cifra corrente (1–5). Con startedAt il parent può omettere e lasciare il tick interno. */
+  value?: number;
+  /** Clock ISO condiviso — anteprima e SCHERMO mostrano la stessa cifra. */
+  startedAt?: string;
   className?: string;
 };
 
 /** Stacco 5–4–3–2–1: canvas di scena + cifra che zoomma dal fondo ed esplode. */
-export function DisplayStaccoStage({ value, className }: DisplayStaccoStageProps) {
+export function DisplayStaccoStage({
+  value: valueProp,
+  startedAt,
+  className,
+}: DisplayStaccoStageProps) {
   const reduce = useReducedMotion();
   const startedRef = useRef(false);
+  const [clockValue, setClockValue] = useState(() =>
+    startedAt
+      ? resolveStaccoValue({ title: "5", startedAt })
+      : (valueProp ?? 5),
+  );
+
+  useEffect(() => {
+    if (!startedAt) {
+      if (valueProp != null) setClockValue(valueProp);
+      return;
+    }
+    const tick = () => {
+      setClockValue(resolveStaccoValue({ title: "5", startedAt }));
+    };
+    tick();
+    const id = window.setInterval(tick, 100);
+    return () => window.clearInterval(id);
+  }, [startedAt, valueProp]);
+
+  const value = startedAt ? clockValue : (valueProp ?? clockValue);
 
   useEffect(() => {
     if (value <= 0) {
@@ -48,8 +75,20 @@ export function DisplayStaccoStage({ value, className }: DisplayStaccoStageProps
     if (startedRef.current) return;
     startedRef.current = true;
     // Un file ~6 s per tutta la sequenza (coerente con le 5 cifre).
-    playCountdownAudio({ cueKey: `stacco:${value}` });
-  }, [value]);
+    playCountdownAudio({ cueKey: `stacco:${startedAt ?? value}` });
+  }, [value, startedAt]);
+
+  if (value <= 0) {
+    return (
+      <div
+        className={cn("absolute inset-0 z-[2] overflow-hidden", className)}
+        aria-live="polite"
+        aria-label="Via"
+      >
+        <StaccoCanvas />
+      </div>
+    );
+  }
 
   return (
     <div

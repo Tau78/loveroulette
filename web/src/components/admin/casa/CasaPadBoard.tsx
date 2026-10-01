@@ -146,7 +146,11 @@ import {
   SIGLA_VIDEO_OVERLAY,
   SIGLA_WARN_SLIDE,
 } from "@/lib/display/sigla-warn";
-import { STACCO_KICKER } from "@/lib/display/stacco";
+import {
+  STACCO_SECONDS,
+  resolveStaccoValue,
+  staccoDisplayCommand,
+} from "@/lib/display/stacco";
 import "@/components/admin/casa/casa.css";
 import "@/components/admin/casa/casa-board.css";
 
@@ -691,6 +695,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const videoDirInput = useRef<HTMLInputElement>(null);
   const videoTapRef = useRef<{ url: string; at: number } | null>(null);
   const staccoLaunchRef = useRef(false);
+  /** Clock ISO condiviso con /display (anteprima + SCHERMO). */
+  const staccoStartedAtRef = useRef<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const toastUndoBusy = useRef(false);
 
@@ -1024,74 +1030,81 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   useEffect(() => {
     if (beat !== "stacco") {
       staccoLaunchRef.current = false;
+      staccoStartedAtRef.current = null;
       return;
     }
-    if (count == null) return;
+    const startedAt = staccoStartedAtRef.current;
+    if (!startedAt) return;
 
-    if (count > 0) {
-      const t = window.setTimeout(
-        () => setCount((c) => (c == null ? null : c - 1)),
-        1000,
-      );
-      return () => window.clearTimeout(t);
-    }
+    const launchQuiz = () => {
+      if (staccoLaunchRef.current) return;
+      staccoLaunchRef.current = true;
+      setCount(null);
+      setBeat("quiz");
+      setQuizGate("tema");
 
-    // Fine stacco → quiz sull’argomento (tema), senza click.
-    if (staccoLaunchRef.current) return;
-    staccoLaunchRef.current = true;
-    setCount(null);
-    setBeat("quiz");
-    setQuizGate("tema");
-
-    void (async () => {
-      if (live.runtimeState !== "lobby") return;
-      setGoBusy(true);
-      setGoError(null);
-      try {
-        const questionsRes = await Promise.race([
-          fetch(`/api/events/${encodeURIComponent(eventCode)}/questions`),
-          new Promise<Response>((_, reject) =>
-            window.setTimeout(
-              () => reject(new Error("Timeout caricamento domande.")),
-              10_000,
+      void (async () => {
+        if (live.runtimeState !== "lobby") return;
+        setGoBusy(true);
+        setGoError(null);
+        try {
+          const questionsRes = await Promise.race([
+            fetch(`/api/events/${encodeURIComponent(eventCode)}/questions`),
+            new Promise<Response>((_, reject) =>
+              window.setTimeout(
+                () => reject(new Error("Timeout caricamento domande.")),
+                10_000,
+              ),
             ),
-          ),
-        ]);
-        if (!questionsRes.ok) {
-          setGoError("Impossibile caricare le domande.");
-          return;
+          ]);
+          if (!questionsRes.ok) {
+            setGoError("Impossibile caricare le domande.");
+            return;
+          }
+          const result = await live.runQuizAction("start", {
+            questionCount: live.event?.quizSetup.questionCount ?? undefined,
+            questionSeconds: live.event?.quizSetup.questionSeconds ?? undefined,
+            hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
+            rankingEveryN: live.event?.quizSetup.rankingEveryN,
+            skipStartCountdown: true,
+            autoplayEnabled: boardAutoplay,
+            questionIds: lineupIds ?? undefined,
+          });
+          if (!result.ok) {
+            setGoError(result.error);
+            return;
+          }
+          setQuizGate("play");
+          void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
+        } catch (err) {
+          setGoError(
+            err instanceof Error ? err.message : "Avvio quiz non riuscito.",
+          );
+        } finally {
+          setGoBusy(false);
         }
-        const result = await live.runQuizAction("start", {
-          questionCount: live.event?.quizSetup.questionCount ?? undefined,
-          questionSeconds: live.event?.quizSetup.questionSeconds ?? undefined,
-          hideRankingLastN: live.event?.quizSetup.hideRankingLastN,
-              rankingEveryN: live.event?.quizSetup.rankingEveryN,
-          skipStartCountdown: true,
-          autoplayEnabled: boardAutoplay,
-          questionIds: lineupIds ?? undefined,
-        });
-        if (!result.ok) {
-          setGoError(result.error);
-          return;
-        }
-        setQuizGate("play");
-        void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
-      } catch (err) {
-        setGoError(
-          err instanceof Error ? err.message : "Avvio quiz non riuscito.",
-        );
-      } finally {
-        setGoBusy(false);
-      }
-    })();
+      })();
+    };
+
+    const tick = () => {
+      const value = resolveStaccoValue({
+        title: String(STACCO_SECONDS),
+        startedAt,
+      });
+      setCount(value > 0 ? value : 0);
+      if (value <= 0) launchQuiz();
+    };
+    tick();
+    const id = window.setInterval(tick, 100);
+    return () => window.clearInterval(id);
   }, [
     beat,
     boardAutoplay,
-    count,
     eventCode,
     live.event?.quizSetup.hideRankingLastN,
     live.event?.quizSetup.questionCount,
     live.event?.quizSetup.questionSeconds,
+    live.event?.quizSetup.rankingEveryN,
     live.pin,
     live.runQuizAction,
     live.runtimeState,
@@ -1141,13 +1154,13 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             return;
           }
           if (beat === "stacco") {
+            // Un solo POST con startedAt — anteprima e SCHERMO tickano la stessa cifra.
+            const at =
+              staccoStartedAtRef.current ?? new Date().toISOString();
+            staccoStartedAtRef.current = at;
             await postDisplayCommand(
               eventCode,
-              {
-                type: "slide",
-                kicker: STACCO_KICKER,
-                title: count != null ? String(count) : "…",
-              },
+              staccoDisplayCommand(at),
               live.pin,
             );
             return;
@@ -1178,7 +1191,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     beat,
     sigla,
     help,
-    count,
     eventCode,
     live.pin,
     live.pinReady,
@@ -1379,7 +1391,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       setBeat(step.beat);
       setSigla(step.sigla);
       setRoll(step.roll);
-      if (step.stacco) setCount(5);
+      if (step.stacco) {
+        staccoStartedAtRef.current = new Date().toISOString();
+        setCount(STACCO_SECONDS);
+      }
       if (step.beat === "quiz") {
         setCount(null);
         setQuizGate("tema");
@@ -1764,8 +1779,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       to: "stacco",
       roll,
     });
+    staccoStartedAtRef.current = new Date().toISOString();
     setBeat("stacco");
-    setCount(5);
+    setCount(STACCO_SECONDS);
     flashBoardToast("Presentazione saltata → stacco");
   }
 
