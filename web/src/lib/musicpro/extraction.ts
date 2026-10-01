@@ -11,6 +11,14 @@ import {
 import { parseLoveRouletteGender } from "@/lib/player/identity";
 import { parseLoveRouletteConfig } from "./event-config";
 import type { DisplayOverlay } from "./display-overlay";
+import {
+  computePairRevealStats,
+  type PairRevealStats,
+} from "@/lib/matching/pair-reveal-stats";
+import { getSpecialTrialArchive } from "./special-trial-archive";
+import { getQuizSessionState } from "./quiz-state";
+
+export type { PairRevealStats };
 
 export interface LastReveal {
   maleNick: string;
@@ -20,6 +28,36 @@ export interface LastReveal {
   pairId: string;
   affinityScore: number;
   updatedAt: string;
+  malePhotoUrl?: string;
+  femalePhotoUrl?: string;
+  stats?: PairRevealStats;
+}
+
+function parsePairRevealStats(raw: unknown): PairRevealStats | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const record = raw as Record<string, unknown>;
+  const sameAnswers =
+    typeof record.sameAnswers === "number" ? record.sameAnswers : 0;
+  const questionsCompared =
+    typeof record.questionsCompared === "number"
+      ? record.questionsCompared
+      : 0;
+  const trialsCount =
+    typeof record.trialsCount === "number" ? record.trialsCount : 0;
+  const trialsScore =
+    typeof record.trialsScore === "number" ? record.trialsScore : 0;
+  const fastestMatchQuestionText =
+    typeof record.fastestMatchQuestionText === "string" &&
+    record.fastestMatchQuestionText.trim()
+      ? record.fastestMatchQuestionText.trim()
+      : null;
+  return {
+    sameAnswers,
+    questionsCompared,
+    trialsCount,
+    trialsScore,
+    fastestMatchQuestionText,
+  };
 }
 
 export interface ExtractNextCoupleResult {
@@ -81,6 +119,16 @@ export function getLastReveal(
   const affinityScore =
     typeof record.affinityScore === "number" ? record.affinityScore : 0;
 
+  const malePhotoUrl =
+    typeof record.malePhotoUrl === "string" && record.malePhotoUrl.trim()
+      ? record.malePhotoUrl.trim()
+      : undefined;
+  const femalePhotoUrl =
+    typeof record.femalePhotoUrl === "string" && record.femalePhotoUrl.trim()
+      ? record.femalePhotoUrl.trim()
+      : undefined;
+  const stats = parsePairRevealStats(record.stats);
+
   return {
     maleNick: maleNick.trim(),
     femaleNick: femaleNick.trim(),
@@ -95,6 +143,9 @@ export function getLastReveal(
     pairId: pairId.trim(),
     affinityScore,
     updatedAt: updatedAt.trim(),
+    malePhotoUrl,
+    femalePhotoUrl,
+    stats,
   };
 }
 
@@ -314,18 +365,27 @@ export async function extractNextCouple(
   const participantIds = [pair.participant_male_id, pair.participant_female_id];
   const { data: participants, error: participantsError } = await supabase
     .from("love_roulette_participants")
-    .select("id, nickname")
+    .select("id, nickname, photo_url")
     .in("id", participantIds);
 
   if (participantsError) {
     throw new Error(participantsError.message);
   }
 
-  const nickById = new Map(
-    (participants ?? []).map((row) => [row.id as string, row.nickname as string]),
+  const rowById = new Map(
+    (participants ?? []).map((row) => [row.id as string, row]),
   );
-  const maleNick = nickById.get(pair.participant_male_id);
-  const femaleNick = nickById.get(pair.participant_female_id);
+  const maleRow = rowById.get(pair.participant_male_id);
+  const femaleRow = rowById.get(pair.participant_female_id);
+  const maleNick = maleRow?.nickname as string | undefined;
+  const femaleNick = femaleRow?.nickname as string | undefined;
+  const photoUrl = (url: unknown): string | undefined => {
+    if (typeof url !== "string") return undefined;
+    const trimmed = url.trim();
+    return trimmed && !trimmed.startsWith("blob:") ? trimmed : undefined;
+  };
+  const malePhotoUrl = photoUrl(maleRow?.photo_url);
+  const femalePhotoUrl = photoUrl(femaleRow?.photo_url);
 
   if (!maleNick?.trim() || !femaleNick?.trim()) {
     throw new ExtractionError("Partecipanti della coppia non trovati.", 404);
@@ -360,6 +420,23 @@ export async function extractNextCouple(
     pair.participant_female_id,
   );
 
+  const quiz = getQuizSessionState(metadata);
+  const questionIds = quiz?.questionIds?.length ? quiz.questionIds : undefined;
+  const trialArchive = getSpecialTrialArchive(metadata);
+  let stats: PairRevealStats | undefined;
+  try {
+    stats = await computePairRevealStats(
+      supabase,
+      eventId,
+      pair.participant_male_id,
+      pair.participant_female_id,
+      trialArchive,
+      questionIds,
+    );
+  } catch (err) {
+    console.warn("[extraction] pair reveal stats failed", err);
+  }
+
   const lastReveal: LastReveal = {
     maleNick: maleNick.trim(),
     femaleNick: femaleNick.trim(),
@@ -368,12 +445,13 @@ export async function extractNextCouple(
     pairId: pair.id,
     affinityScore: pair.affinity_score,
     updatedAt: now,
+    malePhotoUrl,
+    femalePhotoUrl,
+    stats,
   };
 
   const displayOverlay: DisplayOverlay = {
-    type: "custom",
-    title: "Coppia rivelata!",
-    body: `${lastReveal.maleNick} & ${lastReveal.femaleNick}`,
+    type: "clear",
     updatedAt: now,
   };
 

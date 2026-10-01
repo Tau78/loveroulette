@@ -70,7 +70,9 @@ export function boardPlayerFromRow(row: BoardPlayerRow): BoardPlayer {
   };
 }
 
-export function playerScreenPhoto(player: BoardPlayer): string {
+export type PlayerScreenPhotoInput = Pick<BoardPlayer, "photo" | "gender">;
+
+export function playerScreenPhoto(player: PlayerScreenPhotoInput): string {
   const photo = player.photo?.trim() ?? "";
   if (photo && !photo.startsWith("blob:") && !photo.startsWith("file:")) {
     return photo;
