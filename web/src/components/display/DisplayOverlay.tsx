@@ -97,7 +97,16 @@ export function DisplayOverlay({
   const show = Boolean(visible && overlay && overlay.type !== "clear");
   const staccoTick =
     show && overlay?.type === "slide" && isStaccoSlide(overlay);
-  const activeFadeSec = staccoTick ? (reduceMotion ? 0 : 0.12) : fadeSec;
+  // Giocatore a schermo (foto in overlay): fade corto — il tap deve sembrare istantaneo.
+  const playerOnScreen =
+    show && overlay?.type === "slide" && Boolean(overlay.imageUrl?.trim());
+  const activeFadeSec = reduceMotion
+    ? 0
+    : staccoTick
+      ? 0.12
+      : playerOnScreen
+        ? 0.18
+        : fadeSec;
 
   return (
     <AnimatePresence mode="sync">

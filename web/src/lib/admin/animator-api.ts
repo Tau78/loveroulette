@@ -1,3 +1,8 @@
+import {
+  broadcastDisplayOverlay,
+  displayCommandToOverlay,
+} from "@/lib/display/display-overlay-broadcast";
+
 const PIN_STORAGE_PREFIX = "lr_animator_pin_";
 
 export function animatorPinStorageKey(eventCode: string): string {
@@ -208,6 +213,12 @@ export async function postDisplayCommand(
   body: Record<string, string>,
   pin: string | null,
 ): Promise<Response> {
+  // Prima il push locale (anteprima + SCHERMO nativo), poi API.
+  try {
+    broadcastDisplayOverlay(eventCode, displayCommandToOverlay(body));
+  } catch {
+    /* broadcast non bloccante */
+  }
   return fetch(`/api/events/${encodeURIComponent(eventCode)}/display`, {
     method: "POST",
     headers: animatorAuthHeaders(pin),

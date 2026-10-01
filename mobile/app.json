@@ -16,7 +16,7 @@
     ],
     "ios": {
       "bundleIdentifier": "it.musicproeventi.loveroulette",
-      "buildNumber": "37",
+      "buildNumber": "38",
       "supportsTablet": true,
       "requireFullScreen": true,
       "config": {
