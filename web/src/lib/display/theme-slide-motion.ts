@@ -77,26 +77,26 @@ export const THEME_ART_MOTION: Record<QuizThemeSlideCategory, ThemeArtMotion> = 
     animate: { scale: 1.22, x: "5%", y: "-2%" },
     transition: { duration: 18, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" },
   },
-  /** Libri: pan lento da «values». */
+  /** Libri: pan lento sulle pagine. */
   libri: {
-    className: "scale-[1.22]",
-    initial: { scale: 1.24, x: "0%", y: "0%" },
-    animate: { scale: 1.1, x: "0%", y: "0%" },
-    transition: { duration: 15, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" },
+    className: "scale-[1.23]",
+    initial: { scale: 1.16, x: "-2%", y: "1%" },
+    animate: { scale: 1.2, x: "2%", y: "-1%" },
+    transition: { duration: 17, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" },
   },
-  /** Cinema: energia da «fun». */
+  /** Cinema: energia proiettore. */
   cinema: {
-    className: "scale-[1.24]",
-    initial: { scale: 1.1, x: "-3%", y: "0%", rotate: -0.6 },
-    animate: { scale: 1.24, x: "3%", y: "0%", rotate: 0.6 },
-    transition: { duration: 9, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" },
+    className: "scale-[1.25]",
+    initial: { scale: 1.08, x: "2%", y: "-2%", rotate: 0.4 },
+    animate: { scale: 1.23, x: "-2%", y: "2%", rotate: -0.4 },
+    transition: { duration: 10, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" },
   },
-  /** Musica: deriva da «romantic». */
+  /** Musica: pulse ritmico. */
   musica: {
-    className: "scale-[1.2]",
-    initial: { scale: 1.12, x: "0%", y: "4%" },
-    animate: { scale: 1.22, x: "0%", y: "-4%" },
-    transition: { duration: 16, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" },
+    className: "scale-[1.21]",
+    initial: { scale: 1.1, x: "0%", y: "-3%" },
+    animate: { scale: 1.24, x: "0%", y: "3%" },
+    transition: { duration: 7, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" },
   },
 };
 
@@ -209,19 +209,19 @@ export const THEME_TEXT_MOTION: Record<QuizThemeSlideCategory, ThemeTextMotion> 
   },
   libri: {
     kicker: {
-      initial: { opacity: 0, y: -40 },
-      animate: { opacity: 1, y: 0 },
+      initial: { opacity: 0, x: 24 },
+      animate: { opacity: 1, x: 0 },
       transition: { duration: 0.28, ease: EASE_OUT_EXPO },
     },
     title: {
-      initial: { opacity: 0, y: -160, scale: 1.4, filter: "blur(10px)" },
+      initial: { opacity: 0, y: 80, scale: 0.92, filter: "blur(8px)" },
       animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
-      transition: { duration: 0.4, ease: EASE_OUT_EXPO, delay: 0.05 },
+      transition: { duration: 0.44, ease: EASE_OUT_EXPO, delay: 0.06 },
     },
     subtitle: {
-      initial: { opacity: 0, scale: 0.9 },
-      animate: { opacity: 1, scale: 1 },
-      transition: { duration: 0.32, ease: EASE_OUT_EXPO, delay: 0.26 },
+      initial: { opacity: 0, y: 20 },
+      animate: { opacity: 1, y: 0 },
+      transition: { duration: 0.3, ease: EASE_OUT_EXPO, delay: 0.24 },
     },
   },
   cinema: {
@@ -231,8 +231,8 @@ export const THEME_TEXT_MOTION: Record<QuizThemeSlideCategory, ThemeTextMotion> 
       transition: { duration: 0.28, ease: EASE_OUT_BACK },
     },
     title: {
-      initial: { opacity: 0, scale: 0.2, rotate: -12 },
-      animate: { opacity: 1, scale: 1, rotate: 0 },
+      initial: { opacity: 0, scale: 0.35, rotate: -14, y: 12 },
+      animate: { opacity: 1, scale: 1, rotate: 0, y: 0 },
       transition: { duration: 0.45, ease: EASE_OUT_BACK, delay: 0.03 },
     },
     subtitle: {
@@ -243,19 +243,19 @@ export const THEME_TEXT_MOTION: Record<QuizThemeSlideCategory, ThemeTextMotion> 
   },
   musica: {
     kicker: {
-      initial: { opacity: 0, y: 20 },
-      animate: { opacity: 1, y: 0 },
-      transition: { duration: 0.3, ease: EASE_OUT_EXPO },
+      initial: { opacity: 0, scale: 1.2 },
+      animate: { opacity: 1, scale: 1 },
+      transition: { duration: 0.26, ease: EASE_OUT_EXPO },
     },
     title: {
-      initial: { opacity: 0, y: 120, scale: 0.82, filter: "blur(12px)" },
-      animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
-      transition: { duration: 0.48, ease: EASE_OUT_BACK, delay: 0.04 },
+      initial: { opacity: 0, y: 60, scale: 1.15, rotate: 2 },
+      animate: { opacity: 1, y: 0, scale: 1, rotate: 0 },
+      transition: { duration: 0.4, ease: EASE_OUT_BACK, delay: 0.05 },
     },
     subtitle: {
-      initial: { opacity: 0, y: 28 },
-      animate: { opacity: 1, y: 0 },
-      transition: { duration: 0.34, ease: EASE_OUT_EXPO, delay: 0.28 },
+      initial: { opacity: 0, x: -30 },
+      animate: { opacity: 1, x: 0 },
+      transition: { duration: 0.32, ease: EASE_OUT_EXPO, delay: 0.22 },
     },
   },
 };

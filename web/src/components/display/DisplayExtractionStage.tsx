@@ -22,6 +22,17 @@ interface DisplayExtractionStageProps {
 
 type ExtractionStage = "idle" | "spinning" | "revealed";
 
+/** Pure helper for tests — when to run the roulette spin before reveal. */
+export function shouldSpinExtractionReveal(
+  previousUpdatedAt: string | null,
+  nextUpdatedAt: string,
+  spinOnFirstReveal: boolean,
+): boolean {
+  if (previousUpdatedAt === null) return spinOnFirstReveal;
+  if (previousUpdatedAt === nextUpdatedAt) return false;
+  return true;
+}
+
 function WheelSegmentLabels() {
   const segmentAngle = 360 / WHEEL_SEGMENT_COUNT;
 
@@ -150,7 +161,16 @@ export function DisplayExtractionStage({
 
     if (previousUpdatedAt === null) {
       prevUpdatedAtRef.current = lastReveal.updatedAt;
-      setStage("revealed");
+      const spin = shouldSpinExtractionReveal(null, lastReveal.updatedAt, true);
+      if (!spin || reduceMotion) {
+        setStage("revealed");
+        return;
+      }
+      setStage("spinning");
+      spinTimerRef.current = window.setTimeout(() => {
+        spinTimerRef.current = null;
+        setStage("revealed");
+      }, SPIN_DURATION_MS);
       return;
     }
 
