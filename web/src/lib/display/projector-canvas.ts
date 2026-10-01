@@ -14,12 +14,12 @@ export const PROJECTOR_EXTRACTION_WHEEL_PX = 520;
 export const PROJECTOR_ROULETTE_CLASS =
   "h-auto w-[880px] max-h-[842px] object-contain";
 
-/** Logo fuori quiz — angolo basso-destra (stessa baseline del cuore: h 72). */
+/** Logo fuori quiz — angolo basso-destra (stessa baseline del cuore: h 144). */
 export const PROJECTOR_LOBBY_LOGO_CLASS =
-  "h-[72px] w-auto object-contain object-bottom drop-shadow-[0_8px_32px_rgba(233,30,140,0.55)]";
+  "h-[144px] w-auto object-contain object-bottom drop-shadow-[0_8px_32px_rgba(233,30,140,0.55)]";
 
 export const PROJECTOR_LOBBY_LOGO_FULL_CLASS =
-  "h-auto w-[320px] max-h-[140px] object-contain object-bottom drop-shadow-[0_8px_32px_rgba(233,30,140,0.55)]";
+  "h-auto w-[640px] max-h-[280px] object-contain object-bottom drop-shadow-[0_8px_32px_rgba(233,30,140,0.55)]";
 
 /** Header proiettore (badge fase) */
 export const PROJECTOR_HEADER_CLASS =
@@ -39,10 +39,11 @@ export const PROJECTOR_QUIZ_MAIN_PAD = "px-4 py-3";
  * Fascia bassa riservata — logo Love Roulette (dx), sync indicator (sx), footer quiz/finalisti.
  * Il contenuto del `<main>` non deve mai invadere questa area (1920×1080).
  */
-export const PROJECTOR_BOTTOM_SAFE_ZONE_PX = 152;
+/** Spazio basso per cuore/logo ×2 (144) + inset bottom-6. */
+export const PROJECTOR_BOTTOM_SAFE_ZONE_PX = 200;
 
 /** Padding bottom sul main quando il footer finalisti non è visibile. */
-export const PROJECTOR_MAIN_BOTTOM_SAFE_CLASS = "pb-[152px]";
+export const PROJECTOR_MAIN_BOTTOM_SAFE_CLASS = "pb-[200px]";
 
 /** Footer finalisti a tre colonne — altezza minima nel flex column. */
 export const PROJECTOR_FINALISTS_FOOTER_MIN_CLASS = "shrink-0 min-h-[168px]";
