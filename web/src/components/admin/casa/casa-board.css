@@ -1613,6 +1613,9 @@ body.casa-board-resizing iframe {
   flex: 1 1 0;
   min-height: 0;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 .casa-board-msg {
