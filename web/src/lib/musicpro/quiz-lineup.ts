@@ -1,11 +1,17 @@
 /**
  * Scaletta domande variata: con N domande tocca tutti gli argomenti
  * (round-robin sulle categorie), non il prefisso del banco.
+ * Ogni chiamata rimescola — ogni manche esce diversa.
  */
 
 export type QuizLineupQuestion = {
   id: string;
   category: string;
+};
+
+export type BuildQuizLineupOptions = {
+  /** Preferisci domande non in questo set (es. manche precedente). */
+  excludeIds?: Iterable<string>;
 };
 
 function normalizeCategory(category: string | null | undefined): string {
@@ -35,14 +41,22 @@ export function buildBalancedQuizLineup(
   bank: QuizLineupQuestion[],
   count: number,
   random: () => number = Math.random,
+  options?: BuildQuizLineupOptions,
 ): string[] {
   const n = Math.max(0, Math.min(Math.floor(count), bank.length));
   if (n === 0) return [];
 
+  const exclude = new Set(options?.excludeIds ?? []);
+  let pool = exclude.size
+    ? bank.filter((q) => !exclude.has(q.id))
+    : bank;
+  // Banca troppo piccola dopo exclude → usa tutto (rimescola comunque).
+  if (pool.length < n) pool = bank;
+
   const byCat = new Map<string, string[]>();
   const catOrder: string[] = [];
 
-  for (const q of bank) {
+  for (const q of pool) {
     const cat = normalizeCategory(q.category);
     let list = byCat.get(cat);
     if (!list) {

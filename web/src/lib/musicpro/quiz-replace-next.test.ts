@@ -37,31 +37,26 @@ describe("pickLineupReplacement", () => {
     { id: "b2", category: "fun" },
   ];
 
-  it("prefers same-category unused", () => {
+  it("replaces with same-category unused only", () => {
     expect(pickLineupReplacement(bank, ["a1", "b1"], 0, () => 0)).toEqual({
       kind: "replace",
       questionId: "a2",
     });
   });
 
-  it("falls back to any unused category", () => {
-    expect(pickLineupReplacement(bank, ["a1", "a2", "b1"], 0, () => 0)).toEqual(
-      {
-        kind: "replace",
-        questionId: "b2",
-      },
-    );
+  it("does not fall back to another category", () => {
+    expect(pickLineupReplacement(bank, ["a1", "a2", "b1"], 0, () => 0)).toBeNull();
   });
 
-  it("swaps when the lineup already uses the whole bank", () => {
+  it("does not swap across the lineup when the bank is exhausted", () => {
     const ids = ["a1", "a2", "b1", "b2"];
-    const picked = pickLineupReplacement(bank, ids, 0, () => 0);
-    expect(picked).toEqual({ kind: "swap", withIndex: 1 });
-    expect(applyLineupReplacement(ids, 0, picked!)).toEqual([
-      "a2",
-      "a1",
-      "b1",
-      "b2",
-    ]);
+    expect(pickLineupReplacement(bank, ids, 0, () => 0)).toBeNull();
+  });
+
+  it("applyLineupReplacement still swaps when given a swap payload", () => {
+    const ids = ["a1", "a2", "b1", "b2"];
+    expect(
+      applyLineupReplacement(ids, 0, { kind: "swap", withIndex: 1 }),
+    ).toEqual(["a2", "a1", "b1", "b2"]);
   });
 });

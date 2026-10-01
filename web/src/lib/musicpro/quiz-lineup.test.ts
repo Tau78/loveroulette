@@ -97,4 +97,14 @@ describe("buildBalancedQuizLineup", () => {
     const counts = lineupCategoryCounts(mixed, ids);
     expect(counts.size).toBe(2);
   });
+
+  it("prefers questions outside excludeIds when the bank is large enough", () => {
+    const ids = buildBalancedQuizLineup(bank, 5, () => 0, {
+      excludeIds: ["l1", "l2", "l3", "r1", "r2", "r3"],
+    });
+    expect(ids).toHaveLength(5);
+    for (const id of ids) {
+      expect(["l1", "l2", "l3", "r1", "r2", "r3"]).not.toContain(id);
+    }
+  });
 });

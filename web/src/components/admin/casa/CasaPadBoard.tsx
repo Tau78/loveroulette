@@ -880,23 +880,37 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   );
   const [lineupIds, setLineupIds] = useState<string[] | null>(null);
   const lineupCountRef = useRef<number | null>(null);
+  const prevHadQuizRef = useRef(false);
+  /** Scaletta della manche appena finita — la prossima la evita se può. */
+  const lastFinishedLineupRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (live.quizState?.questionIds?.length) {
       setLineupIds(live.quizState.questionIds);
       lineupCountRef.current = live.quizState.questionIds.length;
+      prevHadQuizRef.current = true;
       return;
     }
     if (cueQuestions.length === 0) return;
 
+    const quizJustEnded = prevHadQuizRef.current;
+    if (quizJustEnded && lineupIds?.length) {
+      lastFinishedLineupRef.current = [...lineupIds];
+    }
+    prevHadQuizRef.current = false;
+
     const countChanged = lineupCountRef.current !== plannedCount;
-    // Prima build, o cambio N domande. «Cambia domanda» manuale resta finché non cambia N.
-    if (lineupIds != null && !countChanged) return;
+    // Prima build, cambio N, o nuova manche → rimescola. «Cambia domanda» resta.
+    if (lineupIds != null && !countChanged && !quizJustEnded) return;
 
     setLineupIds(
       buildBalancedQuizLineup(
         cueQuestions.map((q) => ({ id: q.id, category: q.category })),
         plannedCount,
+        Math.random,
+        quizJustEnded
+          ? { excludeIds: lastFinishedLineupRef.current }
+          : undefined,
       ),
     );
     lineupCountRef.current = plannedCount;
@@ -1977,18 +1991,15 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         nextCueIndex,
       );
       if (!replacement) {
-        const msg = "Nessuna altra domanda disponibile da mettere al posto.";
+        const msg =
+          "Nessuna altra domanda di questo argomento da mettere al posto.";
         setCmdError(msg);
         flashBoardToast(msg);
         return;
       }
       const nextIds = applyLineupReplacement(ids, nextCueIndex, replacement);
       setLineupIds(nextIds);
-      flashBoardToast(
-        replacement.kind === "swap"
-          ? `Domanda scambiata con Q${replacement.withIndex + 1}`
-          : "Domanda cambiata",
-      );
+      flashBoardToast("Domanda cambiata (stesso argomento)");
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Cambio domanda non riuscito.";
