@@ -42,6 +42,8 @@ interface DisplayQuizStageProps {
   quizState: QuizSessionState;
   currentQuestion: LoveRouletteQuestion | null;
   progressLabel: string | null;
+  /** false = solo mirror (iframe anteprima): i tick li guida plancia / SCHERMO. */
+  driveTicks?: boolean;
   onQuizUpdate?: (
     quiz: QuizSessionState | null,
     runtimeState?: EventState,
@@ -491,6 +493,7 @@ export function DisplayQuizStage({
   quizState,
   currentQuestion,
   progressLabel,
+  driveTicks = true,
   onQuizUpdate,
 }: DisplayQuizStageProps) {
   const [results, setResults] = useState<QuestionResults | null>(null);
@@ -510,10 +513,12 @@ export function DisplayQuizStage({
     quizState,
     enabled: true,
     // Binario: start_countdown + answers→% sempre; hold su AVANTI salvo Auto.
+    // Anteprima embed: solo lettura — evita doppio tick con SCHERMO / plancia.
     driveTicks:
-      serverPhase === "start_countdown" ||
-      serverPhase === "answers" ||
-      autoplayEnabled,
+      driveTicks &&
+      (serverPhase === "start_countdown" ||
+        serverPhase === "answers" ||
+        autoplayEnabled),
     onPhaseChange: (nextPhase) => {
       if (nextPhase === "results") {
         setResults(null);
