@@ -28,7 +28,8 @@ import {
   type SessionTransport,
 } from "@/lib/musicpro/realtime";
 
-const DISPLAY_POLL_MS = 3000;
+/** Overlay/sigla/stacco: poll rapido così anteprima iframe e SCHERMO restano allineati. */
+const DISPLAY_POLL_MS = 400;
 const QUIZ_POLL_MS = 350;
 const FINALS_FAST_POLL_MS = 350;
 

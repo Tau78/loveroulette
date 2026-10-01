@@ -56,6 +56,7 @@ export function DisplayThemeSlide({
         compact ? "rounded-xl" : "rounded-2xl",
         className,
       )}
+      data-theme-slide="1"
     >
       {artSrc ? (
         <>
@@ -107,12 +108,13 @@ export function DisplayThemeSlide({
         />
       )}
 
-      <div className="relative z-10 flex h-full min-h-0 flex-col items-center justify-center px-4 py-6 md:px-10">
-        <div className="relative w-full max-w-6xl text-center">
+      <div className="relative z-10 flex h-full min-h-0 flex-col items-center justify-center px-10 py-6 md:px-16">
+        {/* Safe zone orizzontale sul canvas 1920 — niente clip del titolo lungo. */}
+        <div className="relative w-full max-w-[1600px] text-center">
           <motion.div
             key={`plate-${category ?? "default"}-${title}`}
             className={cn(
-              "pointer-events-none absolute -inset-x-3 -inset-y-5 rounded-[2rem] border border-white/15 bg-gradient-to-b from-black/85 via-black/75 to-black/85 shadow-[0_28px_90px_rgba(0,0,0,0.75)] backdrop-blur-md md:-inset-x-12 md:-inset-y-10",
+              "pointer-events-none absolute inset-0 rounded-[2rem] border border-white/15 bg-gradient-to-b from-black/85 via-black/75 to-black/85 shadow-[0_28px_90px_rgba(0,0,0,0.75)] backdrop-blur-md",
             )}
             initial={still ? false : { opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -121,8 +123,10 @@ export function DisplayThemeSlide({
           />
           <div
             className={cn(
-              "relative z-10 flex flex-col items-center",
-              compact ? "gap-2 px-3 py-5" : "gap-4 px-4 py-10 md:gap-5 md:py-14",
+              "relative z-10 flex w-full min-w-0 flex-col items-center",
+              compact
+                ? "gap-2 px-6 py-5"
+                : "gap-4 px-10 py-10 md:gap-5 md:px-14 md:py-14",
             )}
           >
             {kicker ? (
@@ -149,8 +153,8 @@ export function DisplayThemeSlide({
               key={`title-${category}-${title}`}
               className={cn(
                 QUIZ_THEME_TITLE_CLASS,
-                "text-center text-white",
-                compact && "text-[clamp(2.9rem,7.2vw,4.6rem)] leading-[0.95]",
+                "w-full max-w-full break-words text-center uppercase text-white",
+                compact && "text-[clamp(2.5rem,5.5cqi,4rem)] leading-[0.95]",
               )}
               style={{
                 textShadow:

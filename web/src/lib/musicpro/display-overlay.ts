@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type DisplayOverlayType = "show_qr" | "custom" | "clear" | "slide";
+export type DisplayOverlayType =
+  | "show_qr"
+  | "custom"
+  | "clear"
+  | "slide"
+  | "sigla";
 
 export interface DisplayOverlay {
   type: DisplayOverlayType;
@@ -10,6 +15,11 @@ export interface DisplayOverlay {
   kicker?: string;
   /** Optional face / media for player presentation overlays. */
   imageUrl?: string;
+  /**
+   * Clock condiviso (ISO) — es. stacco 5–4–3–2–1.
+   * Anteprima e SCHERMO derivano la cifra da qui, non da POST a ogni tick.
+   */
+  startedAt?: string;
   updatedAt: string;
 }
 
@@ -18,6 +28,7 @@ const OVERLAY_TYPES = new Set<DisplayOverlayType>([
   "custom",
   "clear",
   "slide",
+  "sigla",
 ]);
 
 export function getDisplayOverlay(
@@ -56,6 +67,9 @@ export function getDisplayOverlay(
   if (typeof record.imageUrl === "string" && record.imageUrl.trim()) {
     overlay.imageUrl = record.imageUrl.trim();
   }
+  if (typeof record.startedAt === "string" && record.startedAt.trim()) {
+    overlay.startedAt = record.startedAt.trim();
+  }
 
   return overlay;
 }
@@ -86,6 +100,9 @@ export async function setDisplayOverlay(
   }
   if (overlay.imageUrl !== undefined) {
     stored.imageUrl = overlay.imageUrl;
+  }
+  if (overlay.startedAt !== undefined) {
+    stored.startedAt = overlay.startedAt;
   }
 
   const { data: row, error: fetchError } = await supabase

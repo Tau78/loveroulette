@@ -41,11 +41,15 @@
   font-size: calc(64px * var(--lr-display-type-scale, 1.8));
 }
 
+/**
+ * Titolo slide argomento — px sul canvas 1920 (non vw viewport).
+ * Con DisplayFixedCanvas lo scale è sul wrapper: vw TV tagliava i titoli lunghi.
+ */
 .lr-dt-theme-title {
   font-size: clamp(
-    calc(4.5rem * var(--lr-display-type-scale, 1.8)),
-    calc(9vw * var(--lr-display-type-scale, 1.8)),
-    calc(7.5rem * var(--lr-display-type-scale, 1.8))
+    72px,
+    calc(72px * var(--lr-display-type-scale, 1.8) / 1.2),
+    128px
   );
 }
 

@@ -1703,7 +1703,8 @@ body.casa-board-resizing iframe {
 }
 
 .casa-board-proj-host .casa-screen,
-.casa-board-proj-host .casa-proj-host {
+.casa-board-proj-host .casa-proj-host,
+.casa-board-proj-host > div {
   width: 100% !important;
   height: 100% !important;
   max-width: 100%;

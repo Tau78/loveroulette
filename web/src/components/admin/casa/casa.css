@@ -911,7 +911,7 @@ html.casa-native-chrome .casa {
 
 .casa-proj-theme {
   position: absolute;
-  inset: 48px 64px 152px;
+  inset: 48px 64px 200px;
   z-index: 2;
   overflow: hidden;
   border-radius: 1.25rem;

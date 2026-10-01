@@ -42,6 +42,8 @@ interface DisplayQuizStageProps {
   quizState: QuizSessionState;
   currentQuestion: LoveRouletteQuestion | null;
   progressLabel: string | null;
+  /** false = solo mirror (iframe anteprima): i tick li guida plancia / SCHERMO. */
+  driveTicks?: boolean;
   onQuizUpdate?: (
     quiz: QuizSessionState | null,
     runtimeState?: EventState,
@@ -56,6 +58,8 @@ function DisplayQuizGameLayout({
   heartProgress,
   centerKey,
   instantCenter = false,
+  /** Slide argomento: tutta la larghezza canvas (1280 tagliava i titoli lunghi). */
+  fullBleedCenter = false,
 }: {
   header: ReactNode;
   center: ReactNode;
@@ -64,12 +68,14 @@ function DisplayQuizGameLayout({
   centerKey?: string;
   /** Evita fade sul centro (es. reveal risposte con slide laterali). */
   instantCenter?: boolean;
+  fullBleedCenter?: boolean;
 }) {
   return (
     <div className="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <div
         className={cn(
-          "mx-auto flex min-h-0 w-full max-w-[1280px] flex-1 flex-col",
+          "mx-auto flex min-h-0 w-full flex-1 flex-col",
+          fullBleedCenter ? "max-w-none" : "max-w-[1280px]",
           instantCenter
             ? "overflow-x-visible overflow-y-hidden"
             : "overflow-hidden",
@@ -491,6 +497,7 @@ export function DisplayQuizStage({
   quizState,
   currentQuestion,
   progressLabel,
+  driveTicks = true,
   onQuizUpdate,
 }: DisplayQuizStageProps) {
   const [results, setResults] = useState<QuestionResults | null>(null);
@@ -510,10 +517,12 @@ export function DisplayQuizStage({
     quizState,
     enabled: true,
     // Binario: start_countdown + answers→% sempre; hold su AVANTI salvo Auto.
+    // Anteprima embed: solo lettura — evita doppio tick con SCHERMO / plancia.
     driveTicks:
-      serverPhase === "start_countdown" ||
-      serverPhase === "answers" ||
-      autoplayEnabled,
+      driveTicks &&
+      (serverPhase === "start_countdown" ||
+        serverPhase === "answers" ||
+        autoplayEnabled),
     onPhaseChange: (nextPhase) => {
       if (nextPhase === "results") {
         setResults(null);
@@ -637,6 +646,7 @@ export function DisplayQuizStage({
     return (
       <DisplayQuizGameLayout
         centerKey={`theme-${quizState.currentIndex}`}
+        fullBleedCenter
         header={
           <ThemeHeaderPanel progressLabel={progressLabel} />
         }
