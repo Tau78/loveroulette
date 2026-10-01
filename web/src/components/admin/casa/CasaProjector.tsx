@@ -444,7 +444,7 @@ export function CasaProjector({
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={reduceMotion ? undefined : { opacity: 0 }}
-            transition={{ duration: fadeSec, ease: "easeInOut" }}
+            transition={{ duration: fadeSec, ease: [0.22, 1, 0.36, 1] }}
           >
             {help ? (
               <div className="casa-proj-help">
