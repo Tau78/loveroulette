@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   displayCommandToOverlay,
+  displayOverlaySemanticKey,
   parseDisplayOverlayBroadcast,
   preferFresherDisplayOverlay,
 } from "./display-overlay-broadcast";
@@ -39,6 +40,19 @@ describe("preferFresherDisplayOverlay", () => {
     };
     expect(preferFresherDisplayOverlay(older, newer)?.title).toBe("B");
     expect(preferFresherDisplayOverlay(newer, older)?.title).toBe("B");
+  });
+
+  it("ignores duplicate sigla with only newer updatedAt", () => {
+    const playing = {
+      type: "sigla" as const,
+      updatedAt: "2026-10-01T12:00:00.000Z",
+    };
+    const rebroadcast = {
+      type: "sigla" as const,
+      updatedAt: "2026-10-01T12:00:05.000Z",
+    };
+    expect(preferFresherDisplayOverlay(playing, rebroadcast)).toBe(playing);
+    expect(displayOverlaySemanticKey(playing)).toBe("sigla");
   });
 
   it("keeps a fresh local overlay when poll sends null", () => {
