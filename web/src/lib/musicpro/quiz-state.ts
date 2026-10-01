@@ -22,6 +22,7 @@ import {
   phaseAutoAdvancesOnTick,
   resolvePhaseAfterQuestionAdvance,
 } from "./quiz-display";
+import { buildBalancedQuizLineup } from "./quiz-lineup";
 import type { LoveRouletteQuestionSource } from "./types";
 import { updateSessionRuntimeState } from "./session";
 import {
@@ -427,6 +428,48 @@ async function resolveRankingCouplePages(
   return rankingCouplePageCount(preview.pairs.length);
 }
 
+const RECENT_QUESTION_IDS_KEY = "love_roulette_recent_question_ids";
+
+function readRecentQuestionIds(
+  metadata: Record<string, unknown>,
+): string[] {
+  const raw = metadata[RECENT_QUESTION_IDS_KEY];
+  if (!Array.isArray(raw)) return [];
+  return raw.map(String).filter(Boolean);
+}
+
+async function persistRecentQuestionIds(
+  supabase: SupabaseClient,
+  eventId: string,
+  questionIds: string[],
+): Promise<void> {
+  const { data: row, error: fetchError } = await supabase
+    .from("events")
+    .select("metadata")
+    .eq("id", eventId)
+    .maybeSingle();
+  if (fetchError || !row) return;
+
+  const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+  const prev = readRecentQuestionIds(metadata);
+  // Tieni le ultime ~2 manche per evitare ripetizioni immediate.
+  const merged = [...questionIds, ...prev].slice(0, Math.max(questionIds.length * 2, 30));
+  const unique: string[] = [];
+  for (const id of merged) {
+    if (!unique.includes(id)) unique.push(id);
+  }
+
+  await supabase
+    .from("events")
+    .update({
+      metadata: {
+        ...metadata,
+        [RECENT_QUESTION_IDS_KEY]: unique,
+      },
+    })
+    .eq("id", eventId);
+}
+
 export async function startQuizSession(
   supabase: SupabaseClient,
   eventId: string,
@@ -496,13 +539,21 @@ export async function startQuizSession(
     }
     questionIds = unique;
   } else {
-    questionIds = quizQuestions.map((q) => q.id);
+    // N domande variate su tutti gli argomenti (non il prefisso del banco).
+    const count =
+      options.questionCount !== undefined
+        ? Math.max(1, Math.min(quizQuestions.length, options.questionCount))
+        : quizQuestions.length;
+    const recent = readRecentQuestionIds(metadata);
+    questionIds = buildBalancedQuizLineup(
+      quizQuestions.map((q) => ({ id: q.id, category: q.category })),
+      count,
+      Math.random,
+      { excludeIds: recent },
+    );
   }
 
-  if (options.questionCount !== undefined && !options.questionIds?.length) {
-    const limit = Math.max(1, Math.min(questionIds.length, options.questionCount));
-    questionIds = questionIds.slice(0, limit);
-  }
+  await persistRecentQuestionIds(supabase, eventId, questionIds);
 
   await persistQuizSetupMetadata(supabase, eventId, {
     questionCount: questionIds.length,
@@ -854,7 +905,7 @@ export async function backQuizQuestion(
 }
 
 /**
- * Sostituisce la prossima domanda (currentIndex+1) con un'altra della stessa
+ * Sostituisce la domanda allo slot con un'altra della stessa
  * categoria non già in scaletta. Non tocca fase/indice — fuori dal binario AVANTI.
  */
 export function pickSameCategoryReplacementId(
@@ -887,16 +938,9 @@ export type LineupReplacement =
   | { kind: "replace"; questionId: string }
   | { kind: "swap"; withIndex: number };
 
-function pickRandomIndex(length: number, random: () => number): number {
-  if (length <= 0) return 0;
-  return Math.min(length - 1, Math.floor(random() * length));
-}
-
 /**
- * Trova un ricambio per la scaletta plancia:
- * 1) stessa categoria fuori scaletta
- * 2) qualsiasi fuori scaletta
- * 3) swap con un altro slot (stessa categoria se possibile)
+ * «Cambia domanda»: solo stesso argomento, fuori scaletta.
+ * Niente fallback cross-categoria né swap (evita di cambiare tema).
  */
 export function pickLineupReplacement(
   bank: { id: string; category: string }[],
@@ -911,34 +955,7 @@ export function pickLineupReplacement(
     random,
   );
   if (sameCat) return { kind: "replace", questionId: sameCat };
-
-  const targetId = questionIds[targetIndex];
-  if (!targetId) return null;
-
-  const target = bank.find((q) => q.id === targetId);
-  const used = new Set(questionIds);
-  const unusedAny = bank.filter((q) => !used.has(q.id));
-  if (unusedAny.length > 0) {
-    const pick = unusedAny[pickRandomIndex(unusedAny.length, random)];
-    return pick ? { kind: "replace", questionId: pick.id } : null;
-  }
-
-  // Banca = scaletta: scambia con un altro posto (preferisci stessa categoria).
-  if (!target || questionIds.length < 2) return null;
-  const cat = target.category.trim().toLowerCase();
-  const otherIndices = questionIds
-    .map((_, i) => i)
-    .filter((i) => i !== targetIndex);
-  const sameCatIndices = otherIndices.filter((i) => {
-    const id = questionIds[i];
-    const q = id ? bank.find((b) => b.id === id) : undefined;
-    return q?.category.trim().toLowerCase() === cat;
-  });
-  const pool = sameCatIndices.length > 0 ? sameCatIndices : otherIndices;
-  if (pool.length === 0) return null;
-  const withIndex = pool[pickRandomIndex(pool.length, random)];
-  if (withIndex == null) return null;
-  return { kind: "swap", withIndex };
+  return null;
 }
 
 export function applyLineupReplacement(
@@ -983,7 +1000,9 @@ export async function replaceNextQuizQuestion(
   const replacement = pickLineupReplacement(bank, current.questionIds, index);
 
   if (!replacement) {
-    throw new Error("Nessuna altra domanda disponibile da mettere al posto.");
+    throw new Error(
+      "Nessuna altra domanda di questo argomento da mettere al posto.",
+    );
   }
 
   const questionIds = applyLineupReplacement(
