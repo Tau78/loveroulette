@@ -12,16 +12,22 @@ interface UseQuizGongAtCountdownEndOptions {
 
 const SYNC_POLL_MS = 32;
 
+function answersCueKey(quiz: QuizSessionState): string {
+  return `${quiz.currentIndex}:${quiz.phaseStartedAt}`;
+}
+
 /**
- * Gong sullo «0» del countdown: stesso orologio del proiettore.
- * Suona quando la fase `answers` arriva a remaining 0 (lock tastiere),
- * non al click AVANTI verso i risultati.
+ * Gong sullo «0» del countdown (stesso orologio del proiettore), oppure
+ * quando il server chiude le risposte perché tutti hanno risposto (`gongCueKey`).
+ * Non suona al click AVANTI (nessun cue).
  */
 export function useQuizGongAtCountdownEnd({
   quizState,
   enabled = true,
 }: UseQuizGongAtCountdownEndOptions): void {
   const playedRef = useRef<string | null>(null);
+  /** Chiave della finestra `answers` in cui eravamo armati (remaining > 0). */
+  const armedKeyRef = useRef<string | null>(null);
   const quizStateRef = useRef(quizState);
   quizStateRef.current = quizState;
 
@@ -29,20 +35,42 @@ export function useQuizGongAtCountdownEnd({
     if (enabled) preloadQuizGongSound();
   }, [enabled]);
 
+  // Early-close: cue server dopo aver lasciato answers con remaining > 0.
   useEffect(() => {
     if (!enabled || !quizState) return;
 
-    const cueKey = `${quizState.currentIndex}:${quizState.phaseStartedAt}`;
+    const cue = quizState.gongCueKey;
+    if (
+      cue &&
+      armedKeyRef.current === cue &&
+      playedRef.current !== cue
+    ) {
+      playedRef.current = cue;
+      armedKeyRef.current = null;
+      void playQuizGongSound({ dedupKey: cue });
+    }
+  }, [enabled, quizState?.gongCueKey, quizState?.displayPhase]);
+
+  useEffect(() => {
+    if (!enabled || !quizState) return;
+
+    if (quizState.displayPhase !== "answers") {
+      return;
+    }
+
+    const cueKey = answersCueKey(quizState);
     if (playedRef.current === cueKey) return;
 
     const initial = resolveSyncedQuizClock(quizState);
 
-    // Join in ritardo: già a 0 / fuori da answers → non sparare il gong stale.
-    if (initial.displayPhase !== "answers" || initial.remaining <= 0) {
+    // Join in ritardo: già a 0 → non sparare il gong stale.
+    if (initial.remaining <= 0) {
       playedRef.current = cueKey;
+      armedKeyRef.current = null;
       return;
     }
 
+    armedKeyRef.current = cueKey;
     let previousRemaining = initial.remaining;
     void preloadQuizGongSound();
 

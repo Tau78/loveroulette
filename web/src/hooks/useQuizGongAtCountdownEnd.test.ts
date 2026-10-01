@@ -14,6 +14,18 @@ function shouldArmGongWatch(quiz: QuizSessionState): boolean {
   return clock.displayPhase === "answers" && clock.remaining > 0;
 }
 
+/** Early-close: gong solo se eravamo armati sulla stessa chiave del cue server. */
+function shouldPlayGongFromServerCue(
+  armedKey: string | null,
+  gongCueKey: string | undefined,
+  alreadyPlayed: string | null,
+): boolean {
+  if (!gongCueKey || !armedKey) return false;
+  if (armedKey !== gongCueKey) return false;
+  if (alreadyPlayed === gongCueKey) return false;
+  return true;
+}
+
 function quizFixture(
   phase: QuizSessionState["displayPhase"],
   elapsedSec: number,
@@ -50,5 +62,17 @@ describe("quiz gong arm contract", () => {
 
   it("arms while answers countdown still running", () => {
     expect(shouldArmGongWatch(quizFixture("answers", 2))).toBe(true);
+  });
+
+  it("plays gong on early-close cue matching armed answers window", () => {
+    const answers = quizFixture("answers", 2);
+    const key = `${answers.currentIndex}:${answers.phaseStartedAt}`;
+    expect(shouldPlayGongFromServerCue(key, key, null)).toBe(true);
+  });
+
+  it("skips gong on AVANTI (no cue) or late join (not armed)", () => {
+    expect(shouldPlayGongFromServerCue(null, "0:iso", null)).toBe(false);
+    expect(shouldPlayGongFromServerCue("0:a", undefined, null)).toBe(false);
+    expect(shouldPlayGongFromServerCue("0:a", "0:b", null)).toBe(false);
   });
 });
