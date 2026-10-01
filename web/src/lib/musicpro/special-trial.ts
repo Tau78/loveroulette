@@ -3,6 +3,10 @@ import { logAvantiBinary } from "@/lib/admin/avanti-binary-log";
 import type { EventState } from "@/lib/types";
 import type { SpecialTrialChallengeId } from "@/lib/game/special-trial-challenges";
 import {
+  appendSpecialTrialArchive,
+  archiveEntryFromTrial,
+} from "./special-trial-archive";
+import {
   advanceQuizIndexAfterHold,
   getQuizSessionState,
   type QuizSessionState,
@@ -256,6 +260,7 @@ export async function advanceQuizAfterSpecialTrial(
   eventId: string,
 ): Promise<{ quiz: QuizSessionState | null; runtimeState: EventState }> {
   const metadata = await readEventMetadata(supabase, eventId);
+  const trialBeforeClose = getSpecialTrialState(metadata);
   const current = getQuizSessionState(metadata);
   if (!current) {
     await writeSpecialTrialState(supabase, eventId, null);
@@ -263,6 +268,17 @@ export async function advanceQuizAfterSpecialTrial(
   }
 
   const advanced = await advanceQuizIndexAfterHold(supabase, eventId);
+  if (trialBeforeClose) {
+    const entry = archiveEntryFromTrial(trialBeforeClose, nowIso());
+    if (entry) {
+      const archived = appendSpecialTrialArchive(metadata, entry);
+      const { error: archiveError } = await supabase
+        .from("events")
+        .update({ metadata: archived })
+        .eq("id", eventId);
+      if (archiveError) throw new Error(archiveError.message);
+    }
+  }
   await writeSpecialTrialState(supabase, eventId, null);
 
   logAvantiBinary("advance", "special_trial closed → next theme", {
