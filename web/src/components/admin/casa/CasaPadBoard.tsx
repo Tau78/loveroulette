@@ -125,14 +125,12 @@ import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { useQuizGongAtCountdownEnd } from "@/hooks/useQuizGongAtCountdownEnd";
 import { useCurrentQuizQuestion, useQuizQuestions, questionWithShuffledOptions } from "@/hooks/useQuizQuestions";
 import {
-  DEFAULT_GONG_ATMOSPHERE,
   DEFAULT_VIDEO,
   isAudioFile,
   nextIndex,
   pickDirectoryFiles,
   revokeTracks,
   tracksFromFiles,
-  type CasaGongAtmosphere,
   type CasaMediaTrack,
   type CasaRepeatMode,
   type CasaVideoState,
@@ -674,7 +672,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     bed: false,
     fx: false,
   });
-  const [gongAtmo] = useState<CasaGongAtmosphere>(DEFAULT_GONG_ATMOSPHERE);
   const [bedSeek, setBedSeek] = useState({ current: 0, duration: 0 });
   const [bedPickError, setBedPickError] = useState<string | null>(null);
   const [videoState, setVideoState] = useState<CasaVideoState>(DEFAULT_VIDEO);
@@ -742,6 +739,14 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (siglaBundledOk !== false) return;
+    flashBoardToast(
+      "Sigla video assente · fallback audio/logo · metti web/public/grafiche/video/sigla.mp4",
+      { ms: 4000 },
+    );
+  }, [siglaBundledOk, flashBoardToast]);
 
   const applyDemoChatMessages = useCallback(
     (messages: { id: string; who: string; text: string }[]) => {
@@ -1812,6 +1817,82 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     flashBoardToast("Presentazione saltata → stacco");
   }
 
+  /** AVANTI locale bloccato (busy/errore) → riprova. In quiz live: advance. */
+  async function forceAvanti() {
+    if (goBusy || goError) {
+      setGoBusy(false);
+      setGoError(null);
+      await go();
+      flashBoardToast("Forza AVANTI");
+      return;
+    }
+    if (liveQuizActive && !live.controlsDisabled) {
+      setCmdBusy(true);
+      setCmdError(null);
+      try {
+        const result = await live.runQuizAction("advance");
+        if (!result.ok) {
+          setCmdError(result.error);
+          if (result.invalidPin) live.openPinModal();
+          return;
+        }
+        flashBoardToast("Forza AVANTI");
+      } catch (err) {
+        setCmdError(
+          err instanceof Error ? err.message : "Forza AVANTI non riuscito.",
+        );
+      } finally {
+        setCmdBusy(false);
+      }
+    }
+  }
+
+  /** Ripeti domanda corrente: wipe risposte + riparti da theme_intro. */
+  async function replayCurrentQuestion() {
+    if (!liveQuizActive || cmdBusy || live.controlsDisabled) return;
+    setCmdBusy(true);
+    setCmdError(null);
+    try {
+      const result = await live.runQuizAction("replayCurrent");
+      if (!result.ok) {
+        setCmdError(result.error);
+        if (result.invalidPin) live.openPinModal();
+        return;
+      }
+      const q = (live.quizState?.currentIndex ?? 0) + 1;
+      flashBoardToast(`Ripeti Q${q} · risposte annullate`);
+      if (live.pinReady) {
+        void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
+      }
+    } catch (err) {
+      setCmdError(
+        err instanceof Error ? err.message : "Ripeti domanda non riuscito.",
+      );
+    } finally {
+      setCmdBusy(false);
+    }
+  }
+
+  type ContextCmd = "ripeti" | "salta" | "forza";
+  const contextCmd: ContextCmd =
+    beat === "presenti"
+      ? "salta"
+      : goBusy || Boolean(goError)
+        ? "forza"
+        : "ripeti";
+
+  function runContextCmd() {
+    if (contextCmd === "salta") {
+      skipPresentiRoll();
+      return;
+    }
+    if (contextCmd === "forza") {
+      void forceAvanti();
+      return;
+    }
+    void replayCurrentQuestion();
+  }
+
   /** Chiude il riquadro: se c’era un giocatore a schermo, torna al gioco. */
   function closeExpand() {
     if (expand === "players" && pickedId) {
@@ -2029,46 +2110,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         err instanceof Error ? err.message : "Cambio domanda non riuscito.";
       setCmdError(msg);
       flashBoardToast(msg);
-    } finally {
-      setCmdBusy(false);
-    }
-  }
-
-  async function showRankingNow() {
-    if (!liveQuizActive || cmdBusy || live.controlsDisabled) return;
-    if (liveQuizPhase === "next_question") return;
-    const prevPhase = live.quizState?.displayPhase;
-    setCmdBusy(true);
-    setCmdError(null);
-    try {
-      const result = await live.runQuizAction("setPhase", {
-        displayPhase: "next_question",
-      });
-      if (!result.ok) {
-        setCmdError(result.error);
-        if (result.invalidPin) live.openPinModal();
-        return;
-      }
-      flashBoardToast("Classifica sul proiettore", {
-        undo:
-          prevPhase && prevPhase !== "next_question"
-            ? async () => {
-                const undoResult = await live.runQuizAction("setPhase", {
-                  displayPhase: prevPhase,
-                });
-                if (!undoResult.ok) {
-                  setCmdError(undoResult.error);
-                  if (undoResult.invalidPin) live.openPinModal();
-                  return;
-                }
-                flashBoardToast("Classifica annullata");
-              }
-            : undefined,
-      });
-    } catch (err) {
-      setCmdError(
-        err instanceof Error ? err.message : "Classifica non riuscita.",
-      );
     } finally {
       setCmdBusy(false);
     }
@@ -3103,22 +3144,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               <div className="casa-board-cmds">
                 <button
                   type="button"
-                  className="casa-board-cmd casa-board-cmd-rank"
-                  disabled={
-                    !liveQuizActive ||
-                    cmdBusy ||
-                    live.controlsDisabled ||
-                    liveQuizPhase === "next_question"
-                  }
-                  title="Mostra classifica intermedia sul proiettore"
-                  onClick={() => {
-                    void showRankingNow();
-                  }}
-                >
-                  Classifica
-                </button>
-                <button
-                  type="button"
                   className={
                     live.quizState?.skipResults
                       ? "casa-board-cmd casa-board-cmd-warn casa-board-cmd-on"
@@ -3159,32 +3184,51 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 <button
                   type="button"
                   className={
-                    beat === "presenti"
+                    resumeOpen
                       ? "casa-board-cmd casa-board-cmd-warn"
-                      : resumeOpen
-                        ? "casa-board-cmd casa-board-cmd-warn"
-                        : "casa-board-cmd"
+                      : "casa-board-cmd"
                   }
                   disabled={
-                    beat === "presenti"
-                      ? live.controlsDisabled
-                      : !liveQuizActive || cmdBusy || live.controlsDisabled
+                    !liveQuizActive || cmdBusy || live.controlsDisabled
                   }
-                  title={
-                    beat === "presenti"
-                      ? "Salta la presentazione giocatori → stacco"
-                      : "Riprendi da una domanda (solo quiz, senza wipe)"
-                  }
-                  aria-pressed={beat === "presenti" ? undefined : resumeOpen}
+                  title="Riprendi da una domanda (solo quiz, senza wipe)"
+                  aria-pressed={resumeOpen}
                   onClick={() => {
-                    if (beat === "presenti") {
-                      skipPresentiRoll();
-                      return;
-                    }
                     openResumeRow();
                   }}
                 >
-                  {beat === "presenti" ? "Salta" : "Riprendi"}
+                  Riprendi
+                </button>
+                <button
+                  type="button"
+                  className={
+                    contextCmd === "ripeti"
+                      ? "casa-board-cmd"
+                      : "casa-board-cmd casa-board-cmd-warn"
+                  }
+                  disabled={
+                    contextCmd === "salta"
+                      ? live.controlsDisabled
+                      : contextCmd === "forza"
+                        ? live.controlsDisabled || cmdBusy
+                        : !liveQuizActive ||
+                          cmdBusy ||
+                          live.controlsDisabled
+                  }
+                  title={
+                    contextCmd === "salta"
+                      ? "Salta la presentazione giocatori → stacco"
+                      : contextCmd === "forza"
+                        ? "AVANTI bloccato — forza il passo"
+                        : "Ripeti la domanda corrente e annulla le risposte già date"
+                  }
+                  onClick={runContextCmd}
+                >
+                  {contextCmd === "salta"
+                    ? "Salta"
+                    : contextCmd === "forza"
+                      ? "Forza avanti"
+                      : "Ripeti"}
                 </button>
               </div>
               {resumeOpen ? (
@@ -3498,18 +3542,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         </section>
       </main>
 
-      <footer className="casa-board-foot">
-        <span className="casa-board-phase">{beat}</span>
-        <span className="casa-board-foot-meta">
-          {siglaBundledOk === false ? (
-            <span className="casa-board-foot-warn" title="Asset installazione">
-              Sigla video assente · fallback audio/logo · metti
-              web/public/grafiche/video/sigla.mp4
-            </span>
-          ) : null}
-          {gongAtmo.enabled ? "Gong on" : "Gong off"} · ufficiale /board
-        </span>
-      </footer>
       </div>
 
       {drawerOpen ? (
