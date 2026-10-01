@@ -58,6 +58,8 @@ function DisplayQuizGameLayout({
   heartProgress,
   centerKey,
   instantCenter = false,
+  /** Slide argomento: tutta la larghezza canvas (1280 tagliava i titoli lunghi). */
+  fullBleedCenter = false,
 }: {
   header: ReactNode;
   center: ReactNode;
@@ -66,12 +68,14 @@ function DisplayQuizGameLayout({
   centerKey?: string;
   /** Evita fade sul centro (es. reveal risposte con slide laterali). */
   instantCenter?: boolean;
+  fullBleedCenter?: boolean;
 }) {
   return (
     <div className="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <div
         className={cn(
-          "mx-auto flex min-h-0 w-full max-w-[1280px] flex-1 flex-col",
+          "mx-auto flex min-h-0 w-full flex-1 flex-col",
+          fullBleedCenter ? "max-w-none" : "max-w-[1280px]",
           instantCenter
             ? "overflow-x-visible overflow-y-hidden"
             : "overflow-hidden",
@@ -642,6 +646,7 @@ export function DisplayQuizStage({
     return (
       <DisplayQuizGameLayout
         centerKey={`theme-${quizState.currentIndex}`}
+        fullBleedCenter
         header={
           <ThemeHeaderPanel progressLabel={progressLabel} />
         }

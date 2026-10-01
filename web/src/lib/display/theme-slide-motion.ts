@@ -124,8 +124,9 @@ export const THEME_TEXT_MOTION: Record<QuizThemeSlideCategory, ThemeTextMotion> 
       transition: { duration: 0.28, ease: EASE_OUT_EXPO },
     },
     title: {
-      initial: { opacity: 0, x: -220, skewX: -8, scale: 1.15 },
-      animate: { opacity: 1, x: 0, skewX: 0, scale: 1 },
+      // Niente x grande: overflow-hidden sulla slide tagliava il titolo a sinistra.
+      initial: { opacity: 0, y: 40, skewX: -4, scale: 1.08 },
+      animate: { opacity: 1, y: 0, skewX: 0, scale: 1 },
       transition: { duration: 0.38, ease: EASE_OUT_EXPO, delay: 0.04 },
     },
     subtitle: {
