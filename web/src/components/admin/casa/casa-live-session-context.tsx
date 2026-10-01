@@ -22,7 +22,8 @@ export type CasaQuizActionBody = {
     | "setPhase"
     | "replaceNextQuestion"
     | "setSkipResults"
-    | "resumeAt";
+    | "resumeAt"
+    | "replayCurrent";
   autoplaySeconds?: number;
   questionCount?: number;
   questionSeconds?: number;
@@ -76,6 +77,8 @@ export type CasaLiveSessionValue = {
   lastReveal: UseLoveRouletteSessionResult["lastReveal"];
   syncStatus: UseLoveRouletteSessionResult["syncStatus"];
   applyQuizUpdate: UseLoveRouletteSessionResult["applyQuizUpdate"];
+  applyRuntimeState: UseLoveRouletteSessionResult["applyRuntimeState"];
+  applyLastReveal: UseLoveRouletteSessionResult["applyLastReveal"];
   applyFinalsUpdate: UseLoveRouletteSessionResult["applyFinalsUpdate"];
   applySpecialTrialUpdate: UseLoveRouletteSessionResult["applySpecialTrialUpdate"];
   stats: EventStats;

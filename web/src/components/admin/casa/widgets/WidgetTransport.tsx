@@ -10,7 +10,11 @@ import {
   useCasaInvalidPinHandler,
 } from "@/components/admin/casa/widgets/casa-widget-live";
 import { postSpecialTrialAction } from "@/lib/admin/animator-api";
+import {
+  isSpecialTrialRunningExpired,
+} from "@/lib/musicpro/special-trial";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
+import type { EventState } from "@/lib/types";
 
 /**
  * Transport live — AdminTransportBar (GO fase) + STOP (spegne Auto quiz).
@@ -42,6 +46,8 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
     extractionMode,
     setExtractionMode,
     applyQuizUpdate,
+    applyRuntimeState,
+    applyLastReveal,
     applyFinalsUpdate,
     applySpecialTrialUpdate,
     specialTrial,
@@ -55,49 +61,52 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
   const [trialBusy, setTrialBusy] = useState(false);
 
   const handleQuizChange = useCallback(
-    (quiz: QuizSessionState | null) => {
-      applyQuizUpdate(quiz);
+    (quiz: QuizSessionState | null, nextRuntimeState?: EventState) => {
+      applyQuizUpdate(quiz, nextRuntimeState);
     },
     [applyQuizUpdate],
   );
 
+  const runSpecialTrialAction = useCallback(
+    async (action: "advance" | "start" | "tick") => {
+      if (controlsDisabled || trialBusy) return;
+      setTrialBusy(true);
+      try {
+        const res = await postSpecialTrialAction(eventCode, { action }, pin);
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+          specialTrial?: typeof specialTrial;
+          quiz?: QuizSessionState | null;
+        } | null;
+        if (!res.ok) {
+          if (res.status === 403) onInvalidPin();
+          throw new Error(data?.error ?? "Azione prova fallita.");
+        }
+        applySpecialTrialUpdate(data?.specialTrial ?? null, data?.quiz);
+      } finally {
+        setTrialBusy(false);
+      }
+    },
+    [
+      applySpecialTrialUpdate,
+      controlsDisabled,
+      eventCode,
+      onInvalidPin,
+      pin,
+      specialTrial,
+      trialBusy,
+    ],
+  );
+
   const advanceSpecialTrial = useCallback(async () => {
-    if (controlsDisabled || trialBusy) return;
     if (
       specialTrial?.status !== "closing" &&
       specialTrial?.status !== "results"
     ) {
       return;
     }
-    setTrialBusy(true);
-    try {
-      const res = await postSpecialTrialAction(
-        eventCode,
-        { action: "advance" },
-        pin,
-      );
-      const data = (await res.json().catch(() => null)) as {
-        error?: string;
-        specialTrial?: typeof specialTrial;
-        quiz?: QuizSessionState | null;
-      } | null;
-      if (!res.ok) {
-        if (res.status === 403) onInvalidPin();
-        throw new Error(data?.error ?? "Avanzamento prova fallito.");
-      }
-      applySpecialTrialUpdate(data?.specialTrial ?? null, data?.quiz);
-    } finally {
-      setTrialBusy(false);
-    }
-  }, [
-    applySpecialTrialUpdate,
-    controlsDisabled,
-    eventCode,
-    onInvalidPin,
-    pin,
-    specialTrial?.status,
-    trialBusy,
-  ]);
+    await runSpecialTrialAction("advance");
+  }, [runSpecialTrialAction, specialTrial?.status]);
 
   const startQuiz = useCallback(async () => {
     if (controlsDisabled || startBusy) return;
@@ -174,17 +183,40 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
   }
 
   if (specialTrial?.status === "running") {
+    const expired = isSpecialTrialRunningExpired(specialTrial);
     return (
-      <button type="button" className="casa-go" disabled aria-disabled>
-        Prova in corso
+      <button
+        type="button"
+        className="casa-go"
+        disabled={controlsDisabled || trialBusy || !expired}
+        aria-disabled={controlsDisabled || trialBusy || !expired}
+        onClick={() => void runSpecialTrialAction("tick")}
+      >
+        {expired ? (trialBusy ? "…" : "Fine prova") : "Prova in corso"}
       </button>
     );
   }
 
   if (specialTrial?.status === "setup") {
+    const canStart =
+      Boolean(specialTrial.challengeId) &&
+      Boolean(specialTrial.mode) &&
+      (specialTrial.mode !== "scegli" ||
+        specialTrial.participants.length > 0);
     return (
-      <button type="button" className="casa-go" disabled aria-disabled>
-        Setup prova
+      <button
+        type="button"
+        className="casa-go"
+        disabled={controlsDisabled || trialBusy || !canStart}
+        aria-disabled={controlsDisabled || trialBusy || !canStart}
+        onClick={() => void runSpecialTrialAction("start")}
+        title={
+          canStart
+            ? "VIA — avvia la prova"
+            : "Completa setup (prova, modalità, giocatori)"
+        }
+      >
+        {trialBusy ? "…" : canStart ? "VIA" : "Setup prova"}
       </button>
     );
   }
@@ -203,6 +235,8 @@ function WidgetTransportBody({ variant }: { variant: "panel" | "go" }) {
         onExtractionModeChange={setExtractionMode}
         onInvalidPin={onInvalidPin}
         onQuizChange={handleQuizChange}
+        onRuntimeStateChange={applyRuntimeState}
+        onLastRevealChange={applyLastReveal}
         onFinalsChange={applyFinalsUpdate}
         onRefreshProgress={refreshSessionStats}
         onStartQuiz={

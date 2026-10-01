@@ -12,6 +12,9 @@ describe("quiz-theme-tracks", () => {
     expect(quizBedTrackForCategory("adventure")).toBe("LR_02_Quiz_Adventure");
     expect(quizBedTrackForCategory("values")).toBe("LR_02_Quiz_Values");
     expect(quizBedTrackForCategory("intimacy")).toBe("LR_02_Quiz_Intimacy");
+    expect(quizBedTrackForCategory("libri")).toBe("LR_02_Quiz_Values");
+    expect(quizBedTrackForCategory("cinema")).toBe("LR_02_Quiz_Fun");
+    expect(quizBedTrackForCategory("musica")).toBe("LR_02_Quiz_Romantic");
   });
 
   it("uses theme bed on theme_intro and question", () => {
@@ -21,9 +24,9 @@ describe("quiz-theme-tracks", () => {
     expect(trackIdForQuizPhase("question", "fun")).toBe("LR_02_Quiz_Fun");
   });
 
-  it("switches to countdown bed when answers appear", () => {
+  it("keeps theme bed through answers until gong", () => {
     expect(trackIdForQuizPhase("answers", "romantic")).toBe(
-      "LR_03_Quiz_Countdown",
+      "LR_02_Quiz_Romantic",
     );
   });
 

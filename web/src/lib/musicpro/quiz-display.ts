@@ -76,6 +76,18 @@ export const CATEGORY_THEME_LABELS: Record<
     title: "Intimità",
     subtitle: "Vicinanza emotiva (PG-18)",
   },
+  libri: {
+    title: "Libri",
+    subtitle: "Dalla lettura leggera ai classici (e un po' di pepe)",
+  },
+  cinema: {
+    title: "Cinema",
+    subtitle: "Generi, titoli, star e un filo di gossip",
+  },
+  musica: {
+    title: "Musica",
+    subtitle: "Band, voci, concerti e frasi da karaoke",
+  },
 };
 
 export function phaseDurationSeconds(

@@ -51,7 +51,10 @@ export interface QuizSessionState {
   timing: QuizTimingConfig;
   /** Manche importate dal Generatore (slide tematiche). */
   manche?: QuizMancheTheme[];
-  /** Suona gong solo quando il countdown risposte scade (non su AVANTI). */
+  /**
+   * Cue gong quando le risposte si chiudono da timer o “tutti hanno risposto”.
+   * Assente su AVANTI forzato (niente gong).
+   */
   gongCueKey?: string;
   /** Ultime N domande senza classifica di accoppiamento (al buio). */
   hideRankingLastN: number;
@@ -636,11 +639,35 @@ async function loadEventMetadata(
   return (data?.metadata ?? {}) as Record<string, unknown>;
 }
 
+export type TickQuizPhaseOptions = {
+  /** AVANTI / skip: forza avanzamento senza gong. */
+  force?: boolean;
+  /**
+   * Tutti gli online hanno risposto: chiudi `answers` subito con gong
+   * (stessa transizione auto del timer, anticipata).
+   */
+  earlyCloseAnswers?: boolean;
+};
+
+function normalizeTickOptions(
+  forceOrOptions: boolean | TickQuizPhaseOptions = false,
+): { force: boolean; earlyCloseAnswers: boolean } {
+  if (typeof forceOrOptions === "boolean") {
+    return { force: forceOrOptions, earlyCloseAnswers: false };
+  }
+  const earlyCloseAnswers = forceOrOptions.earlyCloseAnswers === true;
+  return {
+    force: forceOrOptions.force === true || earlyCloseAnswers,
+    earlyCloseAnswers,
+  };
+}
+
 export async function tickQuizPhase(
   supabase: SupabaseClient,
   eventId: string,
-  force = false,
+  forceOrOptions: boolean | TickQuizPhaseOptions = false,
 ): Promise<{ quiz: QuizSessionState | null; runtimeState: EventState }> {
+  const { force, earlyCloseAnswers } = normalizeTickOptions(forceOrOptions);
   let current = await loadCurrentQuiz(supabase, eventId);
   const metadata = await loadEventMetadata(supabase, eventId);
   const specialTrial = getSpecialTrialState(metadata);
@@ -649,7 +676,11 @@ export async function tickQuizPhase(
     return { quiz: current, runtimeState: "quiz" };
   }
 
-  if (!force) {
+  if (earlyCloseAnswers) {
+    if (current.displayPhase !== "answers") {
+      return { quiz: current, runtimeState: "quiz" };
+    }
+  } else if (!force) {
     const canAuto = phaseAutoAdvancesOnTick(
       current.displayPhase,
       current.autoplayEnabled,
@@ -733,6 +764,29 @@ export async function tickQuizPhase(
         total: current.total,
         force,
       });
+    } else if (
+      earlyCloseAnswers &&
+      fromPhase === "answers" &&
+      next === "results"
+    ) {
+      logAvantiBinary("advance", "answers all-answered → results %", {
+        eventId,
+        from: fromPhase,
+        to: next,
+        index: fromIndex,
+      });
+    } else if (
+      earlyCloseAnswers &&
+      fromPhase === "answers" &&
+      current.skipResults === true &&
+      (next === "advance_index" || next === "next_question" || next === "finish")
+    ) {
+      logAvantiBinary("advance", "answers all-answered → Al Buio (skip %)", {
+        eventId,
+        from: fromPhase,
+        to: next,
+        index: fromIndex,
+      });
     } else if (force) {
       logAvantiBinary("advance", "forced AVANTI / skip phase", {
         eventId,
@@ -774,6 +828,10 @@ export async function tickQuizPhase(
         return { quiz: current, runtimeState: "quiz" };
       }
 
+      const answersGongKey =
+        earlyCloseAnswers && fromPhase === "answers"
+          ? `${fromIndex}:${current.phaseStartedAt}`
+          : undefined;
       const newIndex = current.currentIndex + 1;
       current = freshPhase(
         {
@@ -787,13 +845,14 @@ export async function tickQuizPhase(
           newIndex,
           current.manche,
         ),
+        answersGongKey ? { gongCueKey: answersGongKey } : undefined,
       );
       await writeQuizState(supabase, eventId, current);
     } else {
+      // Gong: timer answers→% oppure early-close (tutti risposti). Mai su AVANTI.
       const gongCueKey =
-        !force &&
         current.displayPhase === "answers" &&
-        next === "results"
+        ((!force && next === "results") || earlyCloseAnswers)
           ? `${current.currentIndex}:${current.phaseStartedAt}`
           : undefined;
 
@@ -1127,6 +1186,38 @@ export async function resumeQuizAtIndex(
 
   await writeQuizState(supabase, eventId, quiz);
   return quiz;
+}
+
+/**
+ * Recovery plancia «RIPETI»: cancella le risposte della domanda corrente
+ * e riparte da quella Q (theme_intro). Non altera l’ordine del binario.
+ */
+export async function replayQuizCurrentQuestion(
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<QuizSessionState> {
+  const current = await loadCurrentQuiz(supabase, eventId);
+  const questionId = current.questionIds[current.currentIndex];
+  if (!questionId) {
+    throw new Error("Nessuna domanda corrente da ripetere.");
+  }
+
+  const { error: answersError } = await supabase
+    .from("love_roulette_answers")
+    .delete()
+    .eq("question_id", questionId);
+  if (answersError) {
+    throw new Error(answersError.message);
+  }
+
+  logAvantiBinary("info", "replay current question (wipe answers)", {
+    eventId,
+    index: current.currentIndex,
+    questionId,
+    from: current.displayPhase,
+  });
+
+  return resumeQuizAtIndex(supabase, eventId, current.currentIndex);
 }
 
 export async function setQuizDisplayPhase(

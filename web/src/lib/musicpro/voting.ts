@@ -9,6 +9,9 @@ export interface VotingFinalist {
   rank: number;
 }
 
+/** Chiave ballot del voto animatore (non è un participant UUID). */
+export const ANIMATOR_BALLOT_KEY = "__animator__";
+
 export interface VotingSessionState {
   status: "open" | "closed";
   challengeId: ChallengeId;
@@ -19,6 +22,8 @@ export interface VotingSessionState {
   counts: Record<string, number>;
   /** participantId → pairId for the active challenge. */
   ballots: Record<string, string>;
+  /** Coppia scelta dall’animatore (plancia), se ha votato. */
+  animatorPairId?: string | null;
   winnerPairId?: string | null;
   closedAt?: string;
 }
@@ -110,6 +115,13 @@ function normalizeSession(raw: unknown): VotingSessionState | null {
 
   const status = record.status === "closed" ? "closed" : "open";
 
+  const animatorPairId =
+    typeof record.animatorPairId === "string"
+      ? record.animatorPairId
+      : typeof ballots[ANIMATOR_BALLOT_KEY] === "string"
+        ? ballots[ANIMATOR_BALLOT_KEY]
+        : null;
+
   return {
     status,
     challengeId: challengeId as ChallengeId,
@@ -120,6 +132,7 @@ function normalizeSession(raw: unknown): VotingSessionState | null {
     finalists,
     counts: { ...emptyCounts(finalists), ...counts },
     ballots,
+    animatorPairId,
     winnerPairId:
       typeof record.winnerPairId === "string" ? record.winnerPairId : null,
     closedAt: typeof record.closedAt === "string" ? record.closedAt : undefined,
@@ -321,6 +334,57 @@ export async function startVotingSession(
   return session;
 }
 
+/** Voto animatore da plancia: conta come 1 voto pubblico (sostituibile). */
+export async function submitAnimatorVote(
+  supabase: SupabaseClient,
+  eventId: string,
+  pairId: string,
+): Promise<VotingSessionState> {
+  const metadata = await readEventMetadata(supabase, eventId);
+  const votingMeta = getVotingMetadata(metadata);
+  const session = votingMeta.current;
+
+  if (!session || session.status !== "open") {
+    throw new VotingError("La votazione non è attiva.", 409);
+  }
+
+  const validPair = session.finalists.some((f) => f.pairId === pairId);
+  if (!validPair) {
+    throw new VotingError("Coppia non valida.", 400);
+  }
+
+  const previousPairId =
+    session.animatorPairId ?? session.ballots[ANIMATOR_BALLOT_KEY] ?? null;
+  if (previousPairId === pairId) {
+    return session;
+  }
+
+  const counts = { ...session.counts };
+  const ballots = { ...session.ballots };
+
+  if (previousPairId && counts[previousPairId] !== undefined) {
+    counts[previousPairId] = Math.max(0, (counts[previousPairId] ?? 0) - 1);
+  }
+
+  counts[pairId] = (counts[pairId] ?? 0) + 1;
+  ballots[ANIMATOR_BALLOT_KEY] = pairId;
+
+  const updated: VotingSessionState = {
+    ...session,
+    counts,
+    ballots,
+    animatorPairId: pairId,
+    updatedAt: nowIso(),
+  };
+
+  await writeVotingMetadata(supabase, eventId, {
+    ...votingMeta,
+    current: updated,
+  });
+
+  return updated;
+}
+
 export async function submitVote(
   supabase: SupabaseClient,
   eventId: string,
@@ -382,8 +446,8 @@ export async function submitVote(
   };
 
   await writeVotingMetadata(supabase, eventId, {
+    ...votingMeta,
     current: updated,
-    completed: votingMeta.completed,
   });
 
   return updated;

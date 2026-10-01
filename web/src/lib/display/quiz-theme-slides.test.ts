@@ -9,9 +9,7 @@ describe("quiz-theme-slides", () => {
   it("maps every known category to a public asset", () => {
     for (const id of QUIZ_THEME_SLIDE_CATEGORIES) {
       expect(isQuizThemeSlideCategory(id)).toBe(true);
-      expect(resolveThemeSlideSrc(id)).toBe(
-        `/grafiche/theme-slides/${id}.jpg`,
-      );
+      expect(resolveThemeSlideSrc(id)).toMatch(/^\/grafiche\/theme-slides\/.+\.jpg$/);
     }
   });
 

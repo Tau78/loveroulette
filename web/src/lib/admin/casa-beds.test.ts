@@ -32,8 +32,10 @@ describe("casa auto beds", () => {
       "LR_02_Quiz_Fun",
     );
     expect(casaAutoBedSrc("quiz", "start_countdown")).toBeNull();
-    expect(casaAutoBedSrc("quiz", "answers")).toContain("LR_03_Quiz_Countdown");
-    expect(casaAutoBedLabel("quiz", "answers")).toMatch(/countdown/i);
+    expect(casaAutoBedSrc("quiz", "answers", "romantic")).toContain(
+      "LR_02_Quiz_Romantic",
+    );
+    expect(casaAutoBedLabel("quiz", "answers", "romantic")).toMatch(/tema/i);
     expect(casaAutoBedSrc("quiz", "results", "adventure")).toContain(
       "LR_02_Quiz_Adventure",
     );

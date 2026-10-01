@@ -199,7 +199,7 @@ export function AdminControlPanel({
             ? "…"
             : (questionCount ?? "—")}
         </span>
-        {questionCount === 27 ? (
+        {questionCount != null && questionCount >= 42 ? (
           <span className="ml-1 text-primary/80">· OK</span>
         ) : null}
       </p>

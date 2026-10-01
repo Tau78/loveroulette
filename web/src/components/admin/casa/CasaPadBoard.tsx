@@ -14,6 +14,7 @@ import { AdminPlayersManager } from "@/components/admin/AdminPlayersManager";
 import { AdminRegiaPanel } from "@/components/admin/AdminRegiaPanel";
 import { ScaledProjectorPreview } from "@/components/admin/ScaledProjectorPreview";
 import { CasaPrep } from "@/components/admin/casa/CasaPrep";
+import { BoardFinalsCommand } from "@/components/admin/casa/BoardFinalsCommand";
 import { BoardSpecialTrialPanel } from "@/components/admin/casa/BoardSpecialTrialPanel";
 import { BoardVideoRegiaPanel } from "@/components/admin/casa/BoardVideoRegiaPanel";
 import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
@@ -114,7 +115,12 @@ import {
 } from "@/lib/admin/casa-results-reveal";
 import { whenQuizGongCleared } from "@/lib/audio/quiz-gong-results-gate";
 import { AVANTI_CROSSFADE_MS } from "@/lib/audio/types";
-import { getMediaVolume, resumeMediaAudio, setMediaVolume } from "@/lib/audio/media-element-gain";
+import {
+  getMediaVolume,
+  rampMediaVolume,
+  resumeMediaAudio,
+  setMediaVolume,
+} from "@/lib/audio/media-element-gain";
 import { buildBalancedQuizLineup } from "@/lib/musicpro/quiz-lineup";
 import {
   applyLineupReplacement,
@@ -125,14 +131,12 @@ import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { useQuizGongAtCountdownEnd } from "@/hooks/useQuizGongAtCountdownEnd";
 import { useCurrentQuizQuestion, useQuizQuestions, questionWithShuffledOptions } from "@/hooks/useQuizQuestions";
 import {
-  DEFAULT_GONG_ATMOSPHERE,
   DEFAULT_VIDEO,
   isAudioFile,
   nextIndex,
   pickDirectoryFiles,
   revokeTracks,
   tracksFromFiles,
-  type CasaGongAtmosphere,
   type CasaMediaTrack,
   type CasaRepeatMode,
   type CasaVideoState,
@@ -674,7 +678,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     bed: false,
     fx: false,
   });
-  const [gongAtmo] = useState<CasaGongAtmosphere>(DEFAULT_GONG_ATMOSPHERE);
   const [bedSeek, setBedSeek] = useState({ current: 0, duration: 0 });
   const [bedPickError, setBedPickError] = useState<string | null>(null);
   const [videoState, setVideoState] = useState<CasaVideoState>(DEFAULT_VIDEO);
@@ -688,8 +691,18 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     useState<BoardDisplayCueId | null>(null);
   /** Dopo Partenza: playlist/regia locali cedono a sigla e colonna del gioco. */
   const [gameOwnsAv, setGameOwnsAv] = useState(false);
-  const bedAudio = useRef<HTMLAudioElement | null>(null);
-  const bedFadeRaf = useRef<number | null>(null);
+  const bedAudioA = useRef<HTMLAudioElement | null>(null);
+  const bedAudioB = useRef<HTMLAudioElement | null>(null);
+  /** Quale dei due <audio> è la bed attiva (l’altro è idle per overlap). */
+  const bedActiveIsA = useRef(true);
+  const bedFadeToken = useRef(0);
+
+  function bedActiveEl(): HTMLAudioElement | null {
+    return bedActiveIsA.current ? bedAudioA.current : bedAudioB.current;
+  }
+  function bedIdleEl(): HTMLAudioElement | null {
+    return bedActiveIsA.current ? bedAudioB.current : bedAudioA.current;
+  }
   const bedDirInput = useRef<HTMLInputElement>(null);
   const bedFilesInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
@@ -742,6 +755,14 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (siglaBundledOk !== false) return;
+    flashBoardToast(
+      "Sigla video assente · fallback audio/logo · metti web/public/grafiche/video/sigla.mp4",
+      { ms: 4000 },
+    );
+  }, [siglaBundledOk, flashBoardToast]);
 
   const applyDemoChatMessages = useCallback(
     (messages: { id: string; who: string; text: string }[]) => {
@@ -804,6 +825,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       live.specialTrial.status === "running" ||
       live.specialTrial.status === "closing" ||
       live.specialTrial.status === "results");
+  /** Finali: sotto anteprima = centro comando prove + voto animatore. */
+  const finalsCommandOpen =
+    live.runtimeState === "finals" ||
+    (live.runtimeState === "winner" && live.finalsShow != null);
 
   const venue = prep.venueName || live.event?.title || live.event?.venueName || eventCode;
   const onStage = guests[roll];
@@ -1025,7 +1050,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }, [expand]);
 
   useEffect(() => {
-    void applyAudioSink(bedAudio.current, audioRoute);
+    void applyAudioSink(bedAudioA.current, audioRoute);
+    void applyAudioSink(bedAudioB.current, audioRoute);
   }, [audioRoute]);
 
   useEffect(() => {
@@ -1209,7 +1235,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           /* display non bloccante */
         }
       })();
-    }, 80);
+    }, 0);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
@@ -1226,104 +1252,116 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   ]);
 
   useEffect(() => {
-    const el = bedAudio.current;
+    const el = bedActiveEl();
     if (!el) return;
-    if (bedFadeRaf.current != null) return;
     setMediaVolume(el, effVol("bed"));
   }, [vols.bed, mute.bed, masterVol]);
 
   useEffect(() => {
-    const el = bedAudio.current;
-    if (!el) return;
-    if (!activeBed?.url) {
-      el.pause();
-      el.removeAttribute("src");
-      el.load();
-      setBedSeek({ current: 0, duration: 0 });
-      return;
-    }
-    const abs = new URL(activeBed.url, window.location.origin).href;
+    const active = bedActiveEl();
+    const idle = bedIdleEl();
+    if (!active || !idle) return;
+
+    const token = ++bedFadeToken.current;
     const shouldPlay =
       bedPlaying && !remoteAudio && !(gameOwnsAv && beat === "sigla");
     const targetVol = Math.min(1, Math.max(0, effVol("bed")));
     const fadeMs = AVANTI_CROSSFADE_MS;
-    el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
+    const loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
 
-    const cancelFade = () => {
-      if (bedFadeRaf.current != null) {
-        cancelAnimationFrame(bedFadeRaf.current);
-        bedFadeRaf.current = null;
+    const stopEl = (el: HTMLAudioElement) => {
+      el.pause();
+      el.removeAttribute("src");
+      try {
+        el.load();
+      } catch {
+        /* ignore */
       }
     };
 
-    const fadeTo = (toVol: number, ms: number, onDone?: () => void) => {
-      cancelFade();
-      const startVol = getMediaVolume(el);
-      const t0 = performance.now();
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - t0) / ms);
-        setMediaVolume(el, startVol + (toVol - startVol) * t);
-        if (t < 1) {
-          bedFadeRaf.current = requestAnimationFrame(tick);
-          return;
-        }
-        bedFadeRaf.current = null;
-        setMediaVolume(el, toVol);
-        onDone?.();
-      };
-      bedFadeRaf.current = requestAnimationFrame(tick);
-    };
-
-    if (el.src === abs) {
-      el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
-      if (shouldPlay) {
-        const wasPaused = el.paused;
-        void el.play().then(() => {
-          if (wasPaused || getMediaVolume(el) < targetVol * 0.85) {
-            setMediaVolume(el, 0);
-            fadeTo(targetVol, fadeMs);
-          } else {
-            setMediaVolume(el, targetVol);
-          }
-        }).catch(() => setBedPlaying(false));
-      } else if (!el.paused) {
-        fadeTo(0, fadeMs, () => {
-          el.pause();
-          setMediaVolume(el, targetVol);
+    // Nessuna bed (sigla on, stacco, …): fade-out, mai hard-cut.
+    if (!activeBed?.url) {
+      if (!active.paused && active.currentSrc) {
+        rampMediaVolume(active, 0, fadeMs, () => {
+          if (token !== bedFadeToken.current) return;
+          stopEl(active);
+          setBedSeek({ current: 0, duration: 0 });
         });
       } else {
-        setMediaVolume(el, targetVol);
+        stopEl(active);
+        setBedSeek({ current: 0, duration: 0 });
+      }
+      if (idle.currentSrc) stopEl(idle);
+      return;
+    }
+
+    const abs = new URL(activeBed.url, window.location.origin).href;
+    active.loop = loop;
+
+    // Stesso URL sulla bed attiva: solo play/pause con fade.
+    if (active.src === abs || active.currentSrc === abs) {
+      if (shouldPlay) {
+        const wasPaused = active.paused;
+        void active.play().then(() => {
+          if (token !== bedFadeToken.current) return;
+          if (wasPaused || getMediaVolume(active) < targetVol * 0.85) {
+            setMediaVolume(active, 0);
+            rampMediaVolume(active, targetVol, fadeMs);
+          } else {
+            setMediaVolume(active, targetVol);
+          }
+        }).catch(() => setBedPlaying(false));
+      } else if (!active.paused) {
+        rampMediaVolume(active, 0, fadeMs, () => {
+          if (token !== bedFadeToken.current) return;
+          active.pause();
+          setMediaVolume(active, targetVol);
+        });
+      } else {
+        setMediaVolume(active, targetVol);
       }
       return;
     }
 
-    // Crossover morbido su cambio bed (AVANTI / fasi quiz / playlist).
-    cancelFade();
+    // Crossfade vero: idle entra mentre active esce (overlap).
+    idle.src = activeBed.url;
+    idle.loop = loop;
+    setMediaVolume(idle, 0);
+    setBedSeek({ current: 0, duration: 0 });
 
-    const swapIn = () => {
-      el.src = activeBed.url;
-      setBedSeek({ current: 0, duration: 0 });
-      el.loop = !bedFolder || bedRepeat === "one" || gameOwnsAv;
-      setMediaVolume(el, 0);
-      if (!shouldPlay) {
-        el.pause();
-        setMediaVolume(el, targetVol);
-        return;
-      }
-      void el.play().then(() => {
-        fadeTo(targetVol, fadeMs);
-      }).catch(() => setBedPlaying(false));
+    const promoteIdle = () => {
+      bedActiveIsA.current = !bedActiveIsA.current;
     };
 
-    if (!el.paused && el.currentSrc) {
-      fadeTo(0, fadeMs, () => {
-        el.pause();
-        swapIn();
-      });
+    if (!shouldPlay) {
+      if (!active.paused && active.currentSrc) {
+        rampMediaVolume(active, 0, fadeMs, () => {
+          if (token !== bedFadeToken.current) return;
+          stopEl(active);
+          promoteIdle();
+          setMediaVolume(idle, targetVol);
+        });
+      } else {
+        stopEl(active);
+        promoteIdle();
+        setMediaVolume(idle, targetVol);
+      }
       return;
     }
 
-    swapIn();
+    void idle.play().then(() => {
+      if (token !== bedFadeToken.current) return;
+      rampMediaVolume(idle, targetVol, fadeMs);
+      if (!active.paused && active.currentSrc) {
+        rampMediaVolume(active, 0, fadeMs, () => {
+          if (token !== bedFadeToken.current) return;
+          stopEl(active);
+        });
+      } else {
+        stopEl(active);
+      }
+      promoteIdle();
+    }).catch(() => setBedPlaying(false));
   }, [
     activeBed?.url,
     bedFolder,
@@ -1335,7 +1373,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   ]);
 
   useEffect(() => {
-    const el = bedAudio.current;
+    const el = bedActiveEl();
     if (!el) return;
     const onTime = () => {
       setBedSeek({
@@ -1366,7 +1404,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       el.removeEventListener("loadedmetadata", onTime);
       el.removeEventListener("ended", onEnded);
     };
-  }, [bedFolder, bedList.length, bedIndex, bedRepeat]);
+  }, [activeBed?.url, bedFolder, bedList.length, bedIndex, bedRepeat]);
 
   /**
    * Apertura locale (casa→stacco) + ingresso quiz come /serata.
@@ -1639,7 +1677,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }
 
   function seekBed(ratio: number) {
-    const el = bedAudio.current;
+    const el = bedActiveEl();
     if (!el || !Number.isFinite(el.duration) || el.duration <= 0) return;
     el.currentTime = Math.max(0, Math.min(el.duration, ratio * el.duration));
   }
@@ -1649,12 +1687,12 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
    * Senza playlist locale usa la bed auto (lobby su beat casa).
    */
   async function toggleBedPlayback() {
-    const el = bedAudio.current;
+    const el = bedActiveEl();
     if (!el) return;
 
     if (bedPlaying) {
+      // Fade-out nel bed effect (bedPlaying → false), niente hard pause.
       setBedPlaying(false);
-      el.pause();
       return;
     }
 
@@ -1812,6 +1850,82 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     flashBoardToast("Presentazione saltata → stacco");
   }
 
+  /** AVANTI locale bloccato (busy/errore) → riprova. In quiz live: advance. */
+  async function forceAvanti() {
+    if (goBusy || goError) {
+      setGoBusy(false);
+      setGoError(null);
+      await go();
+      flashBoardToast("Forza AVANTI");
+      return;
+    }
+    if (liveQuizActive && !live.controlsDisabled) {
+      setCmdBusy(true);
+      setCmdError(null);
+      try {
+        const result = await live.runQuizAction("advance");
+        if (!result.ok) {
+          setCmdError(result.error);
+          if (result.invalidPin) live.openPinModal();
+          return;
+        }
+        flashBoardToast("Forza AVANTI");
+      } catch (err) {
+        setCmdError(
+          err instanceof Error ? err.message : "Forza AVANTI non riuscito.",
+        );
+      } finally {
+        setCmdBusy(false);
+      }
+    }
+  }
+
+  /** Ripeti domanda corrente: wipe risposte + riparti da theme_intro. */
+  async function replayCurrentQuestion() {
+    if (!liveQuizActive || cmdBusy || live.controlsDisabled) return;
+    setCmdBusy(true);
+    setCmdError(null);
+    try {
+      const result = await live.runQuizAction("replayCurrent");
+      if (!result.ok) {
+        setCmdError(result.error);
+        if (result.invalidPin) live.openPinModal();
+        return;
+      }
+      const q = (live.quizState?.currentIndex ?? 0) + 1;
+      flashBoardToast(`Ripeti Q${q} · risposte annullate`);
+      if (live.pinReady) {
+        void postDisplayCommand(eventCode, { type: "clear" }, live.pin);
+      }
+    } catch (err) {
+      setCmdError(
+        err instanceof Error ? err.message : "Ripeti domanda non riuscito.",
+      );
+    } finally {
+      setCmdBusy(false);
+    }
+  }
+
+  type ContextCmd = "ripeti" | "salta" | "forza";
+  const contextCmd: ContextCmd =
+    beat === "presenti"
+      ? "salta"
+      : goBusy || Boolean(goError)
+        ? "forza"
+        : "ripeti";
+
+  function runContextCmd() {
+    if (contextCmd === "salta") {
+      skipPresentiRoll();
+      return;
+    }
+    if (contextCmd === "forza") {
+      void forceAvanti();
+      return;
+    }
+    void replayCurrentQuestion();
+  }
+
   /** Chiude il riquadro: se c’era un giocatore a schermo, torna al gioco. */
   function closeExpand() {
     if (expand === "players" && pickedId) {
@@ -1960,31 +2074,9 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   }, [beat, sigla]);
 
   function fadeOutBed(done: () => void) {
-    const el = bedAudio.current;
-    if (bedFadeRaf.current != null) {
-      cancelAnimationFrame(bedFadeRaf.current);
-      bedFadeRaf.current = null;
-    }
-    if (!el || el.paused) {
-      done();
-      return;
-    }
-    const startVol = getMediaVolume(el);
-    const t0 = performance.now();
-    const dur = AVANTI_CROSSFADE_MS;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - t0) / dur);
-      setMediaVolume(el, startVol * (1 - t));
-      if (t < 1) {
-        bedFadeRaf.current = requestAnimationFrame(tick);
-        return;
-      }
-      bedFadeRaf.current = null;
-      el.pause();
-      setMediaVolume(el, Math.min(1, Math.max(0, effVol("bed"))));
-      done();
-    };
-    bedFadeRaf.current = requestAnimationFrame(tick);
+    // Delega al bed effect (null URL / bedPlaying false) per un solo owner di fade.
+    setBedPlaying(false);
+    window.setTimeout(done, AVANTI_CROSSFADE_MS);
   }
 
   async function changeNextQuestion() {
@@ -2029,46 +2121,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         err instanceof Error ? err.message : "Cambio domanda non riuscito.";
       setCmdError(msg);
       flashBoardToast(msg);
-    } finally {
-      setCmdBusy(false);
-    }
-  }
-
-  async function showRankingNow() {
-    if (!liveQuizActive || cmdBusy || live.controlsDisabled) return;
-    if (liveQuizPhase === "next_question") return;
-    const prevPhase = live.quizState?.displayPhase;
-    setCmdBusy(true);
-    setCmdError(null);
-    try {
-      const result = await live.runQuizAction("setPhase", {
-        displayPhase: "next_question",
-      });
-      if (!result.ok) {
-        setCmdError(result.error);
-        if (result.invalidPin) live.openPinModal();
-        return;
-      }
-      flashBoardToast("Classifica sul proiettore", {
-        undo:
-          prevPhase && prevPhase !== "next_question"
-            ? async () => {
-                const undoResult = await live.runQuizAction("setPhase", {
-                  displayPhase: prevPhase,
-                });
-                if (!undoResult.ok) {
-                  setCmdError(undoResult.error);
-                  if (undoResult.invalidPin) live.openPinModal();
-                  return;
-                }
-                flashBoardToast("Classifica annullata");
-              }
-            : undefined,
-      });
-    } catch (err) {
-      setCmdError(
-        err instanceof Error ? err.message : "Classifica non riuscita.",
-      );
     } finally {
       setCmdBusy(false);
     }
@@ -2178,7 +2230,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         return;
       }
       setResumeOpen(false);
-      flashBoardToast("Manche chiusa → matching");
+      flashBoardToast("Manche chiusa → Stop alle domande");
     } catch (err) {
       setCmdError(
         err instanceof Error ? err.message : "Chiusura manche non riuscita.",
@@ -2537,7 +2589,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   return (
     <div className="casa-board-shell" data-casa-board-shell="">
     <div className="casa-board" data-casa-board="">
-      <audio ref={bedAudio} hidden preload="auto" />
+      <audio ref={bedAudioA} hidden preload="auto" />
+      <audio ref={bedAudioB} hidden preload="auto" />
       <input
         ref={bedDirInput}
         type="file"
@@ -2880,13 +2933,13 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             style={{ flex: `${layout.left[2]} 1 0` }}
           >
             <BoardCardHead title="Messaggi" onExpand={() => openExpand("msg")} />
-            <div className="casa-board-msgs">
+            <div className="casa-board-msgs" data-scroll="y">
               {msgs.length === 0 ? (
                 <p className="casa-board-empty">
                   Nessun messaggio · «10 coppie test» in Lista ne aggiunge
                 </p>
               ) : (
-                msgs.slice(0, 6).map((m) => (
+                msgs.map((m) => (
                   <div key={m.id} className="casa-board-msg">
                     <div>
                       <strong>{m.who}</strong>
@@ -2971,20 +3024,28 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           <article
             className="casa-board-card casa-board-card-cmds"
             style={{ flex: `${layout.center[1]} 1 0` }}
-            data-prove={specialTrialPanelOpen ? "1" : undefined}
+            data-prove={
+              finalsCommandOpen || specialTrialPanelOpen ? "1" : undefined
+            }
           >
             <header className="casa-board-card-h">
               <span>
-                {specialTrialPanelOpen ? "Prova speciale" : "Prossima domanda"}
+                {finalsCommandOpen
+                  ? "Prove finali"
+                  : specialTrialPanelOpen
+                    ? "Prova speciale"
+                    : "Prossima domanda"}
               </span>
               <span className="casa-board-cue-h-meta">
-                {!specialTrialPanelOpen &&
+                {!finalsCommandOpen &&
+                !specialTrialPanelOpen &&
                 cueLineup.length > 0 &&
                 nextCueIndex >= 0 &&
                 nextCueIndex < cueLineup.length ? (
                   <em className="casa-board-cue-num">Q{nextCueIndex + 1}</em>
                 ) : null}
                 {specialTrialPanelOpen &&
+                !finalsCommandOpen &&
                 live.specialTrial &&
                 (live.specialTrial.status === "booked" ||
                   live.specialTrial.status === "setup") ? (
@@ -3008,7 +3069,17 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 />
               </span>
             </header>
-            {specialTrialPanelOpen ? (
+            {finalsCommandOpen ? (
+              <BoardFinalsCommand
+                eventCode={eventCode}
+                pin={live.pin}
+                disabled={live.controlsDisabled}
+                finalsShow={live.finalsShow}
+                voting={live.voting}
+                onInvalidPin={() => live.openPinModal()}
+                onFinalsChange={(payload) => live.applyFinalsUpdate(payload)}
+              />
+            ) : specialTrialPanelOpen ? (
               <BoardSpecialTrialPanel
                 eventCode={eventCode}
                 pin={live.pin}
@@ -3103,22 +3174,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               <div className="casa-board-cmds">
                 <button
                   type="button"
-                  className="casa-board-cmd casa-board-cmd-rank"
-                  disabled={
-                    !liveQuizActive ||
-                    cmdBusy ||
-                    live.controlsDisabled ||
-                    liveQuizPhase === "next_question"
-                  }
-                  title="Mostra classifica intermedia sul proiettore"
-                  onClick={() => {
-                    void showRankingNow();
-                  }}
-                >
-                  Classifica
-                </button>
-                <button
-                  type="button"
                   className={
                     live.quizState?.skipResults
                       ? "casa-board-cmd casa-board-cmd-warn casa-board-cmd-on"
@@ -3159,32 +3214,51 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 <button
                   type="button"
                   className={
-                    beat === "presenti"
+                    resumeOpen
                       ? "casa-board-cmd casa-board-cmd-warn"
-                      : resumeOpen
-                        ? "casa-board-cmd casa-board-cmd-warn"
-                        : "casa-board-cmd"
+                      : "casa-board-cmd"
                   }
                   disabled={
-                    beat === "presenti"
-                      ? live.controlsDisabled
-                      : !liveQuizActive || cmdBusy || live.controlsDisabled
+                    !liveQuizActive || cmdBusy || live.controlsDisabled
                   }
-                  title={
-                    beat === "presenti"
-                      ? "Salta la presentazione giocatori → stacco"
-                      : "Riprendi da una domanda (solo quiz, senza wipe)"
-                  }
-                  aria-pressed={beat === "presenti" ? undefined : resumeOpen}
+                  title="Riprendi da una domanda (solo quiz, senza wipe)"
+                  aria-pressed={resumeOpen}
                   onClick={() => {
-                    if (beat === "presenti") {
-                      skipPresentiRoll();
-                      return;
-                    }
                     openResumeRow();
                   }}
                 >
-                  {beat === "presenti" ? "Salta" : "Riprendi"}
+                  Riprendi
+                </button>
+                <button
+                  type="button"
+                  className={
+                    contextCmd === "ripeti"
+                      ? "casa-board-cmd"
+                      : "casa-board-cmd casa-board-cmd-warn"
+                  }
+                  disabled={
+                    contextCmd === "salta"
+                      ? live.controlsDisabled
+                      : contextCmd === "forza"
+                        ? live.controlsDisabled || cmdBusy
+                        : !liveQuizActive ||
+                          cmdBusy ||
+                          live.controlsDisabled
+                  }
+                  title={
+                    contextCmd === "salta"
+                      ? "Salta la presentazione giocatori → stacco"
+                      : contextCmd === "forza"
+                        ? "AVANTI bloccato — forza il passo"
+                        : "Ripeti la domanda corrente e annulla le risposte già date"
+                  }
+                  onClick={runContextCmd}
+                >
+                  {contextCmd === "salta"
+                    ? "Salta"
+                    : contextCmd === "forza"
+                      ? "Forza avanti"
+                      : "Ripeti"}
                 </button>
               </div>
               {resumeOpen ? (
@@ -3334,7 +3408,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                   label="Stop"
                   onClick={() => {
                     setBedPlaying(false);
-                    const el = bedAudio.current;
+                    const el = bedActiveEl();
                     if (el) el.currentTime = 0;
                   }}
                 >
@@ -3498,18 +3572,6 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
         </section>
       </main>
 
-      <footer className="casa-board-foot">
-        <span className="casa-board-phase">{beat}</span>
-        <span className="casa-board-foot-meta">
-          {siglaBundledOk === false ? (
-            <span className="casa-board-foot-warn" title="Asset installazione">
-              Sigla video assente · fallback audio/logo · metti
-              web/public/grafiche/video/sigla.mp4
-            </span>
-          ) : null}
-          {gongAtmo.enabled ? "Gong on" : "Gong off"} · ufficiale /board
-        </span>
-      </footer>
       </div>
 
       {drawerOpen ? (
@@ -3575,16 +3637,28 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               />
             ) : null}
             {rail === "prove" ? (
-              <BoardSpecialTrialPanel
-                eventCode={eventCode}
-                pin={live.pin}
-                trial={live.specialTrial}
-                disabled={live.controlsDisabled}
-                onInvalidPin={() => live.openPinModal()}
-                onUpdate={({ specialTrial, quiz }) => {
-                  live.applySpecialTrialUpdate(specialTrial, quiz);
-                }}
-              />
+              finalsCommandOpen ? (
+                <BoardFinalsCommand
+                  eventCode={eventCode}
+                  pin={live.pin}
+                  disabled={live.controlsDisabled}
+                  finalsShow={live.finalsShow}
+                  voting={live.voting}
+                  onInvalidPin={() => live.openPinModal()}
+                  onFinalsChange={(payload) => live.applyFinalsUpdate(payload)}
+                />
+              ) : (
+                <BoardSpecialTrialPanel
+                  eventCode={eventCode}
+                  pin={live.pin}
+                  trial={live.specialTrial}
+                  disabled={live.controlsDisabled}
+                  onInvalidPin={() => live.openPinModal()}
+                  onUpdate={({ specialTrial, quiz }) => {
+                    live.applySpecialTrialUpdate(specialTrial, quiz);
+                  }}
+                />
+              )
             ) : null}
           </div>
         </div>
@@ -3718,7 +3792,7 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               ) : null}
 
               {expand === "msg" ? (
-                <div className="casa-board-msgs">
+                <div className="casa-board-msgs" data-scroll="y">
                   {msgs.length === 0 ? (
                     <p className="casa-board-empty">
                       Nessun messaggio. Apri Lista → «10 coppie test» per la

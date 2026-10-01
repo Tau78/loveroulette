@@ -367,6 +367,42 @@ export async function deleteParticipantAdmin(
   if (error) throw new Error(error.message);
 }
 
+/** Rimuove tutti i giocatori dell’evento (risposte + coppie). Non resetta il quiz. */
+export async function clearAllParticipantsForEvent(
+  supabase: SupabaseClient,
+  eventId: string,
+): Promise<{ deleted: number }> {
+  const { data: participants, error: listError } = await supabase
+    .from("love_roulette_participants")
+    .select("id")
+    .eq("event_id", eventId);
+
+  if (listError) throw new Error(listError.message);
+
+  const ids = (participants ?? []).map((row) => String(row.id));
+  if (ids.length === 0) return { deleted: 0 };
+
+  const { error: answersError } = await supabase
+    .from("love_roulette_answers")
+    .delete()
+    .in("participant_id", ids);
+  if (answersError) throw new Error(answersError.message);
+
+  const { error: pairsError } = await supabase
+    .from("love_roulette_pairs")
+    .delete()
+    .eq("event_id", eventId);
+  if (pairsError) throw new Error(pairsError.message);
+
+  const { error: deleteError } = await supabase
+    .from("love_roulette_participants")
+    .delete()
+    .eq("event_id", eventId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  return { deleted: ids.length };
+}
+
 export async function setParticipantOfflineAdmin(
   supabase: SupabaseClient,
   eventId: string,

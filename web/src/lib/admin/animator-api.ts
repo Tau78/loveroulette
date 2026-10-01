@@ -1,3 +1,8 @@
+import {
+  broadcastDisplayOverlay,
+  displayCommandToOverlay,
+} from "@/lib/display/display-overlay-broadcast";
+
 const PIN_STORAGE_PREFIX = "lr_animator_pin_";
 
 export function animatorPinStorageKey(eventCode: string): string {
@@ -108,7 +113,8 @@ export async function postQuizAction(
       | "setPhase"
       | "replaceNextQuestion"
       | "setSkipResults"
-      | "resumeAt";
+      | "resumeAt"
+      | "replayCurrent";
     autoplaySeconds?: number;
     questionCount?: number;
     questionSeconds?: number;
@@ -208,6 +214,12 @@ export async function postDisplayCommand(
   body: Record<string, string>,
   pin: string | null,
 ): Promise<Response> {
+  // Prima il push locale (anteprima + SCHERMO nativo), poi API.
+  try {
+    broadcastDisplayOverlay(eventCode, displayCommandToOverlay(body));
+  } catch {
+    /* broadcast non bloccante */
+  }
   return fetch(`/api/events/${encodeURIComponent(eventCode)}/display`, {
     method: "POST",
     headers: animatorAuthHeaders(pin),
@@ -236,6 +248,7 @@ export async function postVotingAction(
     | { action: "proclaim_winner" }
     | { action: "simulate_bot_votes" }
     | { action: "vote"; participantId: string; pairId: string }
+    | { action: "animator_vote"; pairId: string }
     | { action: "close" },
   pin: string | null,
 ): Promise<Response> {
@@ -334,6 +347,17 @@ export async function deleteParticipant(
       headers: animatorAuthHeaders(pin),
     },
   );
+}
+
+/** Elimina tutti i giocatori dell’evento. */
+export async function deleteAllParticipants(
+  eventCode: string,
+  pin: string | null,
+): Promise<Response> {
+  return fetch(`/api/events/${encodeURIComponent(eventCode)}/participants`, {
+    method: "DELETE",
+    headers: animatorAuthHeaders(pin),
+  });
 }
 
 export async function postSimulatePlayers(

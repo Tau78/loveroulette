@@ -94,7 +94,8 @@ export default function DisplayPage() {
 
   const showSpecialTrial =
     specialTrial != null &&
-    (specialTrial.status === "setup" ||
+    (specialTrial.status === "booked" ||
+      specialTrial.status === "setup" ||
       specialTrial.status === "running" ||
       specialTrial.status === "closing" ||
       specialTrial.status === "results");
@@ -103,8 +104,7 @@ export default function DisplayPage() {
     eventSlug,
     show: finalsShow,
     enabled: Boolean(finalsShow),
-    // Anteprima embed: solo mirror — i tick li guida plancia / SCHERMO.
-    driveTicks: !embedMode,
+    driveTicks: true,
     onTick: applyFinalsUpdate,
   });
   const { currentQuestion, progressLabel } = useCurrentQuizQuestion(
@@ -269,29 +269,25 @@ export default function DisplayPage() {
           <DisplaySpecialTrialStage
             trial={specialTrial}
             eventSlug={displayCode}
-            onTick={
-              embedMode
-                ? undefined
-                : () => {
-                    void fetch(
-                      `/api/events/${encodeURIComponent(eventSlug)}/special-trial`,
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ action: "tick" }),
-                      },
-                    )
-                      .then((res) => (res.ok ? res.json() : null))
-                      .then((data) => {
-                        if (data) {
-                          applySpecialTrialUpdate(
-                            data.specialTrial ?? null,
-                            data.quiz,
-                          );
-                        }
-                      });
+            onTick={() => {
+              void fetch(
+                `/api/events/${encodeURIComponent(eventSlug)}/special-trial`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "tick" }),
+                },
+              )
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                  if (data) {
+                    applySpecialTrialUpdate(
+                      data.specialTrial ?? null,
+                      data.quiz,
+                    );
                   }
-            }
+                });
+            }}
           />
         ) : runtimeState === "quiz" && quizState ? (
           <DisplayQuizStage
@@ -299,7 +295,6 @@ export default function DisplayPage() {
             quizState={quizState}
             currentQuestion={currentQuestion}
             progressLabel={progressLabel}
-            driveTicks={!embedMode}
             onQuizUpdate={applyQuizUpdate}
           />
         ) : runtimeState === "quiz" ? (
@@ -448,11 +443,7 @@ export default function DisplayPage() {
         </footer>
       ) : null}
 
-      <DisplayOverlay
-        overlay={displayOverlay}
-        joinUrl={effectiveJoinUrl}
-        embedMode={embedMode}
-      />
+      <DisplayOverlay overlay={displayOverlay} joinUrl={effectiveJoinUrl} />
         </div>
       </DisplayFixedCanvas>
     </DisplayProjectorRoot>

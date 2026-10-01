@@ -46,6 +46,7 @@ import {
   type CreditStatus,
 } from "./src/credits";
 import {
+  injectDisplayOverlayJs,
   parseProjectorBridgeMessage,
   pickExternalScreenId,
 } from "./src/projector-screen";
@@ -279,6 +280,7 @@ function WebPlancia({
   const allowed = canRunPlancia(status);
   const crashReloadsRef = useRef(0);
   const [projectorUrl, setProjectorUrl] = useState<string | null>(null);
+  const projectorWebRef = useRef<WebView>(null);
   const projectorOpenAtRef = useRef(0);
   const externalScreens = useExternalDisplay({
     onScreenConnect: () => {},
@@ -362,8 +364,13 @@ function WebPlancia({
     retryLoad();
   };
 
+  const pushOverlayToProjector = useCallback((overlay: unknown) => {
+    projectorWebRef.current?.injectJavaScript(injectDisplayOverlayJs(overlay));
+  }, []);
+
   const projectorWebView = projectorUrl ? (
     <WebView
+      ref={projectorWebRef}
       source={{ uri: projectorUrl }}
       style={styles.web}
       allowsInlineMediaPlayback
@@ -454,6 +461,11 @@ function WebPlancia({
             const raw = event.nativeEvent.data || "";
             if (isCloseProjectorMessage(raw)) {
               closeProjector();
+              return;
+            }
+            const bridge = parseProjectorBridgeMessage(raw);
+            if (bridge?.type === "overlay") {
+              pushOverlayToProjector(bridge.overlay);
               return;
             }
             const url = parseOpenProjectorMessage(raw);

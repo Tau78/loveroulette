@@ -22,9 +22,9 @@ describe("validateMancheDocument", () => {
     expect(validateMancheDocument(example)).toBeNull();
   });
 
-  it("accepts the DEMO01 full 27-question manche document", () => {
+  it("accepts the DEMO01 full 42-question manche document", () => {
     expect(validateMancheDocument(demo01Full)).toBeNull();
-    expect(countMancheQuestions(demo01Full)).toBe(27);
+    expect(countMancheQuestions(demo01Full)).toBe(42);
   });
 
   it("rejects documents without four options per question", () => {

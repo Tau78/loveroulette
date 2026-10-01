@@ -142,10 +142,10 @@ export async function runSessionCatchUp(options: {
   let finalsShow = options.finalsShow;
 
   for (let step = 0; step < maxSteps; step++) {
+    // answers / start_countdown avanzano anche senza Autoplay esplicito.
     if (
       runtimeState === "quiz" &&
       quiz &&
-      quiz.autoplayEnabled === true &&
       quizNeedsServerCatchUp(quiz, options.specialTrial ?? null)
     ) {
       const res = await fetch(

@@ -97,7 +97,16 @@ export function DisplayOverlay({
   const show = Boolean(visible && overlay && overlay.type !== "clear");
   const staccoTick =
     show && overlay?.type === "slide" && isStaccoSlide(overlay);
-  const activeFadeSec = staccoTick ? (reduceMotion ? 0 : 0.12) : fadeSec;
+  // Giocatore a schermo (foto in overlay): fade corto — il tap deve sembrare istantaneo.
+  const playerOnScreen =
+    show && overlay?.type === "slide" && Boolean(overlay.imageUrl?.trim());
+  const activeFadeSec = reduceMotion
+    ? 0
+    : staccoTick
+      ? 0.12
+      : playerOnScreen
+        ? 0.18
+        : fadeSec;
 
   return (
     <AnimatePresence mode="sync">
@@ -108,11 +117,13 @@ export function DisplayOverlay({
               ? `stacco:${overlay.title ?? ""}`
               : overlayKey(overlay)
           }
-          className="fixed inset-0 z-50 bg-black"
+          /* Niente bg-black qui: con sync due matte nere → dip-to-black.
+             Il cover pieno resta sui body slide (player/dettaglio). */
+          className="fixed inset-0 z-50"
           initial={reduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reduceMotion ? undefined : { opacity: 0 }}
-          transition={{ duration: activeFadeSec, ease: "easeInOut" }}
+          transition={{ duration: activeFadeSec, ease: [0.22, 1, 0.36, 1] }}
         >
           <OverlayBody
             overlay={overlay}

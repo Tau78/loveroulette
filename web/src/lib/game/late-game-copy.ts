@@ -44,11 +44,11 @@ export const CLOSED_COPY = {
 } as const;
 
 export const MATCHING_COPY = {
-  badge: "Roulette",
-  displayKicker: "Roulette",
-  displayHeadline: "Calcolo delle affinità…",
-  displaySubline: "Le coppie stanno prendendo forma",
-  playerSubtitle: "La roulette sta girando — chi sarà la tua metà?",
+  badge: "Stop",
+  displayKicker: "Fine quiz",
+  displayHeadline: "Stop alle domande",
+  displaySubline: "Adesso partono le estrazioni delle coppie",
+  playerSubtitle: "Stop alle domande — preparatevi alle estrazioni!",
 } as const;
 
 export const EXTRACTION_COPY = {

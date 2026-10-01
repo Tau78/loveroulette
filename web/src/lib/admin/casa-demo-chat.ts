@@ -77,7 +77,7 @@ export type CasaSimDemoChatDetail = {
 };
 
 export function dispatchSimDemoChat(messages: CasaDemoChatMessage[]) {
-  if (typeof window === "undefined" || messages.length === 0) return;
+  if (typeof window === "undefined") return;
   window.dispatchEvent(
     new CustomEvent<CasaSimDemoChatDetail>(CASA_SIM_DEMO_CHAT_EVENT, {
       detail: { messages },

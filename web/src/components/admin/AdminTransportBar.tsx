@@ -21,6 +21,8 @@ import { useFinalsShowSync } from "@/hooks/useFinalsShowSync";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { finalsAdvanceState } from "@/components/admin/AdminFinalsAdvanceButton";
 import type { FinalsShowState } from "@/lib/musicpro/finals-show";
+import { nextFinalsChallengeId } from "@/lib/musicpro/finals-next-challenge";
+import type { LastReveal } from "@/lib/musicpro/extraction";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import type { PairProgress } from "@/lib/musicpro/pair-progress";
 import type { VotingMetadata } from "@/lib/musicpro/voting";
@@ -38,7 +40,7 @@ const PHASE_BADGE: Record<
 > = {
   lobby: { label: "Lobby", className: "border-sky-500/40 bg-sky-500/15 text-sky-200" },
   quiz: { label: "Quiz", className: "border-emerald-500/40 bg-emerald-500/15 text-emerald-200" },
-  matching: { label: "Match", className: "border-violet-500/40 bg-violet-500/15 text-violet-200" },
+  matching: { label: "Stop", className: "border-violet-500/40 bg-violet-500/15 text-violet-200" },
   extraction: { label: "Estrazione", className: "border-amber-500/40 bg-amber-500/15 text-amber-100" },
   elimination: { label: "Sfoltimento", className: "border-orange-500/40 bg-orange-500/15 text-orange-100" },
   finals: { label: "Finali", className: "border-primary/40 bg-primary/15 text-primary" },
@@ -58,7 +60,12 @@ interface AdminTransportBarProps {
   extractionMode: ExtractionMode;
   onExtractionModeChange: (mode: ExtractionMode) => void;
   onInvalidPin?: () => void;
-  onQuizChange?: (quiz: QuizSessionState | null) => void;
+  onQuizChange?: (
+    quiz: QuizSessionState | null,
+    runtimeState?: EventState,
+  ) => void;
+  onRuntimeStateChange?: (runtimeState: EventState) => void;
+  onLastRevealChange?: (reveal: LastReveal | null) => void;
   onFinalsChange?: (payload: {
     show?: FinalsShowState | null;
     runtimeState?: EventState;
@@ -84,6 +91,8 @@ export function AdminTransportBar({
   onExtractionModeChange,
   onInvalidPin,
   onQuizChange,
+  onRuntimeStateChange,
+  onLastRevealChange,
   onFinalsChange,
   onRefreshProgress,
   onStartQuiz,
@@ -106,7 +115,7 @@ export function AdminTransportBar({
       (autoplayEnabled ||
         quizState?.displayPhase === "start_countdown" ||
         quizState?.displayPhase === "answers"),
-    onTick: (quiz) => onQuizChange?.(quiz),
+    onTick: (quiz, nextRuntime) => onQuizChange?.(quiz, nextRuntime),
   });
 
   const { remaining: finalsRemaining, tickServer } = useFinalsShowSync({
@@ -142,6 +151,10 @@ export function AdminTransportBar({
         if (response.status === 401 || isInvalidAnimatorPinError(message)) onInvalidPin?.();
         throw new Error(message);
       }
+      const data = (await response.json().catch(() => null)) as {
+        runtimeState?: EventState;
+      } | null;
+      onRuntimeStateChange?.(data?.runtimeState ?? nextState);
       await onRefreshProgress?.();
     });
   }
@@ -154,6 +167,12 @@ export function AdminTransportBar({
         const message = payload?.error ?? "Estrazione fallita.";
         if (response.status === 401 || isInvalidAnimatorPinError(message)) onInvalidPin?.();
         throw new Error(message);
+      }
+      const data = (await response.json().catch(() => null)) as {
+        lastReveal?: LastReveal;
+      } | null;
+      if (data?.lastReveal) {
+        onLastRevealChange?.(data.lastReveal);
       }
       await onRefreshProgress?.();
     });
@@ -181,8 +200,12 @@ export function AdminTransportBar({
         if (response.status === 401 || isInvalidAnimatorPinError(message)) onInvalidPin?.();
         throw new Error(message);
       }
-      const data = (await response.json()) as { quiz: QuizSessionState | null };
-      onQuizChange?.(data.quiz ?? null);
+      const data = (await response.json()) as {
+        quiz: QuizSessionState | null;
+        runtimeState?: EventState;
+      };
+      onQuizChange?.(data.quiz ?? null, data.runtimeState);
+      if (data.runtimeState) onRuntimeStateChange?.(data.runtimeState);
     });
   }
 
@@ -200,6 +223,40 @@ export function AdminTransportBar({
       return;
     }
 
+    // idle / tie: AVANTI avvia la prossima prova (slide intro) senza restare bloccato.
+    if (
+      finalsShow &&
+      (finalsShow.phase === "idle" || finalsShow.phase === "tie_blocked")
+    ) {
+      const nextId = nextFinalsChallengeId(finalsShow);
+      await runWithBusy(async () => {
+        const response = await postVotingAction(
+          eventCode,
+          nextId
+            ? { action: "start_challenge", challengeId: nextId }
+            : { action: "proclaim_winner" },
+          animatorPin,
+        );
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          const message = payload?.error ?? "Avanzamento fallito.";
+          if (response.status === 401 || isInvalidAnimatorPinError(message)) {
+            onInvalidPin?.();
+          }
+          throw new Error(message);
+        }
+        const data = (await response.json()) as {
+          show?: FinalsShowState | null;
+          runtimeState?: EventState;
+        };
+        onFinalsChange?.({ show: data.show, runtimeState: data.runtimeState });
+        if (data.runtimeState) onRuntimeStateChange?.(data.runtimeState);
+      });
+      return;
+    }
+
     await runWithBusy(async () => {
       const response = await postVotingAction(eventCode, { action: "advance" }, animatorPin);
       if (!response.ok) {
@@ -210,6 +267,7 @@ export function AdminTransportBar({
       }
       const data = (await response.json()) as { show?: FinalsShowState | null; runtimeState?: EventState };
       onFinalsChange?.({ show: data.show, runtimeState: data.runtimeState });
+      if (data.runtimeState) onRuntimeStateChange?.(data.runtimeState);
     });
   }
 
@@ -266,6 +324,7 @@ export function AdminTransportBar({
     }
     case "matching":
       primaryLabel = "Estrazione";
+      primaryIcon = FastForward;
       primaryAction = () => void goTo("extraction");
       break;
     case "extraction":

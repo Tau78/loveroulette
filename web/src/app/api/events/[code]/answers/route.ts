@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { maybeCloseAnswersIfAllAnswered } from "@/lib/musicpro/quiz-all-answered";
 import { submitAnswer } from "@/lib/musicpro/questions";
 import { getLoveRouletteEvent } from "@/lib/musicpro/resolve-event";
 import { isValidEventSlug, normalizeEventSlug } from "@/lib/musicpro/slug";
@@ -55,6 +56,17 @@ export async function POST(
       questionId: body.questionId,
       optionId: body.optionId,
     });
+
+    // Tutti online hanno risposto → gong + % senza aspettare il countdown.
+    try {
+      await maybeCloseAnswersIfAllAnswered(
+        supabase,
+        event.id,
+        answer.questionId,
+      );
+    } catch {
+      // Non fallire il submit se il tick anticipato fallisce.
+    }
 
     return NextResponse.json({ answer, eventSlug: event.slug });
   } catch (err) {

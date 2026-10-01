@@ -2,6 +2,8 @@
 
 import { ChevronRight } from "lucide-react";
 import type { FinalsShowState } from "@/lib/musicpro/finals-show";
+import { nextFinalsChallengeId } from "@/lib/musicpro/finals-next-challenge";
+import { CHALLENGE_PRESENTATIONS } from "@/lib/game/finals-challenges";
 import { AdminButton } from "@/components/admin/AdminButton";
 import { cn } from "@/lib/utils";
 
@@ -38,13 +40,34 @@ export function finalsAdvanceState(
             ? `Animazione vincitore · ${remaining}s`
             : "Tap AVANTI per il podio",
       };
-    case "tie_blocked":
+    case "tie_blocked": {
+      const replica = nextFinalsChallengeId(show);
+      if (replica) {
+        const title = CHALLENGE_PRESENTATIONS[replica].displayTitle;
+        return {
+          enabled: true,
+          hint: `Parimerito — AVANTI avvia replica «${title}»`,
+        };
+      }
       return {
         enabled: false,
-        hint: "Parimerito — avvia una prova di replica",
+        hint: "Parimerito — scegli una prova di replica in panello",
       };
-    case "idle":
-      return { enabled: false, hint: "Avvia una prova qui sotto" };
+    }
+    case "idle": {
+      const next = nextFinalsChallengeId(show);
+      if (next) {
+        const title = CHALLENGE_PRESENTATIONS[next].displayTitle;
+        return {
+          enabled: true,
+          hint: `AVANTI → prova «${title}»`,
+        };
+      }
+      return {
+        enabled: true,
+        hint: "Prove finite — AVANTI verso il vincitore",
+      };
+    }
     case "winner_podium":
       return { enabled: false, hint: "Podio vincitori in corso" };
     default:

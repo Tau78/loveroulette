@@ -33,7 +33,10 @@ interface AdminQuizPanelProps {
   participantCount?: number;
   disabled?: boolean;
   onInvalidPin?: () => void;
-  onQuizChange?: (quiz: QuizSessionState | null) => void;
+  onQuizChange?: (
+    quiz: QuizSessionState | null,
+    runtimeState?: import("@/lib/types").EventState,
+  ) => void;
   variant?: "card" | "deck";
   /** AVANTI gestito dalla transport bar. */
   hideAdvance?: boolean;
@@ -129,7 +132,7 @@ export function AdminQuizPanel({
     quizState,
     enabled: Boolean(quizState) && !disabled,
     driveTicks: autoplayEnabled && !disabled,
-    onTick: (quiz) => onQuizChange?.(quiz),
+    onTick: (quiz, nextRuntime) => onQuizChange?.(quiz, nextRuntime),
   });
 
   const currentQuestionId =

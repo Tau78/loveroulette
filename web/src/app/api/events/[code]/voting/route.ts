@@ -16,6 +16,7 @@ import {
   closeVotingSession,
   getVotingMetadata,
   startVotingSession,
+  submitAnimatorVote,
   submitVote,
   VotingError,
   writeVotingMetadataBundle,
@@ -39,6 +40,10 @@ const postSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("vote"),
     participantId: z.string().uuid(),
+    pairId: z.string().uuid(),
+  }),
+  z.object({
+    action: z.literal("animator_vote"),
     pairId: z.string().uuid(),
   }),
   z.object({
@@ -123,7 +128,8 @@ export async function POST(
     body.action === "close" ||
     body.action === "advance" ||
     body.action === "proclaim_winner" ||
-    body.action === "simulate_bot_votes";
+    body.action === "simulate_bot_votes" ||
+    body.action === "animator_vote";
   const isPublicTick = body.action === "tick";
 
   try {
@@ -213,6 +219,14 @@ export async function POST(
           supabase,
           event.id,
           body.participantId,
+          body.pairId,
+        );
+        return NextResponse.json({ session, runtimeState: event.runtimeState });
+      }
+      case "animator_vote": {
+        const session = await submitAnimatorVote(
+          supabase,
+          event.id,
           body.pairId,
         );
         return NextResponse.json({ session, runtimeState: event.runtimeState });

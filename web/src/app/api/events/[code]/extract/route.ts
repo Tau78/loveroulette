@@ -69,11 +69,7 @@ export async function POST(
       pairId: result.pairId,
       affinityScore: result.affinityScore,
       displayOverlay: result.displayOverlay,
-      lastReveal: {
-        maleNick: result.lastReveal.maleNick,
-        femaleNick: result.lastReveal.femaleNick,
-        updatedAt: result.lastReveal.updatedAt,
-      },
+      lastReveal: result.lastReveal,
       eventSlug: event.slug,
     });
   } catch (err) {

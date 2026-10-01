@@ -6,7 +6,8 @@ import type {
   LoveRouletteQuestionSource,
 } from "./types";
 
-const MAX_QUESTIONS = 27;
+/** Cap fetch DB — bundle DEMO01 ora ha 42 domande (Libri/Cinema/Musica). */
+const MAX_QUESTIONS = 64;
 
 /** Inline Q1–Q5 when pool is empty in local development (see docs/06-question-bank.md). */
 const DEV_FALLBACK_QUESTIONS: Array<

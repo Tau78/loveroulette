@@ -799,6 +799,450 @@
           ]
         }
       ]
+    },
+    {
+      "id": "manche_libri",
+      "order": 6,
+      "theme_title": "Libri",
+      "theme_subtitle": "Dalla lettura leggera ai classici (e un po' di pepe)",
+      "questions": [
+        {
+          "id": "q28",
+          "body": "Sei più da...",
+          "category": "libri",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q28_a",
+              "label": "Harry Potter",
+              "sort_order": 0
+            },
+            {
+              "id": "q28_b",
+              "label": "Orgoglio e pregiudizio",
+              "sort_order": 1
+            },
+            {
+              "id": "q28_c",
+              "label": "Il nome della rosa",
+              "sort_order": 2
+            },
+            {
+              "id": "q28_d",
+              "label": "50 sfumature di grigio",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q29",
+          "body": "In spiaggia apri...",
+          "category": "libri",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q29_a",
+              "label": "Un giallo che non molli",
+              "sort_order": 0
+            },
+            {
+              "id": "q29_b",
+              "label": "Una love story leggera",
+              "sort_order": 1
+            },
+            {
+              "id": "q29_c",
+              "label": "Un saggio che fa pensare",
+              "sort_order": 2
+            },
+            {
+              "id": "q29_d",
+              "label": "Un romance… un po' piccante",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q30",
+          "body": "Il classico che rifaresti oggi?",
+          "category": "libri",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q30_a",
+              "label": "I promessi sposi",
+              "sort_order": 0
+            },
+            {
+              "id": "q30_b",
+              "label": "Il piccolo principe",
+              "sort_order": 1
+            },
+            {
+              "id": "q30_c",
+              "label": "1984",
+              "sort_order": 2
+            },
+            {
+              "id": "q30_d",
+              "label": "Cime tempestose",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q31",
+          "body": "Se il tuo appuntamento ti regalasse un libro...",
+          "category": "libri",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q31_a",
+              "label": "Mi sciolgo: che gesto",
+              "sort_order": 0
+            },
+            {
+              "id": "q31_b",
+              "label": "Ok, ma deve essere il mio genere",
+              "sort_order": 1
+            },
+            {
+              "id": "q31_c",
+              "label": "Lo tengo sullo scaffale «da leggere»",
+              "sort_order": 2
+            },
+            {
+              "id": "q31_d",
+              "label": "Meglio un podcast, dai",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q32",
+          "body": "La tua libreria ideale ha soprattutto...",
+          "category": "libri",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q32_a",
+              "label": "Fantasy e saghe",
+              "sort_order": 0
+            },
+            {
+              "id": "q32_b",
+              "label": "Classici e letteratura",
+              "sort_order": 1
+            },
+            {
+              "id": "q32_c",
+              "label": "Thriller e noir",
+              "sort_order": 2
+            },
+            {
+              "id": "q32_d",
+              "label": "Romance e bestsellers",
+              "sort_order": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manche_cinema",
+      "order": 7,
+      "theme_title": "Cinema",
+      "theme_subtitle": "Generi, titoli, star e un filo di gossip",
+      "questions": [
+        {
+          "id": "q33",
+          "body": "Il genere che metti sempre in cima?",
+          "category": "cinema",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q33_a",
+              "label": "Commedia romantica",
+              "sort_order": 0
+            },
+            {
+              "id": "q33_b",
+              "label": "Action / thriller",
+              "sort_order": 1
+            },
+            {
+              "id": "q33_c",
+              "label": "Horror",
+              "sort_order": 2
+            },
+            {
+              "id": "q33_d",
+              "label": "Dramma d'autore",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q34",
+          "body": "Sei più da...",
+          "category": "cinema",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q34_a",
+              "label": "Titanic",
+              "sort_order": 0
+            },
+            {
+              "id": "q34_b",
+              "label": "Il Signore degli Anelli",
+              "sort_order": 1
+            },
+            {
+              "id": "q34_c",
+              "label": "Pretty Woman",
+              "sort_order": 2
+            },
+            {
+              "id": "q34_d",
+              "label": "Pulp Fiction",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q35",
+          "body": "La star con cui faresti un drink?",
+          "category": "cinema",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q35_a",
+              "label": "Timothée Chalamet",
+              "sort_order": 0
+            },
+            {
+              "id": "q35_b",
+              "label": "Zendaya",
+              "sort_order": 1
+            },
+            {
+              "id": "q35_c",
+              "label": "Ryan Gosling",
+              "sort_order": 2
+            },
+            {
+              "id": "q35_d",
+              "label": "Margot Robbie",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q36",
+          "body": "La coppia di cinema che ti fa sognare?",
+          "category": "cinema",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q36_a",
+              "label": "Ross e Rachel",
+              "sort_order": 0
+            },
+            {
+              "id": "q36_b",
+              "label": "Jack e Rose",
+              "sort_order": 1
+            },
+            {
+              "id": "q36_c",
+              "label": "Harry e Sally",
+              "sort_order": 2
+            },
+            {
+              "id": "q36_d",
+              "label": "Bonnie e Clyde",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q37",
+          "body": "Gossip da red carpet: tu sei...",
+          "category": "cinema",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q37_a",
+              "label": "Lo so tutto prima di Chi",
+              "sort_order": 0
+            },
+            {
+              "id": "q37_b",
+              "label": "Solo se esce il video virale",
+              "sort_order": 1
+            },
+            {
+              "id": "q37_c",
+              "label": "Fingo disinteresse… ma ascolto",
+              "sort_order": 2
+            },
+            {
+              "id": "q37_d",
+              "label": "Zero gossip, solo film",
+              "sort_order": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manche_musica",
+      "order": 8,
+      "theme_title": "Musica",
+      "theme_subtitle": "Band, voci, concerti e frasi da karaoke",
+      "questions": [
+        {
+          "id": "q38",
+          "body": "La band della tua vita?",
+          "category": "musica",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q38_a",
+              "label": "Queen",
+              "sort_order": 0
+            },
+            {
+              "id": "q38_b",
+              "label": "Coldplay",
+              "sort_order": 1
+            },
+            {
+              "id": "q38_c",
+              "label": "Maneskin",
+              "sort_order": 2
+            },
+            {
+              "id": "q38_d",
+              "label": "The Beatles",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q39",
+          "body": "Il cantante che metti in loop?",
+          "category": "musica",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q39_a",
+              "label": "Vasco Rossi",
+              "sort_order": 0
+            },
+            {
+              "id": "q39_b",
+              "label": "Cesare Cremonini",
+              "sort_order": 1
+            },
+            {
+              "id": "q39_c",
+              "label": "The Weeknd",
+              "sort_order": 2
+            },
+            {
+              "id": "q39_d",
+              "label": "Harry Styles",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q40",
+          "body": "La voce femminile che ti conquista?",
+          "category": "musica",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q40_a",
+              "label": "Mina",
+              "sort_order": 0
+            },
+            {
+              "id": "q40_b",
+              "label": "Annalisa",
+              "sort_order": 1
+            },
+            {
+              "id": "q40_c",
+              "label": "Adele",
+              "sort_order": 2
+            },
+            {
+              "id": "q40_d",
+              "label": "Billie Eilish",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q41",
+          "body": "Al concerto sei...",
+          "category": "musica",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q41_a",
+              "label": "Prima fila, canto a squarciagola",
+              "sort_order": 0
+            },
+            {
+              "id": "q41_b",
+              "label": "In mezzo, ballo e sto bene",
+              "sort_order": 1
+            },
+            {
+              "id": "q41_c",
+              "label": "Dietro, video e vibe",
+              "sort_order": 2
+            },
+            {
+              "id": "q41_d",
+              "label": "Meglio lo streaming dal divano",
+              "sort_order": 3
+            }
+          ]
+        },
+        {
+          "id": "q42",
+          "body": "Sei più da...",
+          "category": "musica",
+          "weight": 1,
+          "options": [
+            {
+              "id": "q42_a",
+              "label": "Comincia un mondo, ma fatto di sesso",
+              "sort_order": 0
+            },
+            {
+              "id": "q42_b",
+              "label": "Come nelle favole",
+              "sort_order": 1
+            },
+            {
+              "id": "q42_c",
+              "label": "Ti regalerò una foto",
+              "sort_order": 2
+            },
+            {
+              "id": "q42_d",
+              "label": "Maledetta primavera",
+              "sort_order": 3
+            }
+          ]
+        }
+      ]
     }
   ],
   "meta": {

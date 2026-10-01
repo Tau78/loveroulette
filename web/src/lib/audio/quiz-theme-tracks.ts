@@ -7,7 +7,10 @@ export type QuizThemeCategory =
   | "adventure"
   | "values"
   | "fun"
-  | "intimacy";
+  | "intimacy"
+  | "libri"
+  | "cinema"
+  | "musica";
 
 export const QUIZ_THEME_CATEGORIES: readonly QuizThemeCategory[] = [
   "lifestyle",
@@ -16,16 +19,22 @@ export const QUIZ_THEME_CATEGORIES: readonly QuizThemeCategory[] = [
   "values",
   "fun",
   "intimacy",
+  "libri",
+  "cinema",
+  "musica",
 ];
 
 const DEFAULT_QUIZ_BED = "LR_02_Quiz_Lifestyle";
 
-/** Bed countdown risposte — parte quando appaiono A–D (fase `answers`). */
+/**
+ * Bed countdown urgenza — non più sulla fase `answers` (resta il tema fino al gong).
+ * Ancora usato per prova speciale / legacy.
+ */
 export const QUIZ_ANSWERS_COUNTDOWN_BED_ID = "LR_03_Quiz_Countdown";
 
 /**
  * Hit one-shot all’ingresso % (dopo gong + gap).
- * Dopo l’hit resta il bed lungo (`quizResultsHoldTrackId`).
+ * Dopo l’hit resta il bed tematico (`quizResultsHoldTrackId`).
  */
 export const QUIZ_RESULTS_REVEAL_ID = "LR_25_Quiz_Results_Reveal";
 
@@ -35,6 +44,7 @@ export const QUIZ_RESULTS_BED_ID = QUIZ_RESULTS_REVEAL_ID;
 /**
  * Bed per manche/tema — un loop coerente con l’argomento della slide.
  * Fallback legacy `LR_02_Quiz_Tension` resta in manifest per compat.
+ * Libri/Cinema/Musica riusano bed esistenti finché non ci sono loop dedicati.
  */
 export const QUIZ_THEME_BED_TRACK: Record<QuizThemeCategory, string> = {
   lifestyle: "LR_02_Quiz_Lifestyle",
@@ -43,6 +53,9 @@ export const QUIZ_THEME_BED_TRACK: Record<QuizThemeCategory, string> = {
   values: "LR_02_Quiz_Values",
   fun: "LR_02_Quiz_Fun",
   intimacy: "LR_02_Quiz_Intimacy",
+  libri: "LR_02_Quiz_Values",
+  cinema: "LR_02_Quiz_Fun",
+  musica: "LR_02_Quiz_Romantic",
 };
 
 export function normalizeQuizThemeCategory(
@@ -79,9 +92,8 @@ export function quizResultsHoldTrackId(
 /**
  * Track quiz per fase (bed continuo):
  * - countdown avvio → silenzio (file countdown one-shot a parte)
- * - tema / lettura domanda → bed della tematica
- * - risposte + countdown → LR_03 countdown
- * - % risultati → hold tematica; l’hit LR_25 è one-shot a parte (dopo gong)
+ * - tema / domanda / risposte → bed della tematica (fino al gong)
+ * - % risultati → stesso hold tematico; hit LR_25 one-shot dopo gong + gap
  */
 export function trackIdForQuizPhase(
   quizPhase: QuizDisplayPhase | null | undefined,
@@ -90,12 +102,10 @@ export function trackIdForQuizPhase(
   if (quizPhase === "start_countdown") {
     return null;
   }
-  if (quizPhase === "answers") {
-    return QUIZ_ANSWERS_COUNTDOWN_BED_ID;
-  }
   if (quizPhase === "results") {
     return quizResultsHoldTrackId(category);
   }
 
+  // theme_intro | question | answers | next_question → categoria
   return quizBedTrackForCategory(category);
 }

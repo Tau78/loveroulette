@@ -14,12 +14,14 @@ import {
   type SpecialTrialState,
 } from "@/lib/musicpro/special-trial";
 import type { VotingMetadata, VotingSessionState } from "@/lib/musicpro/voting";
+import { mergeRuntimeStateFromPoll } from "@/lib/musicpro/event-state-order";
 import {
   deriveSyncStatus,
   finalsNeedsServerCatchUp,
   mergeFinalsShow,
   mergeLastReveal,
   mergeVotingMetadata,
+  quizNeedsServerCatchUp,
   runSessionCatchUp,
   type SessionSyncStatus,
 } from "@/lib/musicpro/session-sync";
@@ -27,9 +29,17 @@ import {
   subscribeLoveRouletteSession,
   type SessionTransport,
 } from "@/lib/musicpro/realtime";
+import {
+  DISPLAY_OVERLAY_EVENT,
+  DISPLAY_OVERLAY_MESSAGE_TYPE,
+  displayOverlayChannel,
+  parseDisplayOverlayBroadcast,
+  preferFresherDisplayOverlay,
+} from "@/lib/display/display-overlay-broadcast";
 
 /** Overlay/sigla/stacco: poll rapido così anteprima iframe e SCHERMO restano allineati. */
 const DISPLAY_POLL_MS = 400;
+const EXTRACTION_POLL_MS = 800;
 const QUIZ_POLL_MS = 350;
 const FINALS_FAST_POLL_MS = 350;
 
@@ -101,6 +111,8 @@ export interface UseLoveRouletteSessionResult {
     quiz: QuizSessionState | null,
     runtimeState?: EventState,
   ) => void;
+  applyRuntimeState: (runtimeState: EventState) => void;
+  applyLastReveal: (reveal: LastReveal | null) => void;
   applyFinalsUpdate: (payload: {
     show?: FinalsShowState | null;
     session?: VotingSessionState | null;
@@ -148,6 +160,9 @@ function pollIntervalMs(
   finalsShow: FinalsShowState | null,
 ): number {
   if (runtimeState === "quiz") return QUIZ_POLL_MS;
+  if (runtimeState === "extraction" || runtimeState === "matching") {
+    return EXTRACTION_POLL_MS;
+  }
   if (
     runtimeState === "finals" &&
     (voting.current?.status === "open" ||
@@ -221,6 +236,7 @@ export function useLoveRouletteSession(
 
   const resyncInFlightRef = useRef(false);
   const seededEventKeyRef = useRef<string | null>(null);
+  const localRuntimeChangedAtRef = useRef(0);
 
   const applyQuizUpdate = useCallback(
     (quiz: QuizSessionState | null, nextRuntimeState?: EventState) => {
@@ -230,11 +246,24 @@ export function useLoveRouletteSession(
         setQuizState((prev) => mergeQuizState(prev, quiz));
       }
       if (nextRuntimeState) {
+        localRuntimeChangedAtRef.current = Date.now();
         setRuntimeState(nextRuntimeState);
       }
     },
     [],
   );
+
+  const applyRuntimeState = useCallback((next: EventState) => {
+    localRuntimeChangedAtRef.current = Date.now();
+    setRuntimeState(next);
+  }, []);
+
+  const applyLastReveal = useCallback((reveal: LastReveal | null) => {
+    setLastReveal((prev) => mergeLastReveal(prev, reveal));
+    if (reveal) {
+      setDisplayOverlay({ type: "clear", updatedAt: reveal.updatedAt });
+    }
+  }, []);
 
   const applySpecialTrialUpdate = useCallback(
     (trial: SpecialTrialState | null, quiz?: QuizSessionState | null) => {
@@ -268,7 +297,10 @@ export function useLoveRouletteSession(
           current: payload.session ?? null,
         }));
       }
-      if (payload.runtimeState) setRuntimeState(payload.runtimeState);
+      if (payload.runtimeState) {
+        localRuntimeChangedAtRef.current = Date.now();
+        setRuntimeState(payload.runtimeState);
+      }
     },
     [],
   );
@@ -276,7 +308,9 @@ export function useLoveRouletteSession(
   const applyPollPayload = useCallback((data: LoveRouletteEvent) => {
     setEventId(data.id);
     setSessionId(data.sessionId);
-    setDisplayOverlay(data.displayOverlay ?? null);
+    setDisplayOverlay((prev) =>
+      preferFresherDisplayOverlay(prev, data.displayOverlay ?? null),
+    );
     setDisplayAudioCue(data.displayAudioCue ?? null);
     setQuizState((prev) => mergeQuizState(prev, data.quizState ?? null));
     setLastReveal((prev) => mergeLastReveal(prev, data.lastReveal ?? null));
@@ -290,7 +324,13 @@ export function useLoveRouletteSession(
       mergeSpecialTrialState(prev, data.specialTrial ?? null),
     );
     setJoinUrl(data.joinUrl);
-    setRuntimeState(data.runtimeState);
+    setRuntimeState((prev) =>
+      mergeRuntimeStateFromPoll(
+        prev,
+        data.runtimeState,
+        localRuntimeChangedAtRef.current,
+      ),
+    );
     setLastSyncedAt(Date.now());
     setLastPollErrorAt(null);
   }, []);
@@ -503,7 +543,10 @@ export function useLoveRouletteSession(
         if (
           data.runtimeState === "quiz" &&
           data.quizState &&
-          data.quizState.autoplayEnabled === true
+          quizNeedsServerCatchUp(
+            data.quizState,
+            data.specialTrial ?? null,
+          )
         ) {
           await runSessionCatchUp({
             eventSlug,
@@ -580,6 +623,49 @@ export function useLoveRouletteSession(
     };
   }, [enabled, resyncNow]);
 
+  // Overlay istantaneo da plancia (BroadcastChannel / postMessage / CustomEvent / nativo).
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined") return;
+
+    const applyBroadcast = (raw: unknown) => {
+      const overlay = parseDisplayOverlayBroadcast(raw, eventSlug);
+      if (overlay === undefined) return;
+      setDisplayOverlay((prev) => preferFresherDisplayOverlay(prev, overlay));
+    };
+
+    const onCustom = (event: Event) => {
+      applyBroadcast((event as CustomEvent).detail);
+    };
+    const onWindowMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      applyBroadcast(event.data);
+    };
+    const onNative = (event: Event) => {
+      applyBroadcast({
+        type: DISPLAY_OVERLAY_MESSAGE_TYPE,
+        eventCode: eventSlug,
+        overlay: (event as CustomEvent).detail ?? null,
+      });
+    };
+
+    window.addEventListener(DISPLAY_OVERLAY_EVENT, onCustom);
+    window.addEventListener("message", onWindowMessage);
+    window.addEventListener("lr-native-display-overlay", onNative);
+
+    let channel: BroadcastChannel | null = null;
+    if ("BroadcastChannel" in window) {
+      channel = new BroadcastChannel(displayOverlayChannel(eventSlug));
+      channel.onmessage = (event) => applyBroadcast(event.data);
+    }
+
+    return () => {
+      window.removeEventListener(DISPLAY_OVERLAY_EVENT, onCustom);
+      window.removeEventListener("message", onWindowMessage);
+      window.removeEventListener("lr-native-display-overlay", onNative);
+      channel?.close();
+    };
+  }, [enabled, eventSlug]);
+
   const syncStatus = deriveSyncStatus({
     lastPollOkAt: lastSyncedAt,
     lastPollErrorAt,
@@ -608,6 +694,8 @@ export function useLoveRouletteSession(
     joinUrl,
     resyncNow,
     applyQuizUpdate,
+    applyRuntimeState,
+    applyLastReveal,
     applyFinalsUpdate,
     applySpecialTrialUpdate,
   };
