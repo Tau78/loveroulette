@@ -22,8 +22,7 @@ export type CasaQuizActionBody = {
     | "setPhase"
     | "replaceNextQuestion"
     | "setSkipResults"
-    | "resumeAt"
-    | "replayCurrent";
+    | "resumeAt";
   autoplaySeconds?: number;
   questionCount?: number;
   questionSeconds?: number;

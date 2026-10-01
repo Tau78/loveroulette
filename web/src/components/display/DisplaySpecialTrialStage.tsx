@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DisplayChallengeIntroStage } from "@/components/display/DisplayChallengeIntroStage";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
-import { specialTrialPresentation } from "@/lib/game/special-trial-challenges";
+import {
+  specialTrialAsChallengePresentation,
+  specialTrialPresentation,
+} from "@/lib/game/special-trial-challenges";
 import {
   formatSpecialTrialClock,
   isSpecialTrialRunningExpired,
@@ -145,33 +149,57 @@ export function DisplaySpecialTrialStage({
     );
   }
 
+  // Setup con prova scelta → stessa slide intro delle prove finali.
+  if (trial.status === "setup" && trial.challengeId) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <DisplayChallengeIntroStage
+          presentation={specialTrialAsChallengePresentation(trial.challengeId)}
+        />
+        {names.length > 0 ? (
+          <p className="pb-8 text-center text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
+            In scena · {names.join(" · ")}
+          </p>
+        ) : (
+          <p className="pb-8 text-center text-sm font-semibold uppercase tracking-[0.2em] text-white/55">
+            Setup in plancia · poi VIA
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (trial.status === "setup" || trial.status === "booked") {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 py-6">
+        <DisplayPhaseHero
+          kicker="Prova speciale"
+          headline={
+            trial.status === "booked"
+              ? "In arrivo"
+              : presentation?.displayTitle ?? "PROVA SPECIALE"
+          }
+          subline={
+            trial.status === "booked"
+              ? "La sala si prepara — a breve una prova a sorpresa"
+              : "Scegli la prova in plancia"
+          }
+          uppercase
+          pulse
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 py-6">
       <DisplayPhaseHero
         kicker="Prova speciale"
         headline={presentation?.displayTitle ?? "PROVA SPECIALE"}
-        subline={
-          trial.status === "setup" && presentation
-            ? presentation.headline
-            : trial.status === "setup"
-              ? "In preparazione in plancia"
-              : presentation?.headline ?? ""
-        }
+        subline={presentation?.explanation ?? presentation?.headline ?? ""}
         challengeTitle
         uppercase
       />
-      {trial.status === "setup" && presentation ? (
-        <p
-          className={cn(
-            "relative mt-8 max-w-3xl rounded-2xl border border-white/15",
-            "bg-black/55 px-8 py-5 text-center text-lg md:text-2xl",
-            "font-semibold uppercase tracking-[0.08em] text-white/85 backdrop-blur-md",
-          )}
-          style={{ textShadow: "0 2px 16px rgba(0,0,0,0.95)" }}
-        >
-          Prova dichiarata — la plancia sceglie chi va in scena
-        </p>
-      ) : null}
 
       {names.length > 0 ? (
         <div

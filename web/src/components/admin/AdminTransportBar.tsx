@@ -21,6 +21,7 @@ import { useFinalsShowSync } from "@/hooks/useFinalsShowSync";
 import { useQuizPhaseSync } from "@/hooks/useQuizPhaseSync";
 import { finalsAdvanceState } from "@/components/admin/AdminFinalsAdvanceButton";
 import type { FinalsShowState } from "@/lib/musicpro/finals-show";
+import { nextFinalsChallengeId } from "@/lib/musicpro/finals-next-challenge";
 import type { LastReveal } from "@/lib/musicpro/extraction";
 import type { QuizSessionState } from "@/lib/musicpro/quiz-state";
 import type { PairProgress } from "@/lib/musicpro/pair-progress";
@@ -222,6 +223,40 @@ export function AdminTransportBar({
       return;
     }
 
+    // idle / tie: AVANTI avvia la prossima prova (slide intro) senza restare bloccato.
+    if (
+      finalsShow &&
+      (finalsShow.phase === "idle" || finalsShow.phase === "tie_blocked")
+    ) {
+      const nextId = nextFinalsChallengeId(finalsShow);
+      await runWithBusy(async () => {
+        const response = await postVotingAction(
+          eventCode,
+          nextId
+            ? { action: "start_challenge", challengeId: nextId }
+            : { action: "proclaim_winner" },
+          animatorPin,
+        );
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          const message = payload?.error ?? "Avanzamento fallito.";
+          if (response.status === 401 || isInvalidAnimatorPinError(message)) {
+            onInvalidPin?.();
+          }
+          throw new Error(message);
+        }
+        const data = (await response.json()) as {
+          show?: FinalsShowState | null;
+          runtimeState?: EventState;
+        };
+        onFinalsChange?.({ show: data.show, runtimeState: data.runtimeState });
+        if (data.runtimeState) onRuntimeStateChange?.(data.runtimeState);
+      });
+      return;
+    }
+
     await runWithBusy(async () => {
       const response = await postVotingAction(eventCode, { action: "advance" }, animatorPin);
       if (!response.ok) {
@@ -232,6 +267,7 @@ export function AdminTransportBar({
       }
       const data = (await response.json()) as { show?: FinalsShowState | null; runtimeState?: EventState };
       onFinalsChange?.({ show: data.show, runtimeState: data.runtimeState });
+      if (data.runtimeState) onRuntimeStateChange?.(data.runtimeState);
     });
   }
 
