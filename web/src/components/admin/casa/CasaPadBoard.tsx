@@ -14,6 +14,7 @@ import { AdminPlayersManager } from "@/components/admin/AdminPlayersManager";
 import { AdminRegiaPanel } from "@/components/admin/AdminRegiaPanel";
 import { ScaledProjectorPreview } from "@/components/admin/ScaledProjectorPreview";
 import { CasaPrep } from "@/components/admin/casa/CasaPrep";
+import { BoardFinalsCommand } from "@/components/admin/casa/BoardFinalsCommand";
 import { BoardSpecialTrialPanel } from "@/components/admin/casa/BoardSpecialTrialPanel";
 import { BoardVideoRegiaPanel } from "@/components/admin/casa/BoardVideoRegiaPanel";
 import { WidgetQuizRegia } from "@/components/admin/casa/widgets/WidgetQuizRegia";
@@ -828,6 +829,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       live.specialTrial.status === "running" ||
       live.specialTrial.status === "closing" ||
       live.specialTrial.status === "results");
+  /** Finali: sotto anteprima = centro comando prove + voto animatore. */
+  const finalsCommandOpen =
+    live.runtimeState === "finals" ||
+    (live.runtimeState === "winner" && live.finalsShow != null);
 
   const venue = prep.venueName || live.event?.title || live.event?.venueName || eventCode;
   const onStage = guests[roll];
@@ -3023,20 +3028,28 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
           <article
             className="casa-board-card casa-board-card-cmds"
             style={{ flex: `${layout.center[1]} 1 0` }}
-            data-prove={specialTrialPanelOpen ? "1" : undefined}
+            data-prove={
+              finalsCommandOpen || specialTrialPanelOpen ? "1" : undefined
+            }
           >
             <header className="casa-board-card-h">
               <span>
-                {specialTrialPanelOpen ? "Prova speciale" : "Prossima domanda"}
+                {finalsCommandOpen
+                  ? "Prove finali"
+                  : specialTrialPanelOpen
+                    ? "Prova speciale"
+                    : "Prossima domanda"}
               </span>
               <span className="casa-board-cue-h-meta">
-                {!specialTrialPanelOpen &&
+                {!finalsCommandOpen &&
+                !specialTrialPanelOpen &&
                 cueLineup.length > 0 &&
                 nextCueIndex >= 0 &&
                 nextCueIndex < cueLineup.length ? (
                   <em className="casa-board-cue-num">Q{nextCueIndex + 1}</em>
                 ) : null}
                 {specialTrialPanelOpen &&
+                !finalsCommandOpen &&
                 live.specialTrial &&
                 (live.specialTrial.status === "booked" ||
                   live.specialTrial.status === "setup") ? (
@@ -3060,7 +3073,17 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
                 />
               </span>
             </header>
-            {specialTrialPanelOpen ? (
+            {finalsCommandOpen ? (
+              <BoardFinalsCommand
+                eventCode={eventCode}
+                pin={live.pin}
+                disabled={live.controlsDisabled}
+                finalsShow={live.finalsShow}
+                voting={live.voting}
+                onInvalidPin={() => live.openPinModal()}
+                onFinalsChange={(payload) => live.applyFinalsUpdate(payload)}
+              />
+            ) : specialTrialPanelOpen ? (
               <BoardSpecialTrialPanel
                 eventCode={eventCode}
                 pin={live.pin}
@@ -3618,16 +3641,28 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
               />
             ) : null}
             {rail === "prove" ? (
-              <BoardSpecialTrialPanel
-                eventCode={eventCode}
-                pin={live.pin}
-                trial={live.specialTrial}
-                disabled={live.controlsDisabled}
-                onInvalidPin={() => live.openPinModal()}
-                onUpdate={({ specialTrial, quiz }) => {
-                  live.applySpecialTrialUpdate(specialTrial, quiz);
-                }}
-              />
+              finalsCommandOpen ? (
+                <BoardFinalsCommand
+                  eventCode={eventCode}
+                  pin={live.pin}
+                  disabled={live.controlsDisabled}
+                  finalsShow={live.finalsShow}
+                  voting={live.voting}
+                  onInvalidPin={() => live.openPinModal()}
+                  onFinalsChange={(payload) => live.applyFinalsUpdate(payload)}
+                />
+              ) : (
+                <BoardSpecialTrialPanel
+                  eventCode={eventCode}
+                  pin={live.pin}
+                  trial={live.specialTrial}
+                  disabled={live.controlsDisabled}
+                  onInvalidPin={() => live.openPinModal()}
+                  onUpdate={({ specialTrial, quiz }) => {
+                    live.applySpecialTrialUpdate(specialTrial, quiz);
+                  }}
+                />
+              )
             ) : null}
           </div>
         </div>

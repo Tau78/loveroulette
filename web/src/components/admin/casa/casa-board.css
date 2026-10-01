@@ -1380,6 +1380,93 @@ body.casa-board-resizing iframe {
   opacity: 0.45;
 }
 
+.casa-board-finals-cmd {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  gap: 0.5rem;
+}
+
+.casa-board-finals-challenges {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.casa-board-finals-challenge-on {
+  border-color: rgba(233, 30, 140, 0.65);
+  background: rgba(233, 30, 140, 0.22);
+}
+
+.casa-board-finals-challenge-done {
+  border-color: rgba(61, 220, 132, 0.4);
+  color: #9eecc0;
+}
+
+.casa-board-finals-couples {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.casa-board-finals-couple {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: clamp(40px, 5.5vh, 48px);
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.38);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.casa-board-finals-couple:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.casa-board-finals-couple:not(:disabled):active {
+  transform: scale(0.99);
+}
+
+.casa-board-finals-couple-on {
+  border-color: rgba(233, 30, 140, 0.7);
+  background: rgba(233, 30, 140, 0.22);
+}
+
+.casa-board-finals-couple strong {
+  font-size: clamp(11px, 1.45vh, 14px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.casa-board-finals-couple span {
+  flex: 0 0 auto;
+  font-size: clamp(10px, 1.2vh, 12px);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+  white-space: nowrap;
+}
+
+.casa-board-finals-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
+
 .casa-board-prove-players {
   display: flex;
   flex-wrap: wrap;
