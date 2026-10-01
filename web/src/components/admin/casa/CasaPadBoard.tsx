@@ -73,6 +73,7 @@ import {
   saveClock,
   type CasaClockPrefs,
 } from "@/lib/admin/casa-clock";
+import { casaBeatDisplaySyncKey } from "@/lib/admin/casa-display-sync";
 import {
   CASA_PAD_HITS,
   prefetchCasaPadHits,
@@ -711,6 +712,8 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
   const staccoLaunchRef = useRef(false);
   /** Clock ISO condiviso con /display (anteprima + SCHERMO). */
   const staccoStartedAtRef = useRef<string | null>(null);
+  /** Evita re-POST overlay identico (sigla loop / flicker anteprima). */
+  const lastDisplaySyncKeyRef = useRef<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const toastUndoBusy = useRef(false);
 
@@ -1164,6 +1167,19 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     lineupIds,
   ]);
 
+  const presentiDisplayKey = onStage
+    ? `${roll}:${onStage.nick}:${onStage.gender}`
+    : null;
+  const openingSlide =
+    beat === "pres" ||
+    beat === "regole" ||
+    beat === "finale" ||
+    beat === "premio" ||
+    beat === "sponsor" ||
+    beat === "stasera"
+      ? slides[beat as CasaSlideId]
+      : null;
+
   useEffect(() => {
     if (!live.pinReady) return;
     const slideIds: CasaSlideId[] = [
@@ -1179,6 +1195,30 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
       void (async () => {
         if (cancelled) return;
         try {
+          let staccoAt = staccoStartedAtRef.current;
+          if (beat === "stacco" && !staccoAt) {
+            staccoAt = new Date().toISOString();
+            staccoStartedAtRef.current = staccoAt;
+          }
+
+          const syncKey = casaBeatDisplaySyncKey({
+            beat,
+            sigla,
+            help,
+            presentiKey: presentiDisplayKey,
+            slideHeadline: openingSlide?.headline ?? null,
+            slideKicker: openingSlide?.kicker ?? null,
+            slideSub: openingSlide?.sub ?? null,
+            staccoStartedAt: staccoAt,
+          });
+
+          if (!syncKey) {
+            lastDisplaySyncKeyRef.current = null;
+            return;
+          }
+          if (syncKey === lastDisplaySyncKeyRef.current) return;
+          lastDisplaySyncKeyRef.current = syncKey;
+
           {
             const qrCmd = casaQrDisplayCommand(help, beat);
             if (qrCmd) {
@@ -1206,14 +1246,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
             );
             return;
           }
-          if (beat === "stacco") {
-            // Un solo POST con startedAt — anteprima e SCHERMO tickano la stessa cifra.
-            const at =
-              staccoStartedAtRef.current ?? new Date().toISOString();
-            staccoStartedAtRef.current = at;
+          if (beat === "stacco" && staccoAt) {
             await postDisplayCommand(
               eventCode,
-              staccoDisplayCommand(at),
+              staccoDisplayCommand(staccoAt),
               live.pin,
             );
             return;
@@ -1248,6 +1284,10 @@ export function CasaPadBoard({ eventCode }: { eventCode: string }) {
     live.pin,
     live.pinReady,
     onStage,
+    openingSlide?.headline,
+    openingSlide?.kicker,
+    openingSlide?.sub,
+    presentiDisplayKey,
     slides,
   ]);
 

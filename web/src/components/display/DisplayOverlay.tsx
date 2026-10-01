@@ -45,13 +45,15 @@ function playerGenderFromOverlay(
 }
 
 function overlayKey(overlay: DisplayOverlayData): string {
+  if (overlay.type === "sigla") return "sigla";
+  if (overlay.type === "show_qr") return "show_qr";
   return [
     overlay.type,
     overlay.title ?? "",
     overlay.kicker ?? "",
     overlay.body ?? "",
     overlay.imageUrl ?? "",
-    overlay.updatedAt ?? "",
+    overlay.startedAt ?? "",
   ].join("|");
 }
 
@@ -128,6 +130,7 @@ export function DisplayOverlay({
           <OverlayBody
             overlay={overlay}
             joinUrl={joinUrl}
+            embedMode={embedMode}
             notifyParentOnSiglaEnd={embedMode}
           />
         </motion.div>
@@ -139,16 +142,18 @@ export function DisplayOverlay({
 function OverlayBody({
   overlay,
   joinUrl,
+  embedMode,
   notifyParentOnSiglaEnd,
 }: {
   overlay: DisplayOverlayData;
   joinUrl: string;
+  embedMode: boolean;
   notifyParentOnSiglaEnd: boolean;
 }) {
   if (overlay.type === "sigla") {
     return (
       <DisplaySiglaStage
-        muted={false}
+        muted={embedMode}
         onEnded={() => {
           if (!notifyParentOnSiglaEnd || typeof window === "undefined") return;
           try {

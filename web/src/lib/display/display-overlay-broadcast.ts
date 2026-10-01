@@ -104,6 +104,24 @@ export function parseDisplayOverlayBroadcast(
   return o;
 }
 
+/** Chiave senza updatedAt — evita remount (sigla in loop) su re-push identici. */
+export function displayOverlaySemanticKey(
+  overlay: DisplayOverlay | null,
+): string | null {
+  if (!overlay) return null;
+  if (overlay.type === "clear") return "clear";
+  if (overlay.type === "sigla") return "sigla";
+  if (overlay.type === "show_qr") return "show_qr";
+  return [
+    overlay.type,
+    overlay.title ?? "",
+    overlay.kicker ?? "",
+    overlay.body ?? "",
+    overlay.imageUrl ?? "",
+    overlay.startedAt ?? "",
+  ].join("|");
+}
+
 /** Preferisci l’overlay più recente (evita che un poll lento cancelli il tap). */
 export function preferFresherDisplayOverlay(
   current: DisplayOverlay | null,
@@ -117,6 +135,14 @@ export function preferFresherDisplayOverlay(
     return null;
   }
   if (!current) return incoming;
+
+  const sameContent =
+    displayOverlaySemanticKey(current) === displayOverlaySemanticKey(incoming);
+  if (sameContent) {
+    // Stesso comando (es. sigla): tieni updatedAt già in play, niente restart video.
+    return current;
+  }
+
   const a = Date.parse(current.updatedAt);
   const b = Date.parse(incoming.updatedAt);
   if (!Number.isFinite(a)) return incoming;

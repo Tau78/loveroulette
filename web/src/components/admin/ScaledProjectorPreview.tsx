@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { displayUrl as buildDisplayUrl } from "@/lib/display/embed";
 import { cn } from "@/lib/utils";
 
@@ -16,10 +17,16 @@ export function ScaledProjectorPreview({
   eventCode,
   className,
 }: ScaledProjectorPreviewProps) {
-  const src =
-    typeof window !== "undefined"
-      ? buildDisplayUrl(eventCode, { embed: true, origin: window.location.origin })
-      : buildDisplayUrl(eventCode, { embed: true });
+  const src = useMemo(
+    () =>
+      typeof window !== "undefined"
+        ? buildDisplayUrl(eventCode, {
+            embed: true,
+            origin: window.location.origin,
+          })
+        : buildDisplayUrl(eventCode, { embed: true }),
+    [eventCode],
+  );
 
   return (
     <div className={cn("relative size-full overflow-hidden bg-black", className)}>
