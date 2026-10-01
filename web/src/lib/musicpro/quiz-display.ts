@@ -28,6 +28,18 @@ export const DEFAULT_QUIZ_TIMING: QuizTimingConfig = {
   nextQuestionSeconds: 5,
 };
 
+/** Classifica intermedia: coppie per slide (senza %), dopo la slide titolo. */
+export const RANKING_COUPLES_PER_PAGE = 5;
+/** Max coppie in classifica intermedia (3 slide da 5). */
+export const RANKING_MAX_COUPLES = 15;
+
+/** Pagine coppie dopo la slide «CLASSIFICA PROVVISORIA» (min 1). */
+export function rankingCouplePageCount(pairCount: number): number {
+  const n = Math.max(0, Math.min(RANKING_MAX_COUPLES, Math.floor(pairCount)));
+  if (n <= 0) return 1;
+  return Math.ceil(n / RANKING_COUPLES_PER_PAGE);
+}
+
 export interface QuizMancheTheme {
   mancheId: string;
   order: number;
@@ -232,7 +244,11 @@ export function phaseAfterCompletedQuestion(
  * tema → AVANTI → domanda → AVANTI →
  * risposte+countdown (auto) →
  * % (auto) OPPURE Al Buio salta le % →
- * classifica intermedia (se dovuta) → AVANTI → prossimo tema
+ * classifica intermedia (se dovuta): slide titolo → AVANTI →
+ * pagine coppie (5/slide, no %) → AVANTI … → prossimo tema
+ *
+ * Il paging delle pagine coppie è in `tickQuizPhase` (rankingPage), non qui:
+ * `next_question` → advance_index resta l’uscita dopo l’ultima pagina.
  */
 export function nextQuizDisplayPhase(
   phase: QuizDisplayPhase,

@@ -46,11 +46,14 @@ Se un passaggio previsto non avviene (slide saltata, client desync): **non blocc
    3. **APPAIONO LE RISPOSTE + COUNTDOWN** (`answers`, cambia musica) — auto
    4. Fine countdown → **PERCENTUALI** (`results`, cambia musica) — auto, niente click
       · **Al Buio live** (plancia): salta le % da ora fino a fine manche (`skipResults`)
-   5. Se **classifica intermedia** (ogni N, non ultima, non in Al Buio setup) → hold `next_question` → **CLICK** AVANTI → prossimo tema
+   5. Se **classifica intermedia** (ogni N, non ultima, non in Al Buio setup) → hold `next_question`:
+      · slide **CLASSIFICA PROVVISORIA** (page 0)
+      · **CLICK** AVANTI → pagine da **5 coppie** (senza %), fino a 3 pagine
+      · **CLICK** AVANTI sull’ultima pagina → prossimo tema
    6. Altrimenti **CLICK** AVANTI dalle % → prossimo tema (`advance_index`)
 
    Con 15 domande / ogni 5 / Al Buio 5: classifica a **5** e **10**; **mai a 15** (c’è la finale matching).
-   Pulsante plancia **Classifica** = forza hold `next_question` ora.
+   Pulsante plancia **Classifica** = forza hold `next_question` ora (page 0).
 
 5. **Prosecuzione** — fine quiz → matching → extraction → elimination.
 6. **Finale** — finals (prove) → winner → closed.
