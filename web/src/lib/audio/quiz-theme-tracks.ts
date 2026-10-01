@@ -7,7 +7,10 @@ export type QuizThemeCategory =
   | "adventure"
   | "values"
   | "fun"
-  | "intimacy";
+  | "intimacy"
+  | "libri"
+  | "cinema"
+  | "musica";
 
 export const QUIZ_THEME_CATEGORIES: readonly QuizThemeCategory[] = [
   "lifestyle",
@@ -16,6 +19,9 @@ export const QUIZ_THEME_CATEGORIES: readonly QuizThemeCategory[] = [
   "values",
   "fun",
   "intimacy",
+  "libri",
+  "cinema",
+  "musica",
 ];
 
 const DEFAULT_QUIZ_BED = "LR_02_Quiz_Lifestyle";
@@ -35,6 +41,7 @@ export const QUIZ_RESULTS_BED_ID = QUIZ_RESULTS_REVEAL_ID;
 /**
  * Bed per manche/tema — un loop coerente con l’argomento della slide.
  * Fallback legacy `LR_02_Quiz_Tension` resta in manifest per compat.
+ * Libri/Cinema/Musica riusano bed esistenti finché non ci sono loop dedicati.
  */
 export const QUIZ_THEME_BED_TRACK: Record<QuizThemeCategory, string> = {
   lifestyle: "LR_02_Quiz_Lifestyle",
@@ -43,6 +50,9 @@ export const QUIZ_THEME_BED_TRACK: Record<QuizThemeCategory, string> = {
   values: "LR_02_Quiz_Values",
   fun: "LR_02_Quiz_Fun",
   intimacy: "LR_02_Quiz_Intimacy",
+  libri: "LR_02_Quiz_Values",
+  cinema: "LR_02_Quiz_Fun",
+  musica: "LR_02_Quiz_Romantic",
 };
 
 export function normalizeQuizThemeCategory(

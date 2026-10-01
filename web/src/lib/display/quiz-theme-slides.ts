@@ -6,11 +6,15 @@ export const QUIZ_THEME_SLIDE_CATEGORIES = [
   "values",
   "fun",
   "intimacy",
+  "libri",
+  "cinema",
+  "musica",
 ] as const;
 
 export type QuizThemeSlideCategory =
   (typeof QUIZ_THEME_SLIDE_CATEGORIES)[number];
 
+/** Libri/Cinema/Musica riusano slide vicine finché non ci sono JPG dedicati. */
 const THEME_SLIDE_SRC: Record<QuizThemeSlideCategory, string> = {
   lifestyle: "/grafiche/theme-slides/lifestyle.jpg",
   romantic: "/grafiche/theme-slides/romantic.jpg",
@@ -18,6 +22,9 @@ const THEME_SLIDE_SRC: Record<QuizThemeSlideCategory, string> = {
   values: "/grafiche/theme-slides/values.jpg",
   fun: "/grafiche/theme-slides/fun.jpg",
   intimacy: "/grafiche/theme-slides/intimacy.jpg",
+  libri: "/grafiche/theme-slides/values.jpg",
+  cinema: "/grafiche/theme-slides/fun.jpg",
+  musica: "/grafiche/theme-slides/romantic.jpg",
 };
 
 export function isQuizThemeSlideCategory(
