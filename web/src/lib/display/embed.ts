@@ -133,6 +133,26 @@ export function notifyNativeCloseProjector(): boolean {
   return postNativeProjectorMessage({ type: "lr-close-projector" });
 }
 
+/** Overlay istantaneo sul WebView proiettore (HDMI) — bypass poll. */
+export function notifyNativeDisplayOverlay(overlay: unknown): boolean {
+  return postNativeProjectorMessage({
+    type: "lr-display-overlay",
+    overlay: overlay ?? null,
+  });
+}
+
+export function isDisplayOverlayNativeMessage(
+  raw: string,
+): { overlay: unknown } | null {
+  try {
+    const data = JSON.parse(raw) as { type?: string; overlay?: unknown };
+    if (data?.type !== "lr-display-overlay") return null;
+    return { overlay: data.overlay ?? null };
+  } catch {
+    return null;
+  }
+}
+
 export type OpenProjectorMode =
   | "secondary"
   | "popup"

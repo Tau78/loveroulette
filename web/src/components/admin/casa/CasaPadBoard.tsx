@@ -115,17 +115,13 @@ import {
 } from "@/lib/admin/casa-results-reveal";
 import { whenQuizGongCleared } from "@/lib/audio/quiz-gong-results-gate";
 import { AVANTI_CROSSFADE_MS } from "@/lib/audio/types";
-<<<<<<< HEAD
-import { getMediaVolume, resumeMediaAudio, setMediaVolume } from "@/lib/audio/media-element-gain";
-import { buildBalancedQuizLineup } from "@/lib/musicpro/quiz-lineup";
-=======
 import {
   getMediaVolume,
   rampMediaVolume,
   resumeMediaAudio,
   setMediaVolume,
 } from "@/lib/audio/media-element-gain";
->>>>>>> origin/cursor/fix-crossfade-smooth-032c
+import { buildBalancedQuizLineup } from "@/lib/musicpro/quiz-lineup";
 import {
   applyLineupReplacement,
   pickLineupReplacement,

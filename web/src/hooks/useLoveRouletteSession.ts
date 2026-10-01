@@ -29,6 +29,13 @@ import {
   subscribeLoveRouletteSession,
   type SessionTransport,
 } from "@/lib/musicpro/realtime";
+import {
+  DISPLAY_OVERLAY_EVENT,
+  DISPLAY_OVERLAY_MESSAGE_TYPE,
+  displayOverlayChannel,
+  parseDisplayOverlayBroadcast,
+  preferFresherDisplayOverlay,
+} from "@/lib/display/display-overlay-broadcast";
 
 /** Overlay/sigla/stacco: poll rapido così anteprima iframe e SCHERMO restano allineati. */
 const DISPLAY_POLL_MS = 400;
@@ -301,7 +308,9 @@ export function useLoveRouletteSession(
   const applyPollPayload = useCallback((data: LoveRouletteEvent) => {
     setEventId(data.id);
     setSessionId(data.sessionId);
-    setDisplayOverlay(data.displayOverlay ?? null);
+    setDisplayOverlay((prev) =>
+      preferFresherDisplayOverlay(prev, data.displayOverlay ?? null),
+    );
     setDisplayAudioCue(data.displayAudioCue ?? null);
     setQuizState((prev) => mergeQuizState(prev, data.quizState ?? null));
     setLastReveal((prev) => mergeLastReveal(prev, data.lastReveal ?? null));
@@ -613,6 +622,49 @@ export function useLoveRouletteSession(
       window.removeEventListener("online", onOnline);
     };
   }, [enabled, resyncNow]);
+
+  // Overlay istantaneo da plancia (BroadcastChannel / postMessage / CustomEvent / nativo).
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined") return;
+
+    const applyBroadcast = (raw: unknown) => {
+      const overlay = parseDisplayOverlayBroadcast(raw, eventSlug);
+      if (overlay === undefined) return;
+      setDisplayOverlay((prev) => preferFresherDisplayOverlay(prev, overlay));
+    };
+
+    const onCustom = (event: Event) => {
+      applyBroadcast((event as CustomEvent).detail);
+    };
+    const onWindowMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      applyBroadcast(event.data);
+    };
+    const onNative = (event: Event) => {
+      applyBroadcast({
+        type: DISPLAY_OVERLAY_MESSAGE_TYPE,
+        eventCode: eventSlug,
+        overlay: (event as CustomEvent).detail ?? null,
+      });
+    };
+
+    window.addEventListener(DISPLAY_OVERLAY_EVENT, onCustom);
+    window.addEventListener("message", onWindowMessage);
+    window.addEventListener("lr-native-display-overlay", onNative);
+
+    let channel: BroadcastChannel | null = null;
+    if ("BroadcastChannel" in window) {
+      channel = new BroadcastChannel(displayOverlayChannel(eventSlug));
+      channel.onmessage = (event) => applyBroadcast(event.data);
+    }
+
+    return () => {
+      window.removeEventListener(DISPLAY_OVERLAY_EVENT, onCustom);
+      window.removeEventListener("message", onWindowMessage);
+      window.removeEventListener("lr-native-display-overlay", onNative);
+      channel?.close();
+    };
+  }, [enabled, eventSlug]);
 
   const syncStatus = deriveSyncStatus({
     lastPollOkAt: lastSyncedAt,
