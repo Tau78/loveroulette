@@ -14,12 +14,14 @@ import {
   type SpecialTrialState,
 } from "@/lib/musicpro/special-trial";
 import type { VotingMetadata, VotingSessionState } from "@/lib/musicpro/voting";
+import { mergeRuntimeStateFromPoll } from "@/lib/musicpro/event-state-order";
 import {
   deriveSyncStatus,
   finalsNeedsServerCatchUp,
   mergeFinalsShow,
   mergeLastReveal,
   mergeVotingMetadata,
+  quizNeedsServerCatchUp,
   runSessionCatchUp,
   type SessionSyncStatus,
 } from "@/lib/musicpro/session-sync";
@@ -226,6 +228,7 @@ export function useLoveRouletteSession(
 
   const resyncInFlightRef = useRef(false);
   const seededEventKeyRef = useRef<string | null>(null);
+  const localRuntimeChangedAtRef = useRef(0);
 
   const applyQuizUpdate = useCallback(
     (quiz: QuizSessionState | null, nextRuntimeState?: EventState) => {
@@ -235,6 +238,7 @@ export function useLoveRouletteSession(
         setQuizState((prev) => mergeQuizState(prev, quiz));
       }
       if (nextRuntimeState) {
+        localRuntimeChangedAtRef.current = Date.now();
         setRuntimeState(nextRuntimeState);
       }
     },
@@ -242,6 +246,7 @@ export function useLoveRouletteSession(
   );
 
   const applyRuntimeState = useCallback((next: EventState) => {
+    localRuntimeChangedAtRef.current = Date.now();
     setRuntimeState(next);
   }, []);
 
@@ -284,7 +289,10 @@ export function useLoveRouletteSession(
           current: payload.session ?? null,
         }));
       }
-      if (payload.runtimeState) setRuntimeState(payload.runtimeState);
+      if (payload.runtimeState) {
+        localRuntimeChangedAtRef.current = Date.now();
+        setRuntimeState(payload.runtimeState);
+      }
     },
     [],
   );
@@ -306,7 +314,13 @@ export function useLoveRouletteSession(
       mergeSpecialTrialState(prev, data.specialTrial ?? null),
     );
     setJoinUrl(data.joinUrl);
-    setRuntimeState(data.runtimeState);
+    setRuntimeState((prev) =>
+      mergeRuntimeStateFromPoll(
+        prev,
+        data.runtimeState,
+        localRuntimeChangedAtRef.current,
+      ),
+    );
     setLastSyncedAt(Date.now());
     setLastPollErrorAt(null);
   }, []);
@@ -519,7 +533,10 @@ export function useLoveRouletteSession(
         if (
           data.runtimeState === "quiz" &&
           data.quizState &&
-          data.quizState.autoplayEnabled === true
+          quizNeedsServerCatchUp(
+            data.quizState,
+            data.specialTrial ?? null,
+          )
         ) {
           await runSessionCatchUp({
             eventSlug,

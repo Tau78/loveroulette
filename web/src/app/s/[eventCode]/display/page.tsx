@@ -94,7 +94,8 @@ export default function DisplayPage() {
 
   const showSpecialTrial =
     specialTrial != null &&
-    (specialTrial.status === "setup" ||
+    (specialTrial.status === "booked" ||
+      specialTrial.status === "setup" ||
       specialTrial.status === "running" ||
       specialTrial.status === "closing" ||
       specialTrial.status === "results");

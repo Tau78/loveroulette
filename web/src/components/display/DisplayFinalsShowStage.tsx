@@ -14,6 +14,7 @@ import { DisplayFinalsResultsStage } from "@/components/display/DisplayFinalsRes
 import { DisplayFinalsVotePrepStage } from "@/components/display/DisplayFinalsVotePrepStage";
 import { DisplayFinalsVotingStage } from "@/components/display/DisplayFinalsVotingStage";
 import { DisplayPhaseHero } from "@/components/display/DisplayShowText";
+import { nextFinalsChallengeId } from "@/lib/musicpro/finals-next-challenge";
 import type { VotingSessionState } from "@/lib/musicpro/voting";
 import { DisplayWinnerSpectacle } from "@/components/display/DisplayWinnerSpectacle";
 
@@ -68,12 +69,26 @@ export function DisplayFinalsShowStage({
   }
 
   if (show.phase === "idle") {
+    const nextId = nextFinalsChallengeId(show);
+    const nextPresentation = nextId
+      ? CHALLENGE_PRESENTATIONS[nextId]
+      : null;
+    if (nextPresentation) {
+      return (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DisplayChallengeIntroStage presentation={nextPresentation} />
+          <p className="pb-10 text-center text-sm font-semibold uppercase tracking-[0.24em] text-primary/90">
+            Prossima prova · AVANTI per iniziare
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6 pb-20 gap-6">
         <DisplayPhaseHero
           kicker={FINALS_COPY.displayKicker}
-          headline={FINALS_COPY.displayHeadline}
-          subline="In attesa della prossima prova…"
+          headline="Prove completate"
+          subline="AVANTI per proclamare il vincitore"
           uppercase
         />
         {show.finalists.length > 0 ? (
@@ -106,7 +121,18 @@ export function DisplayFinalsShowStage({
 
   if (show.phase === "couple_reveal" && presentation) {
     const finalist = show.finalists[show.coupleIndex - 1];
-    if (!finalist) return null;
+    if (!finalist) {
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center px-6 pb-20">
+          <DisplayPhaseHero
+            kicker={presentation.displayTitle}
+            headline="Prossima coppia"
+            subline="AVANTI per continuare"
+            uppercase
+          />
+        </div>
+      );
+    }
     return (
       <div className="relative z-40 flex min-h-0 flex-1 flex-col items-center justify-center px-6 py-4">
         <DisplayCoupleCallout
